@@ -34,6 +34,7 @@ import { poems9a } from './poems/j9a';
 import { poems9b } from './poems/j9b';
 import { poemsExtra } from './poems/j-extra';
 import { poemsMore1 } from './poems/j-more-1';
+import { poemsMore2 } from './poems/j-more-2';
 import { vocabItems as vocabBase } from './vocab';
 import { vocabRhetoric } from './vocab-rhetoric';
 import { classicalTexts as classicalBase } from './classical';
@@ -58,6 +59,12 @@ import { literatureAuthorsClassical1 } from './literature-authors-classical1';
 import { literatureAuthorsClassical2 } from './literature-authors-classical2';
 // 诗歌源头的体裁常识：《诗经》、楚辞、乐府与汉魏古诗
 import { literatureExtraGenres } from './literature-extra-genres';
+// 课外古诗词诵读相关作者的作家作品常识
+import { literatureAuthorsMore } from './literature-authors-more';
+// 课内主要作者的作家作品常识（分批补齐，见各文件头注释）
+import { literatureAuthorsMore2 } from './literature-authors-more2';
+import { literatureAuthorsMore3 } from './literature-authors-more3';
+import { literatureAuthorsMore4 } from './literature-authors-more4';
 import { bookShortQuestions } from './guangzhou-questions';
 import { mindMapsBooks } from './mindmaps-books';
 import { mindMapsClassical } from './mindmaps-classical';
@@ -87,6 +94,7 @@ export const allPoems: Poem[] = [
   ...poems9b,
   // 各册「课外古诗词诵读」的补齐篇目（跨册次，故统一放在册次分组之后）
   ...poemsMore1,
+  ...poemsMore2,
   // 2022 课标必背但原题库遗漏的 7 首
   ...poemsExtra,
 ];
@@ -103,6 +111,10 @@ export const literatureItems: LiteratureItem[] = [
   ...literatureAuthorsClassical1,
   ...literatureAuthorsClassical2,
   ...literatureExtraGenres,
+  ...literatureAuthorsMore,
+  ...literatureAuthorsMore2,
+  ...literatureAuthorsMore3,
+  ...literatureAuthorsMore4,
 ];
 
 /** 字词基础 = 原题库 + 修辞手法（新教材 8 种修辞全部进入补白） */

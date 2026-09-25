@@ -310,6 +310,7 @@ let suppTotal = 0;
 let suppSelfRef = 0;
 let suppDup = 0;
 let suppEmpty = 0;
+const suppEmptyIds: string[] = [];
 let suppBadGroup = 0;
 let suppAsym = 0;
 const suppLink = new Map<string, Set<string>>();
@@ -331,7 +332,10 @@ for (const e of allEntries) {
   const seenTitles = new Set<string>();
   const sameWork = new Set<string>();
 
-  if (!groups.length) suppEmpty += 1;
+  if (!groups.length) {
+    suppEmpty += 1;
+    suppEmptyIds.push(`${e.id}(${e.moduleId})`);
+  }
 
   for (const g of groups) {
     if (!g.kind?.trim()) {
@@ -383,7 +387,7 @@ for (const e of allEntries) {
       }
     }
     if (g.kind === '相关文学常识') hasLitLink.add(e.id);
-  }
+
 
     // 专项训练入口必须指向真实存在的路由形状，且标签非空
     if (g.action) {
@@ -426,23 +430,21 @@ const litNoInbound = litAll.filter((e) => !(litInbound.get(e.id)?.length ?? 0)).
 /**
  * 反查：哪些**古诗文作者**还没有「作家作品」专条。
  *
- * 判据是「有没有一条 category 为 作家作品、且标题里就是该作者的条目」——
+ * 判据是「有没有一条文学常识的**标题**里就写着该作者」——
  * 不能只看「有没有被关联到」：文学体裁类条目（如《诗歌的体裁分类》）的必记要点里
  * 会顺带举很多诗人的例子，那样几乎人人都「有入边」，反而看不出谁缺专条。
+ * 用标题判断还顺带解决「以书名作作者」的情况（《诗经》《礼记》《吕氏春秋》），
+ * 它们的专条标题里本就带着书名。
  * 只报警告不报错：有些作者只选了一首、确实不必单独成条，交给人判断。
  */
-const authorEntryNames = new Set(
-  allEntries
-    .filter((e) => e.moduleId === 'literature' && e.data.category === '作家作品')
-    .map((e) => e.title.split('——')[0].replace(/[《》]/g, '').trim()),
-);
+const litTitles = allEntries.filter((e) => e.moduleId === 'literature').map((e) => e.title);
 const authorsWithoutEntry = new Map<string, number>();
 for (const e of allEntries) {
   if (e.moduleId !== 'poems' && e.moduleId !== 'classical') continue;
   const raw = (e.data as { author?: string }).author ?? '';
   const a = raw.replace(/[《》]/g, '').trim();
   if (!a || a.length < 2 || ['佚名', '无名氏', '不详'].includes(a)) continue;
-  if (authorEntryNames.has(a)) continue;
+  if (litTitles.some((t) => t.includes(a))) continue;
   authorsWithoutEntry.set(raw, (authorsWithoutEntry.get(raw) ?? 0) + 1);
 }
 if (authorsWithoutEntry.size) {
@@ -795,6 +797,9 @@ console.log(
   `      ${'自指'.padEnd(22)} ${String(suppSelfRef + relSelfRef).padStart(4)}` +
     `   重复 ${suppDup}   空分组条目 ${suppEmpty}   不对称 ${suppAsym}   缺理由 ${relNoReason}`,
 );
+if (suppEmptyIds.length) {
+  console.log(`      补不出内容的条目：${suppEmptyIds.slice(0, 8).join('、')}`);
+}
 console.log(
   `      文学常识被关联      ${litAll.length - litNoInbound} / ${litAll.length} 条` +
     `（无入边 ${litNoInbound} 条，其中 l-au- / l-tical- 为 ${unreachable.length} 条）`,

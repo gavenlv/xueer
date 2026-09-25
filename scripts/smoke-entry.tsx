@@ -13,6 +13,7 @@ import { allEntries } from '../src/data';
 import { allPoems } from '../src/data/chinese';
 import { SUBJECTS } from '../src/data/subjects';
 import { supplementsOf } from '../src/lib/relations';
+import { makeReciteQuestions } from '../src/lib/quiz';
 
 /** 取某模块第一条内容的 id，用于详情页与单篇练习 */
 function firstId(moduleId: string): string {
@@ -247,6 +248,33 @@ if (!progressTarget) {
       .join('、') || '五类断言全通过'}）`,
   );
   if (!examOk) failed += 1;
+
+  /* --------- 接线检查：考点「默写这 N 首」真的组出了卷子 --------- */
+
+  /**
+   * 只断言「路由没崩」是不够的：`?poems=` 这条新路由如果没被 PracticePage 认出来，
+   * 页面照样渲染，只是会退化成「按学段随机默写」——学生点了考点却默写了别的篇目。
+   * 所以这里断言标题是「默写专项」，且题量正好等于这几首的逐句默写题数。
+   */
+  const drillPoems = allPoems.slice(0, 3);
+  const drillExpected = drillPoems.reduce(
+    (n, p) => n + makeReciteQuestions(p.lines, p.id, p.title).length,
+    0,
+  );
+  const drillHtml = renderToString(
+    <MemoryRouter initialEntries={[`/practice/poems?poems=${drillPoems.map((p) => p.id).join(',')}`]}>
+      <StudyProvider>
+        <App />
+      </StudyProvider>
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+
+  const drillOk =
+    drillHtml.includes('默写专项') && drillHtml.includes(`${drillExpected} 道题`);
+  console.log(
+    `  ${drillOk ? '✅' : '❌'} 接线检查：考点默写专项（期望 ${drillExpected} 道题，标题「默写专项」）`,
+  );
+  if (!drillOk) failed += 1;
 }
 
 if (failed) {

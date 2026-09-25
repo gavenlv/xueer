@@ -1,6 +1,6 @@
-/** 应用外壳：顶栏 + 移动端底部标签栏 */
+/** 应用外壳：顶栏 + 移动端底部标签栏（含「更多」面板） */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useStreak, useStudy } from '../store/StudyContext';
 import { cn, dateKey } from '../lib/utils';
@@ -18,17 +18,28 @@ const NAV = [
   { to: '/stats', label: '学习报告', icon: '📊', end: false, mobile: true },
 ];
 
+/** 移动端 tab 放不下的入口，收进「更多」面板 */
+const MORE_NAV = NAV.filter((n) => !n.mobile);
+
 export default function AppShell() {
   const streak = useStreak();
   const { checkin, state } = useStudy();
   const location = useLocation();
+  const [moreOpen, setMoreOpen] = useState(false);
 
   // 打开应用即完成当日打卡
   useEffect(() => {
     checkin();
   }, [checkin]);
 
+  // 路由变化时收起「更多」面板
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [location.pathname]);
+
   const todayAnswered = state.daily[dateKey()]?.answered ?? 0;
+  // 当前位于「更多」收录的页面时，底部栏的「更多」按钮保持高亮
+  const moreActive = MORE_NAV.some((n) => location.pathname.startsWith(n.to));
 
   return (
     <div className="app">
@@ -88,7 +99,35 @@ export default function AppShell() {
             <span>{n.label}</span>
           </NavLink>
         ))}
+        <button
+          type="button"
+          className={cn('tabbar__item', 'tabbar__more', moreActive && 'is-active')}
+          onClick={() => setMoreOpen(true)}
+        >
+          <span className="tabbar__icon">⋯</span>
+          <span>更多</span>
+        </button>
       </nav>
+
+      {moreOpen && (
+        <div className="moresheet" role="dialog" aria-label="更多页面">
+          <div className="moresheet__mask" onClick={() => setMoreOpen(false)} />
+          <div className="moresheet__panel">
+            <div className="moresheet__title">更多页面</div>
+            {MORE_NAV.map((n) => (
+              <NavLink
+                key={n.to}
+                to={n.to}
+                end={n.end}
+                className={({ isActive }) => cn('moresheet__link', isActive && 'is-active')}
+              >
+                <span className="moresheet__icon">{n.icon}</span>
+                <span>{n.label}</span>
+              </NavLink>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

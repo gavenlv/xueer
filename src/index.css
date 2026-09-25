@@ -338,6 +338,85 @@ img {
   line-height: 1;
 }
 
+/* 「更多」按钮（收纳移动端放不下的入口） */
+.tabbar__more {
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 「更多」底部面板 */
+.moresheet {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.moresheet__mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 20, 30, 0.4);
+  animation: fadeIn 0.2s ease;
+}
+
+.moresheet__panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--c-surface);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -8px 30px rgba(15, 20, 30, 0.12);
+  padding: 14px 12px calc(16px + env(safe-area-inset-bottom));
+  animation: sheetUp 0.22s ease;
+}
+
+.moresheet__title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--c-ink-3);
+  margin: 0 8px 8px;
+}
+
+.moresheet__link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 10px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-ink);
+  transition: background 0.16s;
+}
+
+.moresheet__link:active {
+  background: var(--c-surface-3);
+}
+
+.moresheet__link.is-active {
+  color: var(--c-primary);
+}
+
+.moresheet__icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+@keyframes sheetUp {
+  from {
+    transform: translateY(60px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 /* --------------------------------- 卡片 --------------------------------- */
 .card {
   background: var(--c-surface);
