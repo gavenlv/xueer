@@ -65,6 +65,7 @@ import { literatureAuthorsMore } from './literature-authors-more';
 import { literatureAuthorsMore2 } from './literature-authors-more2';
 import { literatureAuthorsMore3 } from './literature-authors-more3';
 import { literatureAuthorsMore4 } from './literature-authors-more4';
+import { literatureAuthorsMore5 } from './literature-authors-more5';
 import { bookShortQuestions } from './guangzhou-questions';
 import { mindMapsBooks } from './mindmaps-books';
 import { mindMapsClassical } from './mindmaps-classical';
@@ -115,6 +116,7 @@ export const literatureItems: LiteratureItem[] = [
   ...literatureAuthorsMore2,
   ...literatureAuthorsMore3,
   ...literatureAuthorsMore4,
+  ...literatureAuthorsMore5,
 ];
 
 /** 字词基础 = 原题库 + 修辞手法（新教材 8 种修辞全部进入补白） */
