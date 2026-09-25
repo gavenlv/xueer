@@ -5,8 +5,9 @@
  * 只要新学科的数据装配成 `Entry[]` 并在这里登记即可。
  */
 
-import type { Entry, Extension, GradeId, MindMap, ModuleId, QuizQuestion } from '../types';
+import type { Entry, Extension, GradeId, MindMap, ModuleId, Poem, QuizQuestion } from '../types';
 import { SUBJECTS } from './subjects';
+import { imageryOf, examThemesOf } from '../lib/relations';
 import * as chinese from './chinese';
 import * as math from './math';
 
@@ -193,6 +194,73 @@ export function examPointsByModule(subjectId = 'chinese'): { moduleId: ModuleId;
   return moduleIdsOfSubject(subjectId)
     .map((mid) => ({ moduleId: mid, points: byModule.get(mid) ?? [] }))
     .filter((g) => g.points.length > 0);
+}
+
+/* -------------------- 古诗词的考点（另立一套，理由见注释） -------------------- */
+
+/**
+ * 古诗词模块**不预置题目**（默写题由逐句现场生成），因此它没有任何题目标签，
+ * 在「按题目标签聚合」的考点体系里会整体缺席——而古诗文恰恰是中考默写与鉴赏的重头。
+ *
+ * 所以这里改用内容本身的信号来建考点，三种来源：
+ *   1. **主题**（思乡、爱国、言志…，取自篇目标签，已排除宽泛词）
+ *   2. **意象**（月、杨柳、鸿雁…，由诗句文本识别）
+ *   3. **作者**（同一位诗人有 2 篇以上作品时成组，如「《诗经》4 篇」）
+ *
+ * 每个考点都能一键组卷默写：`/practice/poems?poems=<id,id,…>`。
+ * 只保留 2 篇以上的分组——只有一篇的「考点」没有串联价值。
+ */
+export interface PoemExamPoint {
+  /** 考点名，如「意象·月」「主题·思乡」「作者·李白」 */
+  tag: string;
+  kind: '主题' | '意象' | '作者';
+  entryIds: string[];
+  titles: string[];
+}
+
+/** 把古诗词按某个取键函数聚类，只保留 ≥2 篇的分组 */
+function clusterPoems(
+  kind: PoemExamPoint['kind'],
+  keyOf: (p: Poem) => string[],
+  min: number,
+): PoemExamPoint[] {
+  const map = new Map<string, { ids: string[]; titles: string[] }>();
+  for (const p of chinese.allPoems) {
+    for (const key of keyOf(p)) {
+      if (!key) continue;
+      const cur = map.get(key) ?? { ids: [], titles: [] };
+      cur.ids.push(p.id);
+      cur.titles.push(p.title);
+      map.set(key, cur);
+    }
+  }
+  return [...map]
+    .filter(([, v]) => v.ids.length >= min)
+    .map(([key, v]) => ({ tag: `${kind}·${key}`, kind, entryIds: v.ids, titles: v.titles }))
+    .sort((a, b) => b.entryIds.length - a.entryIds.length);
+}
+
+/** 占位作者（不能作为「同一作者」考点） */
+const POEM_PLACEHOLDER_AUTHORS = new Set(['佚名', '无名氏', '不详']);
+
+export function poemExamPoints(): PoemExamPoint[] {
+  const entryOf = (id: string) => allEntries.find((e) => e.id === id);
+
+  const themes = clusterPoems('主题', (p) => {
+    const e = entryOf(p.id);
+    return e ? examThemesOf(e) : [];
+  }, 2);
+
+  const imageries = clusterPoems('意象', (p) => {
+    const e = entryOf(p.id);
+    return e ? imageryOf(e) : [];
+  }, 2);
+
+  const authors = clusterPoems('作者', (p) =>
+    p.author && p.author.length >= 2 && !POEM_PLACEHOLDER_AUTHORS.has(p.author) ? [p.author] : [],
+  2);
+
+  return [...themes, ...imageries, ...authors];
 }
 
 /* ------------------------------ 统计 ------------------------------ */

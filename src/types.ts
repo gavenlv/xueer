@@ -181,7 +181,11 @@ export interface ReadingPassage {
   grade: GradeId;
   title: string;
   author?: string;
-  genre: '记叙文' | '说明文' | '议论文' | '散文' | '小说';
+  /**
+   * 非连续性文本：广州中考现代文阅读的固定题型，由多则材料（图表、数据、短文）组合而成，
+   * 单独成类才能在模块页按文体筛出来做专项。
+   */
+  genre: '记叙文' | '说明文' | '议论文' | '散文' | '小说' | '非连续性文本';
   /** 原文段落 */
   paragraphs: string[];
   questions: QuizQuestion[];

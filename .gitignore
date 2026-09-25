@@ -4,3 +4,9 @@ scripts/.out/
 *.local
 .DS_Store
 .vite/
+
+# Tencent Cloud EdgeOne
+.env
+.edgeone/*
+.tef_dist/*
+  

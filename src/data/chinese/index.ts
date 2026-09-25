@@ -29,9 +29,11 @@ import { poems7a } from './poems/j7a';
 import { poems7b } from './poems/j7b';
 import { poems8a } from './poems/j8a';
 import { poems8b } from './poems/j8b';
+import { poems8bExtra } from './poems/j8b-extra';
 import { poems9a } from './poems/j9a';
 import { poems9b } from './poems/j9b';
 import { poemsExtra } from './poems/j-extra';
+import { poemsMore1 } from './poems/j-more-1';
 import { vocabItems as vocabBase } from './vocab';
 import { vocabRhetoric } from './vocab-rhetoric';
 import { classicalTexts as classicalBase } from './classical';
@@ -49,6 +51,13 @@ import { writingUpgrade } from './writing-upgrade';
 import { writingSamples } from './writing-samples';
 import { literatureItems as literatureBase } from './literature';
 import { literatureExtra } from './literature-extra';
+// 课内古诗文作者的「作家作品」常识：直接服务「学一补多」的按作者关联
+import { literatureAuthorsTang } from './literature-authors-tang';
+import { literatureAuthorsSong } from './literature-authors-song';
+import { literatureAuthorsClassical1 } from './literature-authors-classical1';
+import { literatureAuthorsClassical2 } from './literature-authors-classical2';
+// 诗歌源头的体裁常识：《诗经》、楚辞、乐府与汉魏古诗
+import { literatureExtraGenres } from './literature-extra-genres';
 import { bookShortQuestions } from './guangzhou-questions';
 import { mindMapsBooks } from './mindmaps-books';
 import { mindMapsClassical } from './mindmaps-classical';
@@ -72,8 +81,12 @@ export const allPoems: Poem[] = [
   ...poems7b,
   ...poems8a,
   ...poems8b,
+  // 八下「课外古诗词诵读」第一组补齐（《式微》《子衿》《望洞庭湖赠张丞相》）
+  ...poems8bExtra,
   ...poems9a,
   ...poems9b,
+  // 各册「课外古诗词诵读」的补齐篇目（跨册次，故统一放在册次分组之后）
+  ...poemsMore1,
   // 2022 课标必背但原题库遗漏的 7 首
   ...poemsExtra,
 ];
@@ -81,8 +94,16 @@ export const allPoems: Poem[] = [
 /** 文言文 = 原题库 + 新教材（2024 修订版）补充篇目 */
 export const classicalTexts: ClassicalText[] = [...classicalBase, ...classicalExtra];
 
-/** 文学常识与名著 = 原题库 + 新教材新增名著 */
-export const literatureItems: LiteratureItem[] = [...literatureBase, ...literatureExtra];
+/** 文学常识与名著 = 原题库 + 新教材新增名著 + 课内作者的作家作品常识 + 诗歌源头体裁常识 */
+export const literatureItems: LiteratureItem[] = [
+  ...literatureBase,
+  ...literatureExtra,
+  ...literatureAuthorsTang,
+  ...literatureAuthorsSong,
+  ...literatureAuthorsClassical1,
+  ...literatureAuthorsClassical2,
+  ...literatureExtraGenres,
+];
 
 /** 字词基础 = 原题库 + 修辞手法（新教材 8 种修辞全部进入补白） */
 export const vocabItems: VocabItem[] = [...vocabBase, ...vocabRhetoric];

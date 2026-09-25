@@ -8,7 +8,7 @@
 declare const process: { exitCode: number };
 
 import katex from 'katex';
-import { allEntries, contentStats, entryIndex, mindMaps, extensions } from '../src/data';
+import { allEntries, contentStats, entryIndex, mindMaps, extensions, poemExamPoints } from '../src/data';
 import { allPoems } from '../src/data/chinese';
 import { SUBJECTS } from '../src/data/subjects';
 import { makeReciteQuestions } from '../src/lib/quiz';
@@ -313,11 +313,22 @@ let suppEmpty = 0;
 let suppBadGroup = 0;
 let suppAsym = 0;
 const suppLink = new Map<string, Set<string>>();
+/** 「相关文学常识」的入边：被哪些条目关联到（用于发现写了却关联不上的常识条目） */
+const litInbound = new Map<string, string[]>();
+/** 有「相关文学常识」入边的条目（用于反查「哪些课内作者还没有作家作品条目」） */
+const hasLitLink = new Set<string>();
 
 for (const e of allEntries) {
   const at = `[学一补多] ${e.id}`;
   const groups = supplementsOf(e, allEntries);
   const seen = new Set<string>([e.id]);
+  /**
+   * 一页之内同一篇作品（按标题）只能出现一次，跨分组也算重复。
+   * 注意**不要**把当前条目自己的标题预先放进来：同一作品·其他模块这一组
+   * 本来就要指向另一模块里的同名篇目（如文言文版《陋室铭》→ 古诗词版《陋室铭》）。
+   */
+  const titleKey = (t: string) => t.replace(/[（(](节选|选段|节录)[)）]/g, '').replace(/[《》\s]/g, '').trim();
+  const seenTitles = new Set<string>();
   const sameWork = new Set<string>();
 
   if (!groups.length) suppEmpty += 1;
@@ -353,6 +364,11 @@ for (const e of allEntries) {
         err(`${at}: 「${it.entry.title}」被重复推荐`);
       }
       seen.add(it.entry.id);
+      // 同一页出现两条同名条目（如古诗词版与文言文版的《诫子书》）看起来像 bug
+      if (seenTitles.has(titleKey(it.entry.title))) {
+        err(`${at}: 「${it.entry.title}」在本页被重复推荐（与其它分组同名）`);
+      }
+      seenTitles.add(titleKey(it.entry.title));
       if (!entryIndex.has(it.entry.id)) err(`${at}: 关联到不存在的条目 ${it.entry.id}`);
       if (g.kind === '同一作品·其他模块') {
         if (it.entry.moduleId === e.moduleId) {
@@ -360,7 +376,14 @@ for (const e of allEntries) {
         }
         sameWork.add(it.entry.id);
       }
+      if (g.kind === '相关文学常识') {
+        const from = litInbound.get(it.entry.id) ?? [];
+        from.push(e.id);
+        litInbound.set(it.entry.id, from);
+      }
     }
+    if (g.kind === '相关文学常识') hasLitLink.add(e.id);
+  }
 
     // 专项训练入口必须指向真实存在的路由形状，且标签非空
     if (g.action) {
@@ -378,6 +401,91 @@ for (const [a, bs] of suppLink) {
       suppAsym += 1;
       err(`[学一补多] 「同一作品」关系不对称：${a} → ${b} 而 ${b} 未回指`);
     }
+  }
+}
+
+/**
+ * 课内作者的「作家作品」与文体常识（id 前缀 l-au- / l-tical-）是专门为「学一补多」写的：
+ * 它们的价值全在于**被古诗文／现代文关联到**。若某条一条都关联不上，说明作者名对不上、
+ * 或文体没写进标签，内容等于白写——这类退化必须在这里拦住。
+ */
+const unreachable = allEntries.filter(
+  (e) =>
+    e.moduleId === 'literature' &&
+    (e.id.startsWith('l-au-') || e.id.startsWith('l-tical-')) &&
+    !(litInbound.get(e.id)?.length ?? 0),
+);
+for (const e of unreachable) {
+  err(`[学一补多] 文学常识「${e.title}」（${e.id}）没有任何条目关联到它，等于写了用不上`);
+}
+
+/** 诊断用：文学常识里还有多少条完全没被关联（名著导读、文化常识本来就很少被勾到，属正常） */
+const litAll = allEntries.filter((e) => e.moduleId === 'literature');
+const litNoInbound = litAll.filter((e) => !(litInbound.get(e.id)?.length ?? 0)).length;
+
+/**
+ * 反查：哪些**古诗文作者**还没有「作家作品」专条。
+ *
+ * 判据是「有没有一条 category 为 作家作品、且标题里就是该作者的条目」——
+ * 不能只看「有没有被关联到」：文学体裁类条目（如《诗歌的体裁分类》）的必记要点里
+ * 会顺带举很多诗人的例子，那样几乎人人都「有入边」，反而看不出谁缺专条。
+ * 只报警告不报错：有些作者只选了一首、确实不必单独成条，交给人判断。
+ */
+const authorEntryNames = new Set(
+  allEntries
+    .filter((e) => e.moduleId === 'literature' && e.data.category === '作家作品')
+    .map((e) => e.title.split('——')[0].replace(/[《》]/g, '').trim()),
+);
+const authorsWithoutEntry = new Map<string, number>();
+for (const e of allEntries) {
+  if (e.moduleId !== 'poems' && e.moduleId !== 'classical') continue;
+  const raw = (e.data as { author?: string }).author ?? '';
+  const a = raw.replace(/[《》]/g, '').trim();
+  if (!a || a.length < 2 || ['佚名', '无名氏', '不详'].includes(a)) continue;
+  if (authorEntryNames.has(a)) continue;
+  authorsWithoutEntry.set(raw, (authorsWithoutEntry.get(raw) ?? 0) + 1);
+}
+if (authorsWithoutEntry.size) {
+  warn(
+    `以下 ${authorsWithoutEntry.size} 位古诗文作者尚无「作家作品」专条（篇目补不到作者常识）：` +
+      [...authorsWithoutEntry]
+        .sort((a, b) => b[1] - a[1])
+        .map(([a, n]) => `${a}(${n}篇)`)
+        .join('、'),
+  );
+}
+
+/* ------------------- 古诗词考点（主题/意象/作者聚类）校验 ------------------- */
+
+/**
+ * 古诗词不预置题目，走的是另一套聚类考点。这里保证：
+ * 每个考点至少 2 篇（只有一篇没有串联价值）、篇目 id 真实存在、
+ * tag / titles 一一对应，并统计有多少首诗被考点覆盖到。
+ */
+const poemPoints = poemExamPoints();
+let poemPointBad = 0;
+const coveredPoems = new Set<string>();
+for (const p of poemPoints) {
+  if (p.entryIds.length < 2) {
+    poemPointBad += 1;
+    err(`[古诗词考点] 「${p.tag}」只有 ${p.entryIds.length} 篇，不足以成考点`);
+  }
+  if (p.entryIds.length !== p.titles.length) {
+    poemPointBad += 1;
+    err(`[古诗词考点] 「${p.tag}」的篇目 id 与标题数量不一致`);
+  }
+  if (!p.tag.startsWith(`${p.kind}·`) || p.tag.length <= p.kind.length + 1) {
+    poemPointBad += 1;
+    err(`[古诗词考点] 「${p.tag}」命名不符「${p.kind}·名称」`);
+  }
+  for (const id of p.entryIds) {
+    const e = entryIndex.get(id);
+    if (!e) {
+      err(`[古诗词考点] 「${p.tag}」引用了不存在的篇目 ${id}`);
+      continue;
+    }
+    if (e.moduleId !== 'poems') err(`[古诗词考点] 「${p.tag}」的 ${id} 不属于古诗词模块`);
+    coveredPoems.add(id);
   }
 }
 
@@ -686,6 +794,14 @@ console.log(
 console.log(
   `      ${'自指'.padEnd(22)} ${String(suppSelfRef + relSelfRef).padStart(4)}` +
     `   重复 ${suppDup}   空分组条目 ${suppEmpty}   不对称 ${suppAsym}   缺理由 ${relNoReason}`,
+);
+console.log(
+  `      文学常识被关联      ${litAll.length - litNoInbound} / ${litAll.length} 条` +
+    `（无入边 ${litNoInbound} 条，其中 l-au- / l-tical- 为 ${unreachable.length} 条）`,
+);
+console.log(
+  `      古诗词考点          ${poemPoints.length} 个（主题/意象/作者聚类）` +
+    `，覆盖 ${coveredPoems.size} / ${allPoems.length} 首，异常 ${poemPointBad} 处`,
 );
 for (const [k, n] of [...suppGroups].sort((a, b) => b[1] - a[1])) {
   console.log(`      ${k.padEnd(22)} ${String(n).padStart(4)} 条`);

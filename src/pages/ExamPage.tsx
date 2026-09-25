@@ -6,10 +6,12 @@
 
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { examPointsByModule, findQuestion } from '../data';
+import { examPointsByModule, findQuestion, poemExamPoints } from '../data';
+import { allPoems } from '../data/chinese';
 import { getModuleMeta } from '../data/subjects';
 import { useStudy } from '../store/StudyContext';
 import type { ModuleId } from '../types';
+import { makeReciteQuestions } from '../lib/quiz';
 import { cn } from '../lib/utils';
 import {
   EmptyState,
@@ -25,8 +27,41 @@ export default function ExamPage() {
   const { state } = useStudy();
   const [keyword, setKeyword] = useState('');
   const [moduleFilter, setModuleFilter] = useState<ModuleId | 'all'>('all');
+  /**
+   * 考点总数已经 600+，一次全铺出来会把页面撑到近 400 KB HTML、手机上必卡。
+   * 因此每个模块先只显示前若干个，点「展开全部」再看剩下的；
+   * 一旦输入了搜索词就全部展开——搜索本身就是「我要找某个点」的意图。
+   */
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const PREVIEW_PER_MODULE = 12;
+  const PREVIEW_PER_KIND = 8;
 
   const groups = useMemo(() => examPointsByModule('chinese'), []);
+
+  /**
+   * 古诗词单独一套考点：它不预置题目，所以按题目标签聚合的那套里会整体缺席。
+   * 这里用「主题 / 意象 / 作者」聚类，每个考点指向这几十首的逐句默写。
+   */
+  const poemPoints = useMemo(() => poemExamPoints(), []);
+  const poemReciteCount = useMemo(
+    () => allPoems.reduce((n, p) => n + makeReciteQuestions(p.lines, p.id, p.title).length, 0),
+    [],
+  );
+  /** 搜索词对古诗词考点同样生效 */
+  const keywordTrimmed = keyword.trim();
+  const poemPointsShown = useMemo(
+    () => (keywordTrimmed ? poemPoints.filter((p) => p.tag.includes(keywordTrimmed)) : poemPoints),
+    [poemPoints, keywordTrimmed],
+  );
+  const showPoems = moduleFilter === 'all' || moduleFilter === 'poems';
+
+  /** 古诗词考点按「主题/意象/作者」三类各显示前若干个，保证三类都能露头 */
+  const poemsVisible = useMemo(() => {
+    if (keywordTrimmed || expanded.has('poems')) return poemPointsShown;
+    return (['主题', '意象', '作者'] as const).flatMap((k) =>
+      poemPointsShown.filter((p) => p.kind === k).slice(0, PREVIEW_PER_KIND),
+    );
+  }, [poemPointsShown, keywordTrimmed, expanded]);
 
   /** 我的错题按考点聚合，用来标出薄弱考点 */
   const wrongByTag = useMemo(() => {
@@ -52,11 +87,9 @@ export default function ExamPage() {
       .filter((g) => g.points.length > 0);
   }, [groups, moduleFilter, keyword]);
 
-  const total = groups.reduce((n, g) => n + g.points.length, 0);
-  const totalQuestions = groups.reduce(
-    (n, g) => n + g.points.reduce((m, p) => m + p.questions, 0),
-    0,
-  );
+  const total = groups.reduce((n, g) => n + g.points.length, 0) + poemPoints.length;
+  const totalQuestions =
+    groups.reduce((n, g) => n + g.points.reduce((m, p) => m + p.questions, 0), 0) + poemReciteCount;
   const weakCount = groups.reduce(
     (n, g) => n + g.points.filter((p) => (wrongByTag.get(p.tag) ?? 0) > 0).length,
     0,
@@ -95,6 +128,13 @@ export default function ExamPage() {
           >
             全部模块（{total}）
           </button>
+          <button
+            className={cn('chip chip--sm', moduleFilter === 'poems' && 'is-active')}
+            onClick={() => setModuleFilter('poems')}
+          >
+            {getModuleMeta('poems')?.module.icon} {getModuleMeta('poems')?.module.name}（
+            {poemPoints.length}）
+          </button>
           {groups.map((g) => {
             const meta = getModuleMeta(g.moduleId);
             return (
@@ -110,7 +150,82 @@ export default function ExamPage() {
         </div>
       </section>
 
-      {filtered.length === 0 ? (
+      {showPoems && poemPointsShown.length ? (
+        <section className="stack stack--sm">
+          <SectionTitle
+            sub={`${poemPointsShown.length} 个考点 · ${allPoems.length} 首必背篇目 · ${poemReciteCount} 道逐句默写题`}
+            extra={
+              <Link className="btn btn--sm" to="/practice/poems?grade=all">
+                🎲 全册默写
+              </Link>
+            }
+          >
+            {getModuleMeta('poems')?.module.icon} 古诗词背诵与默写
+          </SectionTitle>
+
+          <div className="small muted">
+            古诗词不预置题目，默写题由逐句现场生成，所以它没有题目标签，需要单独按
+            <b>主题 / 意象 / 作者</b>聚类成考点。点「默写这 N 首」就只默这一簇。
+          </div>
+
+          <div className="grid grid--auto">
+            {poemsVisible.map((p) => (
+              <div className="card card--pad stack stack--sm" key={p.tag}>
+                <div className="row row--between" style={{ alignItems: 'flex-start' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="bold" style={{ fontSize: 15 }}>
+                      {p.tag}
+                    </div>
+                    <div className="small muted" style={{ marginTop: 2 }}>
+                      {p.entryIds.length} 首
+                    </div>
+                  </div>
+                  <Tag tone="purple">{p.kind}</Tag>
+                </div>
+
+                <div className="small muted" style={{ lineHeight: 1.9 }}>
+                  {p.titles.slice(0, 6).map((t, i) => (
+                    <span key={t}>
+                      {i > 0 ? ' · ' : ''}
+                      <Link to={`/s/chinese/poems/${p.entryIds[i]}`}>{t}</Link>
+                    </span>
+                  ))}
+                  {p.titles.length > 6 ? ` …等 ${p.titles.length} 首` : ''}
+                </div>
+
+                <Link
+                  className="btn btn--primary btn--sm"
+                  to={`/practice/poems?poems=${p.entryIds.join(',')}`}
+                >
+                  ✍️ 默写这 {p.entryIds.length} 首
+                </Link>
+              </div>
+            ))}
+          </div>
+
+          {poemPointsShown.length > poemsVisible.length || expanded.has('poems') ? (
+            <div className="row">
+              <button
+                className="btn btn--sm"
+                onClick={() =>
+                  setExpanded((prev) => {
+                    const next = new Set(prev);
+                    if (next.has('poems')) next.delete('poems');
+                    else next.add('poems');
+                    return next;
+                  })
+                }
+              >
+                {expanded.has('poems')
+                  ? `收起，只看前 ${PREVIEW_PER_KIND * 3} 个`
+                  : `展开全部 ${poemPointsShown.length} 个古诗词考点`}
+              </button>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {filtered.length === 0 && !(showPoems && poemPointsShown.length) ? (
         <EmptyState icon="🔍" title="没有匹配的考点" desc="换个关键词试试。" />
       ) : (
         filtered.map((g) => {
@@ -132,7 +247,10 @@ export default function ExamPage() {
               </SectionTitle>
 
               <div className="grid grid--auto">
-                {g.points.map((p) => {
+                {(keywordTrimmed || expanded.has(g.moduleId)
+                  ? g.points
+                  : g.points.slice(0, PREVIEW_PER_MODULE)
+                ).map((p) => {
                   const wrongN = wrongByTag.get(p.tag) ?? 0;
                   return (
                     <div className="card card--pad stack stack--sm" key={`${p.moduleId}-${p.tag}`}>
@@ -166,6 +284,26 @@ export default function ExamPage() {
                   );
                 })}
               </div>
+
+              {g.points.length > PREVIEW_PER_MODULE ? (
+                <div className="row">
+                  <button
+                    className="btn btn--sm"
+                    onClick={() =>
+                      setExpanded((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(g.moduleId)) next.delete(g.moduleId);
+                        else next.add(g.moduleId);
+                        return next;
+                      })
+                    }
+                  >
+                    {expanded.has(g.moduleId)
+                      ? `收起，只看前 ${PREVIEW_PER_MODULE} 个`
+                      : `展开全部 ${g.points.length} 个考点`}
+                  </button>
+                </div>
+              ) : null}
             </section>
           );
         })

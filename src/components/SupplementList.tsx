@@ -63,7 +63,9 @@ export function SupplementList({ entry }: { entry: Entry }) {
                   aria-expanded={open}
                 >
                   <Tag tone="purple">{g.kind}</Tag>
-                  <span className="ext__title">{g.hint}</span>
+                  <span className="small muted" style={{ flex: 1, minWidth: 0 }}>
+                    {g.hint}
+                  </span>
                   <span className="small muted">{g.items.length} 条</span>
                   <span className="ext__caret">▼</span>
                 </button>

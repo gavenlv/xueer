@@ -69,6 +69,17 @@ function themeTagsOf(entry: Entry): string[] {
 }
 
 /**
+ * 一篇古诗词可用于**考点聚类**的主题词。
+ *
+ * 与 `themeTagsOf` 的区别是额外排掉「抒情」「写景」这类几乎人人都有的宽泛词——
+ * 用它们聚类会得到一个「包含 80 首诗」的伪考点。考点页按主题聚类时用这个。
+ */
+export function examThemesOf(entry: Entry): string[] {
+  if (entry.moduleId !== 'poems') return [];
+  return entry.tags.filter((t) => !NON_THEME.has(t) && !VAGUE_THEMES.has(t));
+}
+
+/**
  * 「抒情」「写景」这类标签在大量篇目上都有，靠它们建立关联等于随机推荐。
  * 两步过滤：
  *   1. 出现比例超过阈值的标签视为无区分度，直接不用；
@@ -158,8 +169,11 @@ function authorOf(entry: Entry): string {
 }
 
 /**
- * 「作者」字段里的占位值：古籍多标「佚名」，有些篇目直接把书名当作者。
- * 拿它们去建「同作者」分组只会得到「同作者·佚名」这种无意义的标题。
+ * 「作者」字段里的占位值。古籍多标「佚名」，拿它建「同作者」分组只会得到
+ * 「同作者·佚名」这种无意义标题，因此直接排除。
+ *
+ * 注意：以书名作作者（如《诗经》《礼记》《吕氏春秋》《古诗十九首》）**不算占位值**——
+ * 「同为《诗经》作品」本身就是一条有用的文学常识，只是分组名改称「同一出处」。
  */
 const PLACEHOLDER_AUTHORS = new Set(['佚名', '无名氏', '不详']);
 
@@ -167,8 +181,23 @@ function realAuthor(entry: Entry): string {
   const a = authorOf(entry);
   if (a.length < 2) return '';
   if (PLACEHOLDER_AUTHORS.has(a)) return '';
-  if (a.startsWith('《')) return '';
   return a;
+}
+
+/** 分组名：以书名作作者的，说「同一出处」比「同作者」准确 */
+function authorGroupKind(author: string): string {
+  return author.startsWith('《') ? `同一出处·${author}` : `同作者·${author}`;
+}
+
+/**
+ * 文学常识匹配用的关键词：以书名作作者的条目（如《诗经》）要去掉书名号再匹配，
+ * 因为文学常识条目里通常写作「《诗经》是我国第一部诗歌总集」。
+ */
+function authorKeys(entry: Entry): string[] {
+  const a = realAuthor(entry);
+  if (!a) return [];
+  const inner = a.replace(/^《|》$/g, '').trim();
+  return inner && inner !== a ? [a.toLowerCase(), inner.toLowerCase()] : [a.toLowerCase()];
 }
 
 /** 模块 id → 学科 id（避免依赖 data 层造成循环引用） */
@@ -196,6 +225,18 @@ function workKey(entry: Entry): string {
   return entry.title
     .replace(/[（(].*?[)）]/g, '')
     .replace(/节选|选段|十二章|二章|三则|一则|其[一二三四五]|·.+$/g, '')
+    .replace(/[《》\s]/g, '')
+    .trim();
+}
+
+/**
+ * 同一页去重用的键：只抹掉「（节选）」这类版本标注与书名号，**保留词牌后的题目**。
+ * 不能用 `workKey`——它会把「山坡羊·潼关怀古」和「山坡羊·骊山怀古」都压成「山坡羊」，
+ * 那是两篇不同的作品。
+ */
+function pageKey(entry: Entry): string {
+  return entry.title
+    .replace(/[（(](节选|选段|节录)[)）]/g, '')
     .replace(/[《》\s]/g, '')
     .trim();
 }
@@ -267,14 +308,69 @@ export function supplementsOf(entry: Entry, pool: Entry[]): SupplementGroup[] {
   const freq = tagFrequency(pool);
 
   const groups: SupplementGroup[] = [];
-  const taken = new Set<string>([entry.id]);
+
+  /**
+   * 一页之内同一篇作品只出现一次。
+   *
+   * 库里同一篇作品常常有两份：古诗词模块一份（供逐句默写）、文言文模块一份（供阅读讲解），
+   * 例如《陋室铭》《诫子书》《出师表》。只看 id 去重是不够的——那会出现
+   * 「同作者」组里一条《诫子书》、《同类作品》组里又一条《诫子书》，看起来像 bug。
+   * 因此这里按「标题」而非 id 去重，先出现的分组先占位。
+   */
+  const usedIds = new Set<string>([entry.id]);
+  const usedTitles = new Set<string>([pageKey(entry)]);
+  const claim = (e: Entry) => {
+    usedIds.add(e.id);
+    usedTitles.add(pageKey(e));
+  };
+  const free = (e: Entry) => !usedIds.has(e.id) && !usedTitles.has(pageKey(e));
+
+  /**
+   * 按给定顺序取出前 `limit` 条**尚未占用**的候选，取一条就占一条。
+   *
+   * 不能只用 `filter(free)`：谓词是对「当前」状态求值的，
+   * 同一分组里的两条同名作品（如古诗词版与文言文版的《诫子书》）会同时通过过滤。
+   */
+  function pick<T>(list: T[], get: (t: T) => Entry, limit: number): T[] {
+    const out: T[] = [];
+    for (const item of list) {
+      const e = get(item);
+      if (!free(e)) continue;
+      claim(e);
+      out.push(item);
+      if (out.length >= limit) break;
+    }
+    return out;
+  }
+
+  /**
+   * 「同一作品·其他模块」专用：这一组要展示的那一份**天然与当前条目同名**
+   * （文言文版《陋室铭》→ 古诗词版《陋室铭》），因此不能套用 `free` 的同名判断，
+   * 只按 id 与组内同名去重。
+   */
+  function pickTwins(list: Entry[], limit: number): Entry[] {
+    const out: Entry[] = [];
+    const titles = new Set<string>();
+    for (const e of list) {
+      if (usedIds.has(e.id)) continue;
+      const k = pageKey(e);
+      if (titles.has(k)) continue;
+      titles.add(k);
+      claim(e);
+      out.push(e);
+      if (out.length >= limit) break;
+    }
+    return out;
+  }
 
   /* 1) 同一作品在其它模块（如《陋室铭》在古诗词与文言文各有一份） */
-  const sameWork = sameSubject.filter(
-    (e) => e.moduleId !== entry.moduleId && myWork.length >= 2 && workKey(e) === myWork,
+  const sameWork = pickTwins(
+    sameSubject.filter(
+      (e) => e.moduleId !== entry.moduleId && myWork.length >= 2 && workKey(e) === myWork,
+    ),
+    3,
   );
   if (sameWork.length) {
-    sameWork.forEach((e) => taken.add(e.id));
     groups.push({
       kind: '同一作品·其他模块',
       hint: '同一篇文章在别的模块还有一份，角度不同，可以对着看',
@@ -282,15 +378,19 @@ export function supplementsOf(entry: Entry, pool: Entry[]): SupplementGroup[] {
     });
   }
 
-  /* 2) 同作者的其他作品（跨模块：文与诗一起看） */
-  const sameAuthor = sameSubject
-    .filter((e) => !taken.has(e.id) && myAuthor && realAuthor(e) === myAuthor)
-    .slice(0, 4);
+  /* 2) 同作者的其他作品（跨模块：文与诗一起看）。以书名作作者的条目走「同一出处」，措辞更准确。 */
+  const sameAuthor = pick(
+    sameSubject.filter((e) => myAuthor && realAuthor(e) === myAuthor),
+    (e) => e,
+    4,
+  );
   if (sameAuthor.length) {
-    sameAuthor.forEach((e) => taken.add(e.id));
+    const fromBook = myAuthor.startsWith('《');
     groups.push({
-      kind: `同作者·${myAuthor}`,
-      hint: '同一作者的其它作品，放在一起能看出风格与思想的脉络',
+      kind: authorGroupKind(myAuthor),
+      hint: fromBook
+        ? '出自同一部作品的其它篇目，放在一起能看出这部书的整体面貌'
+        : '同一作者的其它作品，放在一起能看出风格与思想的脉络',
       items: sameAuthor.map((e) => ({ entry: e, reason: e.subtitle || '同一作者' })),
     });
   }
@@ -298,19 +398,21 @@ export function supplementsOf(entry: Entry, pool: Entry[]): SupplementGroup[] {
   /* 3) 同一考点：只认「有区分度」的共享知识点。
         像「实词」「主旨」这种几乎人人都有的标签权重极低，
         必须靠稀有标签（如「托物言志」「宾语前置」）才够门槛。 */
-  const samePoint = sameSubject
-    .filter((e) => !taken.has(e.id))
-    .map((e) => {
-      const shared = entryTags(e).filter((t) => myTags.includes(t));
-      const score = shared.reduce((a, t) => a + 1 / (freq.get(t) ?? 1), 0);
-      const rare = shared.filter((t) => (freq.get(t) ?? 1) <= 8);
-      return { entry: e, shared, rare, score };
-    })
-    .filter((x) => x.shared.length >= 2 && x.rare.length >= 1 && x.score >= MIN_POINT_SCORE)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 4);
+  const samePoint = pick(
+    sameSubject
+      .map((e) => {
+        const shared = entryTags(e).filter((t) => myTags.includes(t));
+        const score = shared.reduce((a, t) => a + 1 / (freq.get(t) ?? 1), 0);
+        const rare = shared.filter((t) => (freq.get(t) ?? 1) <= 8);
+        return { entry: e, shared, rare, score };
+      })
+      .filter((x) => x.shared.length >= 2 && x.rare.length >= 1 && x.score >= MIN_POINT_SCORE)
+      .sort((a, b) => b.score - a.score),
+    (x) => x.entry,
+    4,
+  );
   if (samePoint.length) {
-    samePoint.forEach((x) => taken.add(x.entry.id));
+    samePoint.forEach((x) => claim(x.entry));
     // 取这批条目共同命中的**最稀有**标签，作为「专项训练」的入口
     const allShared = new Set<string>();
     for (const x of samePoint) for (const t of x.rare) allShared.add(t);
@@ -331,16 +433,18 @@ export function supplementsOf(entry: Entry, pool: Entry[]): SupplementGroup[] {
   }
 
   /* 4) 文中出现的字词 / 成语（本篇正文里能找到的字词条目） */
-  const vocabHits = pool
-    .filter((e) => e.moduleId === 'vocab' && !taken.has(e.id))
-    .map((e) => {
-      const term = (e.data as { term?: string }).term ?? '';
-      return { entry: e, term };
-    })
-    .filter((x) => x.term.length >= 2 && text.includes(x.term.toLowerCase()))
-    .slice(0, 5);
+  const vocabHits = pick(
+    pool
+      .filter((e) => e.moduleId === 'vocab')
+      .map((e) => {
+        const term = (e.data as { term?: string }).term ?? '';
+        return { entry: e, term };
+      })
+      .filter((x) => x.term.length >= 2 && text.includes(x.term.toLowerCase())),
+    (x) => x.entry,
+    5,
+  );
   if (vocabHits.length) {
-    vocabHits.forEach((x) => taken.add(x.entry.id));
     groups.push({
       kind: '本篇涉及的字词',
       hint: '这一篇正文里出现的字词/成语，顺手把释义补上',
@@ -348,28 +452,55 @@ export function supplementsOf(entry: Entry, pool: Entry[]): SupplementGroup[] {
     });
   }
 
-  /* 5) 相关文学常识（作家作品、名著等）：只在标题与必记要点里匹配，
-        避免正文顺带提一句就牵连进来 */
-  const litHits = pool
-    .filter((e) => e.moduleId === 'literature' && !taken.has(e.id))
-    .filter((e) => {
-      const t = narrowText(e);
-      if (myAuthor.length >= 2 && t.includes(myAuthor.toLowerCase())) return true;
-      if (myWork.length >= 2 && t.includes(myWork.toLowerCase())) return true;
-      return false;
-    })
-    .slice(0, 3);
+  /* 5) 相关文学常识（作家作品、名著、文体常识）：只在标题与必记要点里匹配，
+        避免正文顺带提一句就牵连进来。
+        优先级：名字命中标题 > 名字命中要点 > 文体命中标题。 */
+  const litKeys = [
+    ...authorKeys(entry),
+    ...(myWork.length >= 2 ? [myWork.toLowerCase()] : []),
+  ];
+  /**
+   * 文体键：只有明确列出的文体名才算，**且只与「文学体裁」类条目的标题比对**。
+   *
+   * 不做成「标签里长度 ≥2 就用」的通用规则，是因为古诗文的主题标签里也有「叙事」「写人」
+   * 这类词，会误勾到《散文：叙事、抒情与哲理》；也不拿单字的「诗」「词」「曲」「文」做
+   * 子串匹配，否则「唐诗三百首」「骈文与赋」都会被勾进来。
+   * 有了这一条，现代文阅读的每一篇才能补上对应文体常识（如小说的三要素）。
+   */
+  const GENRE_WORDS = new Set([
+    '记叙文', '说明文', '议论文', '散文', '小说', '戏剧', '诗歌', '现代诗',
+    '文言文', '非连续性文本', '新闻', '寓言', '童话', '传记',
+  ]);
+  const genreKeys = entry.tags.filter((t) => GENRE_WORDS.has(t)).map((t) => t.toLowerCase());
+  const litHits = pick(
+    pool
+      .filter((e) => e.moduleId === 'literature')
+      .map((e): { entry: Entry; score: number } | null => {
+        const t = narrowText(e);
+        const title = e.title.toLowerCase();
+        const nameInTitle = litKeys.find((k) => title.includes(k));
+        const nameInPoints = litKeys.find((k) => t.includes(k));
+        // 文体常识必须是「文学体裁」类条目，否则《西游记——神话小说》也会被「小说」勾中
+        const genreInTitle =
+          e.data.category === '文学体裁' && genreKeys.some((k) => title.includes(k));
+        const score = nameInTitle ? 3 : nameInPoints ? 2 : genreInTitle ? 2.5 : 0;
+        return score ? { entry: e as Entry, score } : null;
+      })
+      .filter((x): x is { entry: Entry; score: number } => x !== null)
+      .sort((a, b) => b.score - a.score),
+    (x) => x.entry,
+    3,
+  );
   if (litHits.length) {
-    litHits.forEach((e) => taken.add(e.id));
     groups.push({
       kind: '相关文学常识',
       hint: '和这篇有关的作家作品、体裁或文化常识',
-      items: litHits.map((e) => ({ entry: e, reason: e.subtitle || '相关常识' })),
+      items: litHits.map((x) => ({ entry: x.entry, reason: x.entry.subtitle || '相关常识' })),
     });
   }
 
   /* 6) 同类作品（主题 / 意象 / 作者），沿用原有横向比较逻辑 */
-  const similar = relatedEntries(entry, pool, 4).filter((r) => !taken.has(r.entry.id));
+  const similar = pick(relatedEntries(entry, pool, 6), (r) => r.entry, 4);
   if (similar.length) {
     groups.push({
       kind: '同类作品·横向比较',

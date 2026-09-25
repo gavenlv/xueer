@@ -30,6 +30,8 @@ export default function PracticePage() {
   const grade: GradeId | 'all' = gradeParam ?? studyGrade;
   const countParam = Number(search.get('count') ?? '');
   const idsParam = search.get('ids');
+  /** 古诗词考点专项：只默写这几首（由「中考考点」页传入篇目 id） */
+  const poemsParam = search.get('poems');
   const typeParam = (search.get('type') as QuizQuestion['type'] | null) ?? undefined;
   /** 中考考点专项：只出带该知识点标签的题 */
   const tagParam = search.get('tag') ?? undefined;
@@ -52,12 +54,18 @@ export default function PracticePage() {
 
     // 2) 古诗文：用逐句默写组卷（古诗词本身没有预置题目）
     if (mid === 'poems') {
+      const chosen = poemsParam
+        ? new Set(poemsParam.split(',').filter(Boolean))
+        : undefined;
       const poems = itemId
         ? allPoems.filter((p) => p.id === itemId)
-        : allPoems.filter((p) => grade === 'all' || p.grade === grade);
+        : chosen
+          ? allPoems.filter((p) => chosen.has(p.id))
+          : allPoems.filter((p) => grade === 'all' || p.grade === grade);
       const recite: QuizItem[] = [];
       for (const p of poems) recite.push(...makeReciteQuestions(p.lines, p.id, p.title));
-      return shuffle(recite).slice(0, count ?? DEFAULT_COUNT.poems);
+      // 考点专项按「篇」出题，每首至少留够题量；随机练习仍按 count 截断
+      return chosen ? recite : shuffle(recite).slice(0, count ?? DEFAULT_COUNT.poems);
     }
 
     // 3) 单条内容练习
@@ -73,12 +81,14 @@ export default function PracticePage() {
       onlyType: typeParam,
       onlyTag: tagParam,
     });
-  }, [moduleId, itemId, grade, countParam, idsParam, typeParam, tagParam]);
+  }, [moduleId, itemId, grade, countParam, idsParam, typeParam, tagParam, poemsParam]);
 
   const backTo = itemId ? `/s/chinese/${moduleId}/${itemId}` : `/s/chinese/${moduleId}`;
   const title = tagParam
     ? `考点专项：${tagParam}`
-    : typeParam === 'short'
+    : poemsParam
+      ? '默写专项'
+      : typeParam === 'short'
       ? '广州中考 · 整本书阅读专项'
       : itemId
         ? '专项练习'

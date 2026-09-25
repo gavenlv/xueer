@@ -34,6 +34,8 @@ const routes: string[] = [
   '/s/math/nonexistent',
   `/practice/poems/${allPoems[0]?.id ?? ''}`,
   '/practice/poems?grade=8b',
+  // 古诗词考点专项：按篇目 id 组卷默写（中考考点页的「默写这 N 首」）
+  `/practice/poems?poems=${allPoems.slice(0, 3).map((p) => p.id).join(',')}`,
   '/practice/vocab?grade=9a',
   // 广州中考「整本书阅读」专项：只出简答题，覆盖简答题渲染路径
   '/practice/literature?type=short&grade=all',
@@ -214,6 +216,37 @@ if (!progressTarget) {
       .join('、') || '全部分组到位'}）`,
   );
   if (!suppOk) failed += 1;
+
+  /* ------------- 接线检查：古诗词考点必须出现在中考考点页 ------------- */
+
+  /**
+   * 古诗词不预置题目，走的是「主题/意象/作者」聚类这一套考点。
+   * 只跑路由渲染看不出这一块有没有接上，所以直接断言考点页渲染出了
+   * 古诗词分区与「默写这 N 首」的按篇目组卷链接。
+   */
+  const examHtml = renderToString(
+    <MemoryRouter initialEntries={['/exam']}>
+      <StudyProvider>
+        <App />
+      </StudyProvider>
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+
+  const examChecks: [string, boolean][] = [
+    ['古诗词考点分区', examHtml.includes('古诗词背诵与默写')],
+    ['按篇目组卷链接', /href="\/practice\/poems\?poems=[^"]+"/.test(examHtml)],
+    ['主题类考点', examHtml.includes('主题·')],
+    ['意象类考点', examHtml.includes('意象·')],
+    ['作者类考点', examHtml.includes('作者·')],
+  ];
+  const examOk = examChecks.every(([, ok]) => ok);
+  console.log(
+    `  ${examOk ? '✅' : '❌'} 接线检查：古诗词考点（${examChecks
+      .filter(([, ok]) => !ok)
+      .map(([n]) => n)
+      .join('、') || '五类断言全通过'}）`,
+  );
+  if (!examOk) failed += 1;
 }
 
 if (failed) {
