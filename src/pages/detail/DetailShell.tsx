@@ -170,7 +170,8 @@ export function DetailShell({
       <RelatedList entry={entry} />
 
       {/* 学一补多：同一作品·其他模块 / 同作者 / 同一考点 / 本篇字词 / 文学常识 */}
-      <SupplementList entry={entry} />
+      {/* key 绑定条目 id，切换条目时重挂载，重新默认展开第一组 */}
+      <SupplementList key={entry.id} entry={entry} />
 
       <div className="row row--wrap">
         <Link className="btn" to={backTo}>

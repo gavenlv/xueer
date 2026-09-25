@@ -12,6 +12,7 @@ import { StudyProvider } from '../src/store/StudyContext';
 import { allEntries } from '../src/data';
 import { allPoems } from '../src/data/chinese';
 import { SUBJECTS } from '../src/data/subjects';
+import { supplementsOf } from '../src/lib/relations';
 
 /** 取某模块第一条内容的 id，用于详情页与单篇练习 */
 function firstId(moduleId: string): string {
@@ -164,7 +165,7 @@ if (!progressTarget) {
   /**
    * `supplementsOf` 关联规则写在 lib 里，`SupplementList` 负责渲染。
    * 只跑路由渲染无法发现「组件没接进 DetailShell」这类漏接，
-   * 所以这里直接断言《陋室铭》详情页真的出现了跨模块分组与考点专项入口。
+   * 所以这里直接断言《陋室铭》详情页真的出现了跨模块分组与跨模块链接。
    */
   const suppHtml = renderToString(
     <MemoryRouter initialEntries={['/s/chinese/classical/c-loushiming']}>
@@ -177,10 +178,34 @@ if (!progressTarget) {
   const suppChecks: [string, boolean][] = [
     ['学一补多卡片', suppHtml.includes('学一补多')],
     ['同一作品·其他模块分组', suppHtml.includes('同一作品·其他模块')],
+    ['同作者分组', suppHtml.includes('同作者·刘禹锡')],
     ['同一考点分组', suppHtml.includes('同一考点')],
     ['跨模块指向古诗词模块的《陋室铭》', suppHtml.includes('/s/chinese/poems/p7b-lou-shi-ming')],
-    ['考点专项练习入口', /href="\/practice\/classical\?tag=[^"]+"/.test(suppHtml)],
   ];
+
+  /**
+   * 分组默认只展开第一组，因此「考点专项」按钮不一定在 HTML 里。
+   * 这里挑一个**第一组就带 action** 的条目，专门验证按钮真的渲染成了链接。
+   */
+  const actionTarget = allEntries.find(
+    (e) => e.moduleId !== 'poems' && supplementsOf(e, allEntries)[0]?.action,
+  );
+  if (!actionTarget) {
+    suppChecks.push(['存在带考点专项入口的条目', false]);
+  } else {
+    const actionHtml = renderToString(
+      <MemoryRouter initialEntries={[`/s/chinese/${actionTarget.moduleId}/${actionTarget.id}`]}>
+        <StudyProvider>
+          <App />
+        </StudyProvider>
+      </MemoryRouter>,
+    ).replace(/<!--[\s\S]*?-->/g, '');
+    suppChecks.push([
+      `考点专项入口（${actionTarget.title}）`,
+      actionHtml.includes(`/practice/${actionTarget.moduleId}?tag=`),
+    ]);
+  }
+
   const suppOk = suppChecks.every(([, ok]) => ok);
   console.log(
     `  ${suppOk ? '✅' : '❌'} 接线检查：学一补多（${suppChecks
