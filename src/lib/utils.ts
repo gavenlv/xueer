@@ -95,8 +95,13 @@ function toHalfWidth(s: string): string {
 
 /**
  * 归一化填空答案。
- * `loose` 去掉空白与中英文标点（默写只看字对不对）；
+ * `loose` 去掉空白与中英文标点（默写只看字对不对），并**统一小写**；
  * `strict` 只统一符号写法，保留有语义的标点。
+ *
+ * 为什么要统一小写：英语的填空题（完成句子、语篇填空）答案大多是普通单词，
+ * 学生把句首的 `enough` 打成 `Enough` 不该算错。中文没有大小写，这条对语文判分毫无影响。
+ * 在加上这一条之前，英语内容的作者只能把答案写成 `enough|Enough` 这种列举，
+ * 既容易漏，也让数据膨胀。
  */
 export function normalizeAnswer(s: string, mode: AnswerMode = 'loose'): string {
   if (mode === 'strict') {
@@ -119,6 +124,7 @@ export function normalizeAnswer(s: string, mode: AnswerMode = 'loose'): string {
   return s
     .replace(/[\s\u3000]/g, '')
     .replace(/[，。、；：？！“”‘’"'（）〈〉《》【】…—·,.;:?!()<>[\]{}~`\-_/\\|]/g, '')
+    .toLowerCase()
     .trim();
 }
 

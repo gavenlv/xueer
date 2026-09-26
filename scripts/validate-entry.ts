@@ -978,6 +978,12 @@ const fillCases: [input: string, answer: string, expect: boolean, note: string][
   ['彷徨', '呐喊|《呐喊》', false, '答错必须判错'],
   ['', '呐喊', false, '空作答必须判错'],
   ['   ', '呐喊', false, '纯空白必须判错'],
+  // —— 英语填空题：大小写不该算错（中文没有大小写，这几条同时也是回归保护）——
+  ['Enough', 'enough', true, '英语填空首字母大写应判对'],
+  ['ENOUGH', 'enough', true, '全大写应判对'],
+  ['has been', 'hasbeen', true, '英语填空空格容错'],
+  ['enough', 'enough|Enough', true, '旧写法（列举大小写）仍然有效'],
+  ['enoug', 'enough', false, '英语拼错必须判错'],
 ];
 
 /**
