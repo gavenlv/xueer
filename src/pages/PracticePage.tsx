@@ -52,7 +52,10 @@ export default function PracticePage() {
       const ids = idsParam.split(',').filter(Boolean);
       if (!ids.length) return [];
       const pool = questionsOfModule(mid);
-      return buildModuleQuiz(pool, { onlyIds: ids, shuffleQuestions: false, shuffleOptions: false });
+      // 错题重做不再传 shuffleOptions/shuffleQuestions: false——QuizRunner 拿到题目后
+      // 会无条件重洗（shuffle + permuteOptions），在这里关掉洗牌到不了学生眼前，
+      // 只会让人以为「错题是按原顺序出的」。要改这个行为得动 QuizRunner。
+      return buildModuleQuiz(pool, { onlyIds: ids });
     }
 
     // 2) 古诗文：用逐句默写组卷（古诗词本身没有预置题目）

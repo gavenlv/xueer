@@ -21,9 +21,16 @@ export function permuteOptions(q: QuizQuestion): QuizQuestion {
 export interface BuildQuizOptions {
   /** 抽题数量，默认全部 */
   count?: number;
-  /** 是否打乱选项，默认 true */
+  /**
+   * 是否打乱选项，默认 true。
+   *
+   * ⚠️ 只影响**本函数返回的初始顺序**：练习页把题目交给 `QuizRunner` 后，
+   * 后者会无条件再洗一次（`shuffle` + `permuteOptions`），所以传 `false` 到不了学生眼前。
+   * 错题重做曾传 `false` 想「按原顺序做」，实际无效，现已去掉那个参数。
+   * 真要保留原序，得让 `QuizRunner` 支持关闭洗牌，而不是在这里关。
+   */
   shuffleOptions?: boolean;
-  /** 是否打乱题目顺序，默认 true */
+  /** 是否打乱题目顺序，默认 true（同上：QuizRunner 还会再洗一次） */
   shuffleQuestions?: boolean;
   /** 只出这些题目 id（如错题重做） */
   onlyIds?: string[];
