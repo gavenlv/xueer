@@ -1415,6 +1415,35 @@ for (const theme of WRITING_THEMES) {
   }
 }
 
+/**
+ * 范文标题不得重复（跨文件、跨主题都算）。
+ *
+ * 这条检查来自一次真实事故：新写的「文化传承」组里有一篇《爷爷的刨子》，
+ * 而旧范文库里**同一个主题**早有一篇同题同题材的《爷爷的刨子》——两批内容由不同人
+ * 分批撰写，谁都没看过对方的稿子。逐篇看是看不出来的，只有把全库标题摊在一起才发现。
+ * （另一处「同主题同物件」的重复——两篇都写自行车——标题不同，机器抓不住，
+ * 那次靠人工核对主题与题材发现，也一并改掉了。）
+ */
+const titleSeen = new Map<string, string>();
+for (const e of sampleLessons) {
+  for (const ex of (e.data as WritingLesson).examples ?? []) {
+    if (sampleLength(ex.text) < EXAM_MIN_WORDS) continue;
+    // 标题形如「范文：爷爷的刨子」「范文一：爷爷的刨子」——去掉前缀与书名号后只比篇名
+    const name = ex.title
+      .replace(/^范文[一二三四五六七八九十]?\s*[：:]\s*/, '')
+      .replace(/^片段对照\s*[：:]\s*/, '')
+      .replace(/[《》\s]/g, '')
+      .trim();
+    const prev = titleSeen.get(name);
+    if (prev) {
+      sampleBad += 1;
+      err(`[作文范文] 范文标题重复：「${name}」同时出现在 ${prev} 与 ${e.id}`);
+    } else {
+      titleSeen.set(name, e.id);
+    }
+  }
+}
+
 const fullSampleTotal = [...themeStat.values()].reduce((n, s) => n + s.samples, 0);
 console.log(
   `  中考作文范文      ${WRITING_THEMES.length} 个主题 / ${fullSampleTotal} 篇完整例文` +
