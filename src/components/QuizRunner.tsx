@@ -20,6 +20,7 @@ import {
 import { permuteOptions } from '../lib/quiz';
 import { ProgressBar, Tag } from './common';
 import { RichText } from './RichText';
+import { QuizLearnLinks } from './QuizLearnLinks';
 
 interface Record0 {
   user: string;
@@ -278,6 +279,8 @@ export function QuizRunner({
                   <div className="small muted" style={{ marginTop: 8, lineHeight: 1.75 }}>
                     <RichText text={q.explanation} />
                   </div>
+                  {/* 错题最该做的是回去读一遍：给知识点与关联知识的入口 */}
+                  <QuizLearnLinks item={q} className="learn-back--review" />
                 </div>
               );
             })}
@@ -515,6 +518,9 @@ export function QuizRunner({
             ) : null}
           </div>
         ) : null}
+
+        {/* 答完一题就能回到知识点：这是「练了不会」到「练了就懂」的关键一跳 */}
+        {graded ? <QuizLearnLinks item={current} className="learn-back--quiz" /> : null}
 
         {graded ? (
           <div style={{ marginTop: 16 }}>

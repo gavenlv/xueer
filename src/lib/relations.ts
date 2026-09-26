@@ -14,44 +14,24 @@
  *
  * 全部由既有数据推导，不额外维护关联表。降噪规则见各自的函数注释——
  * 两套规则的共同底线是：**没有区分度的标签不能作为关联依据**。
+ *
+ * ## 输入是「轻量节点」而不是 `Entry`
+ *
+ * 规则只依赖 `Rel`（见 `lib/relNode.ts`）里的少数几个字段：标签、作者、意象、
+ * 题目考点、词条名、文学常识匹配文本。这样**未加载的模块也能参与关联**——
+ * 学《陋室铭》时补上古诗词版的同一篇、词语模块的词条、文学常识条目都不必先把
+ * 那三个模块下载下来。详见 `lib/relNode.ts` 的文件头说明。
  */
 
-import type { Entry } from '../types';
-import { searchTextOf } from './searchText';
+import type { Rel } from './relNode';
 
-/** 初中古诗文常见意象词表（用于从诗句中识别意象） */
-const IMAGERY: { name: string; words: string[] }[] = [
-  { name: '月', words: ['明月', '月明', '月光', '月如钩', '月色', '一轮月', '月下', '秋月', '霜月'] },
-  { name: '杨柳', words: ['杨柳', '柳絮', '折柳', '柳色', '垂柳'] },
-  { name: '鸿雁', words: ['鸿雁', '雁', '归雁', '孤鸿'] },
-  { name: '酒', words: ['酒', '樽', '杯', '觞'] },
-  { name: '菊', words: ['菊', '黄花'] },
-  { name: '梅', words: ['梅'] },
-  { name: '莲', words: ['莲', '荷', '芙蓉', '芙蕖'] },
-  { name: '流水', words: ['流水', '江水', '长江', '东流', '水流'] },
-  { name: '夕阳', words: ['夕阳', '落日', '斜阳', '日暮', '残阳', '黄昏'] },
-  { name: '羌笛琵琶', words: ['羌笛', '琵琶', '胡琴', '芦管', '管弦'] },
-  { name: '孤舟', words: ['孤舟', '扁舟', '孤帆', '行舟'] },
-  { name: '秋风', words: ['秋风', '西风', '悲风'] },
-  { name: '雨雪', words: ['雪', '雨', '霏霏', '纷纷'] },
-  { name: '杜鹃', words: ['子规', '杜鹃', '鹧鸪', '猿啼', '猿鸣'] },
-  { name: '云', words: ['白云', '浮云', '孤云', '云海'] },
-  { name: '草木', words: ['草木', '芳草', '青草', '绿树', '树木'] },
-];
-
-/** 从作品里识别出的意象 */
-export function imageryOf(entry: Entry): string[] {
-  if (entry.moduleId !== 'poems') return [];
-  const text = (entry.data.lines ?? []).join('');
-  const hit: string[] = [];
-  for (const { name, words } of IMAGERY) {
-    if (words.some((w) => text.includes(w))) hit.push(name);
-  }
-  return hit;
+/** 从内容里识别出的意象（`Rel.imagery` 由 `relNode` 统一算出，两条加载路径一致） */
+export function imageryOf(rel: Rel): string[] {
+  return rel.imagery;
 }
 
 export interface RelatedItem {
-  entry: Entry;
+  entry: Rel;
   /** 关联理由，直接显示给学生 */
   reason: string;
   /** 关联强度，用于排序 */
@@ -65,7 +45,7 @@ const NON_THEME = new Set([
   '通假字', '古今异义', '词类活用', '一词多义', '特殊句式',
 ]);
 
-function themeTagsOf(entry: Entry): string[] {
+function themeTagsOf(entry: Rel): string[] {
   return entry.tags.filter((t) => !NON_THEME.has(t));
 }
 
@@ -75,7 +55,7 @@ function themeTagsOf(entry: Entry): string[] {
  * 与 `themeTagsOf` 的区别是额外排掉「抒情」「写景」这类几乎人人都有的宽泛词——
  * 用它们聚类会得到一个「包含 80 首诗」的伪考点。考点页按主题聚类时用这个。
  */
-export function examThemesOf(entry: Entry): string[] {
+export function examThemesOf(entry: Rel): string[] {
   if (entry.moduleId !== 'poems') return [];
   return entry.tags.filter((t) => !NON_THEME.has(t) && !VAGUE_THEMES.has(t));
 }
@@ -92,7 +72,7 @@ const VAGUE_THEMES = new Set([
   '抒情', '写景', '言志', '叙事', '议论', '说明', '咏物', '哲理', '感情', '生活', '写人',
 ]);
 
-function themeFrequency(pool: Entry[]): Map<string, number> {
+function themeFrequency(pool: Rel[]): Map<string, number> {
   const freq = new Map<string, number>();
   for (const e of pool) {
     for (const t of themeTagsOf(e)) freq.set(t, (freq.get(t) ?? 0) + 1);
@@ -107,8 +87,8 @@ function themeFrequency(pool: Entry[]): Map<string, number> {
  * 否则会出现「唐诗因为都『抒情』而关联到现代诗」这种没有教学价值的推荐。
  */
 export function relatedEntries(
-  entry: Entry,
-  pool: Entry[],
+  entry: Rel,
+  pool: Rel[],
   limit = 6,
 ): RelatedItem[] {
   const out: RelatedItem[] = [];
@@ -163,10 +143,8 @@ export function relatedEntries(
     .slice(0, limit);
 }
 
-function authorOf(entry: Entry): string {
-  if (entry.moduleId === 'poems') return entry.data.author ?? '';
-  if (entry.moduleId === 'classical') return entry.data.author ?? '';
-  return '';
+function authorOf(entry: Rel): string {
+  return entry.author;
 }
 
 /**
@@ -178,7 +156,7 @@ function authorOf(entry: Entry): string {
  */
 const PLACEHOLDER_AUTHORS = new Set(['佚名', '无名氏', '不详']);
 
-function realAuthor(entry: Entry): string {
+function realAuthor(entry: Rel): string {
   const a = authorOf(entry);
   if (a.length < 2) return '';
   if (PLACEHOLDER_AUTHORS.has(a)) return '';
@@ -194,7 +172,7 @@ function authorGroupKind(author: string): string {
  * 文学常识匹配用的关键词：以书名作作者的条目（如《诗经》）要去掉书名号再匹配，
  * 因为文学常识条目里通常写作「《诗经》是我国第一部诗歌总集」。
  */
-function authorKeys(entry: Entry): string[] {
+function authorKeys(entry: Rel): string[] {
   const a = realAuthor(entry);
   if (!a) return [];
   const inner = a.replace(/^《|》$/g, '').trim();
@@ -208,6 +186,71 @@ function subjectOf(moduleId: string): string {
 }
 
 /* ------------------------------------------------------------------ */
+/* 相关文学常识：命中关系在生成阶段算好，运行期查表                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 文体键：只有明确列出的文体名才算，**且只与「文学体裁」类条目的标题比对**。
+ *
+ * 不做成「标签里长度 ≥2 就用」的通用规则，是因为古诗文的主题标签里也有「叙事」「写人」
+ * 这类词，会误勾到《散文：叙事、抒情与哲理》；也不拿单字的「诗」「词」「曲」「文」做
+ * 子串匹配，否则「唐诗三百首」「骈文与赋」都会被勾进来。
+ * 有了这一条，现代文阅读的每一篇才能补上对应文体常识（如小说的三条要素）。
+ */
+const GENRE_WORDS = new Set([
+  '记叙文', '说明文', '议论文', '散文', '小说', '戏剧', '诗歌', '现代诗',
+  '文言文', '非连续性文本', '新闻', '寓言', '童话', '传记',
+]);
+
+/**
+ * 一条内容「命中」一条文学常识的强度：0 表示无关。
+ *
+ * 三个信号，优先级从高到低（分数与前缀优先级保持一致，不要调换三元表达式顺序）：
+ *   3  名字（作者 / 篇名）命中**标题**——如《陋室铭》→《刘禹锡》；
+ *   2  名字命中**必记要点**——如《咏雪》→《岑参》（岑参条目要点里举了咏雪名篇）；
+ *   2.5 文体命中标题——且必须是「文学体裁」类条目，否则《西游记——神话小说》
+ *       也会被「小说」勾中。
+ *
+ * `narrowText` 是文学常识条目的窄文本（只含篇名/作者名/体裁名，不含正文），
+ * 若拿整篇正文去匹配，任何一处顺带提及都会造成假关联。
+ */
+export function litScoreFor(source: Rel, lit: Rel, narrowText: string): number {
+  const keys = [
+    ...authorKeys(source),
+    ...(workKey(source).length >= 2 ? [workKey(source).toLowerCase()] : []),
+  ];
+  const title = lit.title.toLowerCase();
+  const nameInTitle = keys.some((k) => title.includes(k));
+  const nameInPoints = keys.some((k) => narrowText.includes(k));
+  const genreInTitle =
+    lit.category === '文学体裁' &&
+    source.tags.some((t) => GENRE_WORDS.has(t) && title.includes(t.toLowerCase()));
+  return nameInTitle ? 3 : nameInPoints ? 2 : genreInTitle ? 2.5 : 0;
+}
+
+/**
+ * 文学常识的命中表：哪些条目命中了它、命中多强。
+ *
+ * 由 `pnpm gen` 拿**全量数据**算一次存进清单（`EntryMeta.matchFrom`），页面只查表；
+ * 校验脚本用同样这两个函数在全量池上重算一遍并逐条比对，所以清单不会悄悄过期。
+ * `lit.match`（窄匹配文本）只在**全量基线**（`relOfEntryFull`）里有值。
+ */
+export function litMatchIndex(lit: Rel, pool: Rel[]): { id: string; score: number }[] {
+  const out: { id: string; score: number }[] = [];
+  for (const source of pool) {
+    if (source.id === lit.id) continue;
+    const score = litScoreFor(source, lit, lit.match);
+    if (score > 0) out.push({ id: source.id, score });
+  }
+  return out;
+}
+
+/** 查表：某条目命中这条文学常识的强度 */
+function litScoreFrom(lit: Rel, sourceId: string): number {
+  return lit.matchFrom.find((x) => x.id === sourceId)?.score ?? 0;
+}
+
+/* ------------------------------------------------------------------ */
 /* 学一补多：学一篇，顺带补上多个初中知识点                              */
 /* ------------------------------------------------------------------ */
 
@@ -216,13 +259,13 @@ export interface SupplementGroup {
   kind: string;
   /** 这个分组「补什么」，一句话 */
   hint: string;
-  items: { entry: Entry; reason: string }[];
+  items: { entry: Rel; reason: string }[];
   /** 可选的下一步动作（如「把这一批考点连起来做专项训练」） */
   action?: { label: string; to: string };
 }
 
 /** 规范化作品名，用于识别「同一篇作品出现在不同模块」 */
-function workKey(entry: Entry): string {
+function workKey(entry: Rel): string {
   return entry.title
     .replace(/[（(].*?[)）]/g, '')
     .replace(/节选|选段|十二章|二章|三则|一则|其[一二三四五]|·.+$/g, '')
@@ -235,18 +278,16 @@ function workKey(entry: Entry): string {
  * 不能用 `workKey`——它会把「山坡羊·潼关怀古」和「山坡羊·骊山怀古」都压成「山坡羊」，
  * 那是两篇不同的作品。
  */
-function pageKey(entry: Entry): string {
+function pageKey(entry: Rel): string {
   return entry.title
     .replace(/[（(](节选|选段|节录)[)）]/g, '')
     .replace(/[《》\s]/g, '')
     .trim();
 }
 
-/** 该条目的全部题目知识点标签（去重） */
-function entryTags(entry: Entry): string[] {
-  const set = new Set<string>();
-  for (const q of entry.questions) for (const t of q.tags ?? []) set.add(t);
-  return [...set];
+/** 该条目的全部题目知识点标签（去重，由 `relNode` 统一算好） */
+function entryTags(entry: Rel): string[] {
+  return entry.qTags;
 }
 
 /**
@@ -254,7 +295,7 @@ function entryTags(entry: Entry): string[] {
  * 用来算「区分度」——「实词」「主旨」这类几乎每个条目都有的标签
  * 不配作为关联依据，否则任何两篇文言文都能互相关联。
  */
-function tagFrequency(pool: Entry[]): Map<string, number> {
+function tagFrequency(pool: Rel[]): Map<string, number> {
   const freq = new Map<string, number>();
   for (const e of pool) {
     for (const t of entryTags(e)) freq.set(t, (freq.get(t) ?? 0) + 1);
@@ -269,28 +310,8 @@ const MIN_POINT_SCORE = 0.28;
  * 取条目里可用于匹配的正文文本（小写）。
  * `searchTextOf` 含标题、作者、正文与标签，用于「正文里出现的字词」这类匹配。
  */
-function bodyText(entry: Entry): string {
-  return searchTextOf(entry);
-}
-
-/**
- * 只含标题与必记要点的窄文本，用于「相关文学常识」匹配。
- * 若拿整篇 content 去匹配作者名，任何一处顺带提及都会造成假关联。
- */
-function narrowText(entry: Entry): string {
-  if (entry.moduleId !== 'literature') return bodyText(entry);
-  const l = entry.data;
-  return [
-    l.title,
-    l.category,
-    l.book?.name,
-    l.book?.author,
-    l.book?.theme,
-    ...(l.keyPoints ?? []),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
+function bodyText(entry: Rel): string {
+  return entry.searchText;
 }
 
 /**
@@ -300,7 +321,7 @@ function narrowText(entry: Entry): string {
  * 「学这一篇，还能顺带补上哪些别的知识点」——同一作品的其他模块版本、
  * 同作者作品、同一考点的题、文中出现的字词成语、相关文学常识。
  */
-export function supplementsOf(entry: Entry, pool: Entry[]): SupplementGroup[] {
+export function supplementsOf(entry: Rel, pool: Rel[]): SupplementGroup[] {
   const sameSubject = pool.filter((e) => e.id !== entry.id && subjectOf(e.moduleId) === subjectOf(entry.moduleId));
   const text = bodyText(entry);
   const myWork = workKey(entry);
@@ -320,11 +341,11 @@ export function supplementsOf(entry: Entry, pool: Entry[]): SupplementGroup[] {
    */
   const usedIds = new Set<string>([entry.id]);
   const usedTitles = new Set<string>([pageKey(entry)]);
-  const claim = (e: Entry) => {
+  const claim = (e: Rel) => {
     usedIds.add(e.id);
     usedTitles.add(pageKey(e));
   };
-  const free = (e: Entry) => !usedIds.has(e.id) && !usedTitles.has(pageKey(e));
+  const free = (e: Rel) => !usedIds.has(e.id) && !usedTitles.has(pageKey(e));
 
   /**
    * 按给定顺序取出前 `limit` 条**尚未占用**的候选，取一条就占一条。
@@ -332,7 +353,7 @@ export function supplementsOf(entry: Entry, pool: Entry[]): SupplementGroup[] {
    * 不能只用 `filter(free)`：谓词是对「当前」状态求值的，
    * 同一分组里的两条同名作品（如古诗词版与文言文版的《诫子书》）会同时通过过滤。
    */
-  function pick<T>(list: T[], get: (t: T) => Entry, limit: number): T[] {
+  function pick<T>(list: T[], get: (t: T) => Rel, limit: number): T[] {
     const out: T[] = [];
     for (const item of list) {
       const e = get(item);
@@ -349,8 +370,8 @@ export function supplementsOf(entry: Entry, pool: Entry[]): SupplementGroup[] {
    * （文言文版《陋室铭》→ 古诗词版《陋室铭》），因此不能套用 `free` 的同名判断，
    * 只按 id 与组内同名去重。
    */
-  function pickTwins(list: Entry[], limit: number): Entry[] {
-    const out: Entry[] = [];
+  function pickTwins(list: Rel[], limit: number): Rel[] {
+    const out: Rel[] = [];
     const titles = new Set<string>();
     for (const e of list) {
       if (usedIds.has(e.id)) continue;
@@ -437,10 +458,7 @@ export function supplementsOf(entry: Entry, pool: Entry[]): SupplementGroup[] {
   const vocabHits = pick(
     pool
       .filter((e) => e.moduleId === 'vocab')
-      .map((e) => {
-        const term = (e.data as { term?: string }).term ?? '';
-        return { entry: e, term };
-      })
+      .map((e) => ({ entry: e, term: e.term }))
       .filter((x) => x.term.length >= 2 && text.includes(x.term.toLowerCase())),
     (x) => x.entry,
     5,
@@ -453,41 +471,14 @@ export function supplementsOf(entry: Entry, pool: Entry[]): SupplementGroup[] {
     });
   }
 
-  /* 5) 相关文学常识（作家作品、名著、文体常识）：只在标题与必记要点里匹配，
-        避免正文顺带提一句就牵连进来。
-        优先级：名字命中标题 > 名字命中要点 > 文体命中标题。 */
-  const litKeys = [
-    ...authorKeys(entry),
-    ...(myWork.length >= 2 ? [myWork.toLowerCase()] : []),
-  ];
-  /**
-   * 文体键：只有明确列出的文体名才算，**且只与「文学体裁」类条目的标题比对**。
-   *
-   * 不做成「标签里长度 ≥2 就用」的通用规则，是因为古诗文的主题标签里也有「叙事」「写人」
-   * 这类词，会误勾到《散文：叙事、抒情与哲理》；也不拿单字的「诗」「词」「曲」「文」做
-   * 子串匹配，否则「唐诗三百首」「骈文与赋」都会被勾进来。
-   * 有了这一条，现代文阅读的每一篇才能补上对应文体常识（如小说的三要素）。
-   */
-  const GENRE_WORDS = new Set([
-    '记叙文', '说明文', '议论文', '散文', '小说', '戏剧', '诗歌', '现代诗',
-    '文言文', '非连续性文本', '新闻', '寓言', '童话', '传记',
-  ]);
-  const genreKeys = entry.tags.filter((t) => GENRE_WORDS.has(t)).map((t) => t.toLowerCase());
+  /* 5) 相关文学常识（作家作品、名著、文体常识）：命中关系由 `litMatchIndex` 在生成阶段
+        算好（运行期只查表），这里只按分数取前三条。
+        优先级：名字命中标题 > 文体命中标题 > 名字命中要点。 */
   const litHits = pick(
     pool
       .filter((e) => e.moduleId === 'literature')
-      .map((e): { entry: Entry; score: number } | null => {
-        const t = narrowText(e);
-        const title = e.title.toLowerCase();
-        const nameInTitle = litKeys.find((k) => title.includes(k));
-        const nameInPoints = litKeys.find((k) => t.includes(k));
-        // 文体常识必须是「文学体裁」类条目，否则《西游记——神话小说》也会被「小说」勾中
-        const genreInTitle =
-          e.data.category === '文学体裁' && genreKeys.some((k) => title.includes(k));
-        const score = nameInTitle ? 3 : nameInPoints ? 2 : genreInTitle ? 2.5 : 0;
-        return score ? { entry: e as Entry, score } : null;
-      })
-      .filter((x): x is { entry: Entry; score: number } => x !== null)
+      .map((e) => ({ entry: e, score: litScoreFrom(e, entry.id) }))
+      .filter((x) => x.score > 0)
       .sort((a, b) => b.score - a.score),
     (x) => x.entry,
     3,

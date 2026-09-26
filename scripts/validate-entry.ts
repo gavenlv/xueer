@@ -26,7 +26,11 @@ import { lessonMindMap } from '../src/lib/lessonMaps';
 import { searchTextOf } from '../src/lib/searchText';
 import { SUBJECTS } from '../src/data/subjects';
 import { makeReciteQuestions } from '../src/lib/quiz';
-import { relatedEntries, supplementsOf } from '../src/lib/relations';
+import { relatedEntries, supplementsOf, litMatchIndex } from '../src/lib/relations';
+import { relOfEntry, relOfEntryFull, relPool } from '../src/lib/relNode';
+import { speechSegmentsOf } from '../src/lib/entrySpeech';
+import { glossaryOf } from '../src/lib/glossary';
+import { splitSegments } from '../src/components/ReciteTrainer';
 import { answerModeFor, checkFill } from '../src/lib/utils';
 import { applyAnswerToProgress } from '../src/lib/progress';
 import {
@@ -353,9 +357,45 @@ const litInbound = new Map<string, string[]>();
 /** 有「相关文学常识」入边的条目（用于反查「哪些课内作者还没有作家作品条目」） */
 const hasLitLink = new Set<string>();
 
+/**
+ * 两条加载路径的一致性。
+ *
+ * 详情页只加载**当前模块**，跨模块的关联靠生成的轻量清单补位（见 `lib/relNode.ts`）。
+ * 但校验脚本默认 `ensureAll()`，全量数据都在手上——如果直接拿全量池去算，
+ * 「清单少存了一个字段」这类问题在这里永远看不见，学生那边却是分组悄悄变少。
+ *
+ * 所以这里同时跑两条路径并逐条比对：
+ *   - `LIGHT_POOL`：清单骨架 + 已加载条目（**页面上真实走的那条**）
+ *   - `FULL_POOL` ：全部字段从原文现算（文学常识的匹配文本用要点全文，不做抽取）
+ * 结果必须一模一样。
+ */
+const LIGHT_POOL = relPool(allEntries);
+const FULL_POOL = allEntries.map((e) => relOfEntryFull(e));
+/** 全量基线的文学常识命中表：与生成阶段用的是同一对函数（`litScoreFor` / `litMatchIndex`） */
+for (const lit of FULL_POOL) {
+  if (lit.moduleId === 'literature') lit.matchFrom = litMatchIndex(lit, FULL_POOL);
+}
+let suppParity = 0;
+
+/** 分组的可比签名：分组名 + 每条关联的 id 与理由 */
+function groupSignature(groups: { kind: string; items: { entry: { id: string }; reason: string }[] }[]): string {
+  return groups
+    .map((g) => `${g.kind}(${g.items.map((i) => `${i.entry.id}:${i.reason}`).join(',')})`)
+    .join('|');
+}
+
 for (const e of allEntries) {
   const at = `[学一补多] ${e.id}`;
-  const groups = supplementsOf(e, allEntries);
+  const groups = supplementsOf(LIGHT_POOL.find((x) => x.id === e.id)!, LIGHT_POOL);
+  const baseGroups = supplementsOf(FULL_POOL.find((x) => x.id === e.id)!, FULL_POOL);
+  if (groupSignature(groups) !== groupSignature(baseGroups)) {
+    suppParity += 1;
+    err(
+      `${at}: 「只加载当前模块」与「全量数据」算出的关联不一致——` +
+        `轻量清单（src/data/summary.ts）漏了字段，跑 pnpm gen 或补 gen-summary.ts\n` +
+        `    轻量: ${groupSignature(groups)}\n    全量: ${groupSignature(baseGroups)}`,
+    );
+  }
   const seen = new Set<string>([e.id]);
   /**
    * 一页之内同一篇作品（按标题）只能出现一次，跨分组也算重复。
@@ -774,7 +814,8 @@ let relSelfRef = 0;
 let relNoReason = 0;
 let relTotal = 0;
 for (const e of allEntries) {
-  for (const r of relatedEntries(e, allEntries, 6)) {
+  // 同样走「页面上真实用的那条路径」（清单 + 已加载条目），而不是全量数据
+  for (const r of relatedEntries(relOfEntry(e), LIGHT_POOL, 6)) {
     relTotal += 1;
     if (r.entry.id === e.id) {
       relSelfRef += 1;
@@ -1068,12 +1109,103 @@ for (const [note, , detail] of reciteFailures) {
   console.log(`    ❌ ${note}  实际 ${detail}`);
 }
 
+/* --------------- 朗读分段 / 逐词释义 / 小段遮罩 --------------- */
+
+/**
+ * 这三块都是「页面渲染得出来、但可能悄悄缺内容」的功能，因此逐条内容检查：
+ *
+ *   1. **整页朗读**：每条内容都要能拆出段落（没有段落的条目点朗读等于没反应）；
+ *      段落文本必须非空、不含公式（`$…$` 读出来是乱码）；
+ *   2. **逐词释义**：古诗词与文言文的正文里必须真的能匹配到词条，
+ *      否则正文上一条虚线也不会出现，tooltip 形同虚设；
+ *   3. **小段遮罩**：`splitSegments` 切出来的小段拼回去必须等于原句（不能丢字、不能吞标点），
+ *      且每段不超过 6 个汉字——这就是「五言一句正好一段」：按标点切成小句后，
+ *      六字以内的小句自成一段（如「枯藤老树昏鸦」），更长的才按 5 个汉字再断
+ *      （七言断成 5+2）。学生一次只练半句，不必整行一起遮。
+ */
+let speechEmpty = 0;
+let speechBad = 0;
+let speechSegs = 0;
+for (const e of allEntries) {
+  const segs = speechSegmentsOf(e);
+  speechSegs += segs.length;
+  if (!segs.length) {
+    speechEmpty += 1;
+    err(`[朗读] ${e.id}（${e.moduleId}）拆不出任何可朗读段落`);
+    continue;
+  }
+  for (const s of segs) {
+    if (!s.text.trim() || s.text.includes('$')) speechBad += 1;
+  }
+}
+if (speechBad) err(`[朗读] 有 ${speechBad} 段为空或含公式（公式读出来是乱码）`);
+
+/** 正文里真的能标出词条的内容条数（tooltip 有没有实际效果） */
+let glossEntries = 0;
+let glossWords = 0;
+const glossNoHit: string[] = [];
+const glossNoHitByModule = new Map<string, number>();
+for (const e of allEntries) {
+  if (e.moduleId !== 'poems' && e.moduleId !== 'classical') continue;
+  const words = glossaryOf(e);
+  const body =
+    e.moduleId === 'poems'
+      ? (e.data.lines ?? []).join('')
+      : (e.data.paragraphs ?? []).join('');
+  const hit = words.filter((w) => body.includes(w.word));
+  glossWords += hit.length;
+  if (hit.length) glossEntries += 1;
+  else {
+    glossNoHit.push(e.id);
+    glossNoHitByModule.set(e.moduleId, (glossNoHitByModule.get(e.moduleId) ?? 0) + 1);
+  }
+}
+
+let maskBad = 0;
+let maskSegments = 0;
+for (const p of allPoems) {
+  for (const line of p.lines) {
+    const segs = splitSegments(line);
+    maskSegments += segs.length;
+    const joined = segs.join('');
+    if (joined !== line) {
+      maskBad += 1;
+      err(`[小段遮罩] ${p.id}「${line}」切段后拼不回原句：${joined}`);
+    }
+    for (const s of segs) {
+      const hanzi = s.replace(/[^\u4e00-\u9fa5]/g, '').length;
+      if (hanzi > 6) {
+        maskBad += 1;
+        err(`[小段遮罩] ${p.id}「${line}」有一段 ${hanzi} 个汉字（应 ≤6）：${s}`);
+      }
+    }
+  }
+}
+
+console.log(
+  `  朗读与释义        整页朗读 ${speechSegs} 段（${allEntries.length} 条内容，拆不出段落的 ${speechEmpty} 条）`,
+);
+console.log(
+  `      ${'正文可标词条'.padEnd(22)} ${glossEntries} 条内容 / ${glossWords} 个词条命中` +
+    `（${glossNoHit.length} 条一个词都标不出：${[...glossNoHitByModule]
+      .map(([m, n]) => `${m} ${n}`)
+      .join('、') || '无'}）`,
+);
+if (glossNoHit.length) console.log(`      标不出词条的条目：${glossNoHit.slice(0, 8).join('、')}`);
+console.log(
+  `      ${'背诵小段'.padEnd(22)} ${maskSegments} 个小段，异常 ${maskBad} 处`,
+);
+
 console.log(
   `  知识联动         学一补多 ${suppTotal} 条 / 关联学习 ${relTotal} 条`,
 );
 console.log(
   `      ${'自指'.padEnd(22)} ${String(suppSelfRef + relSelfRef).padStart(4)}` +
     `   重复 ${suppDup}   空分组条目 ${suppEmpty}   不对称 ${suppAsym}   缺理由 ${relNoReason}`,
+);
+console.log(
+  `      按需加载一致性      ${allEntries.length} 条逐条比对，` +
+    `「只加载当前模块」与「全量数据」结果不一致 ${suppParity} 条`,
 );
 if (suppEmptyIds.length) {
   console.log(`      补不出内容的条目：${suppEmptyIds.slice(0, 8).join('、')}`);

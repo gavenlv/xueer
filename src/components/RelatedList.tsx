@@ -9,10 +9,15 @@ import type { Entry } from '../types';
 import { allEntries, subjectOfModule } from '../data';
 import { getModuleMeta } from '../data/subjects';
 import { relatedEntries } from '../lib/relations';
+import { relOfEntry, relPool } from '../lib/relNode';
 import { Tag } from './common';
 
 export function RelatedList({ entry, limit = 6 }: { entry: Entry; limit?: number }) {
-  const items = useMemo(() => relatedEntries(entry, allEntries, limit), [entry, limit]);
+  // 池子取全量（未加载的模块由轻量清单补位），否则「同作者、同意象」只能看见本模块。
+  const items = useMemo(
+    () => relatedEntries(relOfEntry(entry), relPool(allEntries), limit),
+    [entry, limit],
+  );
 
   if (!items.length) return null;
 

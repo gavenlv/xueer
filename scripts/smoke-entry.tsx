@@ -9,10 +9,12 @@ import { renderToString } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import App from '../src/App';
 import { StudyProvider } from '../src/store/StudyContext';
-import { allEntries, ensureAll } from '../src/data';
+import { allEntries, ensureAll, entryIndex } from '../src/data';
 import { allPoems } from '../src/data/chinese';
 import { SUBJECTS } from '../src/data/subjects';
+import { QuizLearnLinks } from '../src/components/QuizLearnLinks';
 import { supplementsOf } from '../src/lib/relations';
+import { relOfEntry, relPool } from '../src/lib/relNode';
 import { makeReciteQuestions } from '../src/lib/quiz';
 
 /**
@@ -198,7 +200,7 @@ if (!progressTarget) {
    * 这里挑一个**第一组就带 action** 的条目，专门验证按钮真的渲染成了链接。
    */
   const actionTarget = allEntries.find(
-    (e) => e.moduleId !== 'poems' && supplementsOf(e, allEntries)[0]?.action,
+    (e) => e.moduleId !== 'poems' && supplementsOf(relOfEntry(e), relPool(allEntries))[0]?.action,
   );
   if (!actionTarget) {
     suppChecks.push(['存在带考点专项入口的条目', false]);
@@ -350,6 +352,94 @@ if (!progressTarget) {
       .join('、') || mapChecks.map(([n]) => n).join(' / ')}）`,
   );
   if (!mapOk) failed += 1;
+
+  /* ---------- 接线检查：练习里能跳回知识点（📖 / 🧩 两个入口） ---------- */
+
+  /**
+   * 练习页的「回知识点 / 关联知识」是答完题才出现的（`graded` 为真），
+   * 路由级渲染看不到，所以这里直接把组件拉出来渲染《陋室铭》的一道题：
+   * 必须同时给出「回知识点」链接与「关联知识」按钮，且关联条目里包含跨模块的篇目。
+   */
+  const learnEntry = entryIndex.get('c-loushiming');
+  const learnQuestion = learnEntry?.questions[0];
+  if (!learnEntry || !learnQuestion) {
+    console.log('  ❌ 接线检查：练习回知识点（找不到《陋室铭》的题目）');
+    failed += 1;
+  } else {
+    const learnHtml = renderToString(
+      <MemoryRouter>
+        <QuizLearnLinks
+          item={{
+            ...learnQuestion,
+            sourceId: learnEntry.id,
+            sourceTitle: learnEntry.title,
+            moduleId: learnEntry.moduleId,
+          }}
+        />
+      </MemoryRouter>,
+    ).replace(/<!--[\s\S]*?-->/g, '');
+    const learnChecks: [string, boolean][] = [
+      ['「回知识点」按钮', learnHtml.includes('回知识点') && learnHtml.includes(learnEntry.title)],
+      ['链接指向来源条目详情页', learnHtml.includes(`/s/chinese/${learnEntry.moduleId}/${learnEntry.id}`)],
+      // 关联知识默认收起，按钮本身必须出现（说明 `supplementsOf` 真的取到了分组）
+      ['「关联知识」按钮', /关联知识（\d+）/.test(learnHtml)],
+    ];
+    const learnOk = learnChecks.every(([, ok]) => ok);
+    console.log(
+      `  ${learnOk ? '✅' : '❌'} 接线检查：练习跳回知识点（${learnChecks
+        .filter(([, ok]) => !ok)
+        .map(([n]) => n)
+        .join('、') || '两个入口齐备'}）`,
+    );
+    if (!learnOk) failed += 1;
+  }
+
+  /* ---------- 接线检查：朗读 / 逐词释义 / 小段遮罩（古诗页三件套） ---------- */
+
+  /**
+   * 这三块都「渲染失败也不会报错」：朗读条没接进 shell、正文忘了传词表、
+   * 背诵少一档，页面都照常显示，只是功能没了。所以逐一断言。
+   * 注意朗读条在 Node 里拿不到 `speechSynthesis`，会渲染成「浏览器不支持」的提示卡——
+   * 因此这里断言的是**它出现了**（说明接在了所有模块的详情页上），段落是否正确由
+   * `pnpm validate` 的 `speechSegmentsOf` 逐条检查。
+   */
+  const audioPoem = allPoems.find((p) => (p.lineNotes?.length ?? 0) >= 4) ?? allPoems[0];
+  const audioEntry = entryIndex.get(audioPoem?.id ?? '');
+  const audioHtml = audioEntry
+    ? renderToString(
+        <MemoryRouter initialEntries={[`/s/chinese/poems/${audioEntry.id}`]}>
+          <StudyProvider>
+            <App />
+          </StudyProvider>
+        </MemoryRouter>,
+      ).replace(/<!--[\s\S]*?-->/g, '')
+    : '';
+  const litHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/chinese/literature/l-xiyouji']}>
+      <StudyProvider>
+        <App />
+      </StudyProvider>
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+
+  const audioChecks: [string, boolean][] = [
+    ['古诗词详情页有朗读条', audioHtml.includes('朗读')],
+    ['整页朗读接在所有模块（文学常识页也有）', litHtml.includes('朗读')],
+    // 逐词释义：正文（不只是逐句串讲）里必须出现虚线词
+    [`正文逐词释义（${audioHtml.split('tip-word').length - 1} 个词）`, audioHtml.split('tip-word').length - 1 >= 3],
+    [
+      '背诵四档（通读/首字/逐段/全遮）',
+      ['通读全文', '首字提示', '逐段遮罩', '完全遮住'].every((s) => audioHtml.includes(s)),
+    ],
+  ];
+  const audioOk = audioChecks.every(([, ok]) => ok);
+  console.log(
+    `  ${audioOk ? '✅' : '❌'} 接线检查：朗读·释义·小段遮罩（${audioChecks
+      .filter(([, ok]) => !ok)
+      .map(([n]) => n)
+      .join('、') || '五类断言全通过'}）`,
+  );
+  if (!audioOk) failed += 1;
 }
 
 if (failed) {

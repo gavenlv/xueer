@@ -1798,8 +1798,177 @@ button.mm-label:hover {
   flex-shrink: 0;
 }
 
-/* ------------------------------- 拓展阅读 ------------------------------- */
-.ext-list {
+/* ------------------- 朗读（语音）与释义提示（tooltip） ------------------- */
+
+/* 小喇叭按钮：贴着句子放，尽量不打扰阅读 */
+.speak-btn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-full);
+  display: inline-grid;
+  place-items: center;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--c-ink-3);
+  background: transparent;
+  border: 1px solid var(--c-line);
+  transition: background 0.16s, color 0.16s, border-color 0.16s;
+}
+
+.speak-btn:hover {
+  background: var(--c-primary-soft);
+  color: var(--c-primary-ink);
+  border-color: var(--c-primary-soft);
+}
+
+/* 需要翻译的词：虚线下划线，悬停/点按弹释义 */
+.tip-word {
+  border-bottom: 1px dashed var(--c-primary);
+  cursor: help;
+  border-radius: 2px 2px 0 0;
+  transition: background 0.14s;
+}
+
+.tip-word:hover,
+.tip-word:focus,
+.tip-word.is-open {
+  background: var(--c-primary-soft);
+  outline: none;
+}
+
+/* 释义气泡：固定定位，不参与文档流，避免被卡片裁掉 */
+.tip-bubble {
+  position: fixed;
+  z-index: 90;
+  transform: translate(-50%, -100%);
+  max-width: min(320px, 86vw);
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  background: rgba(31, 39, 51, 0.95);
+  color: #fff;
+  font-size: 13.5px;
+  line-height: 1.7;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+  animation: fadeIn 0.14s ease-out;
+}
+
+.tip-bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  margin-left: -6px;
+  border: 6px solid transparent;
+  border-top-color: rgba(31, 39, 51, 0.95);
+  border-bottom-width: 0;
+}
+
+/* 朗读控制条与逐句朗读 */
+.speech {
+  border-color: var(--c-primary-soft);
+}
+
+.poem-line__speak {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* 逐段遮罩（背诵用）：每个小段都能单独点住 */
+.seg-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.seg {
+  font-family: var(--font-kai);
+  font-size: 17px;
+  letter-spacing: 0.06em;
+  padding: 5px 10px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-line-2);
+  background: var(--c-surface);
+  transition: background 0.16s, color 0.16s, border-color 0.16s;
+  cursor: pointer;
+}
+
+.seg:hover {
+  border-color: var(--c-primary);
+}
+
+/* 被遮住的小段：用等长的下划线占位，比整行遮住细得多，正好练一「顿」 */
+.seg.is-hidden {
+  color: transparent;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--c-surface-2) 0 6px,
+    var(--c-line) 6px 8px
+  );
+  border-color: var(--c-line);
+  user-select: none;
+}
+
+.seg.is-hidden::selection {
+  background: transparent;
+}
+
+.seg-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+/* --------------------- 练习里的「学回去」入口 --------------------- */
+/* 答完一题后给「回知识点 / 关联知识」两个出口，样式与解析块保持同一套观感 */
+.learn-back {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--c-line);
+}
+
+.learn-back--review {
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.learn-back__caret {
+  margin-left: 5px;
+  font-size: 11px;
+  color: var(--c-ink-3);
+}
+
+.learn-back__list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--c-surface);
+}
+
+.learn-back__list .list-item + .list-item {
+  border-top: 1px solid var(--c-line);
+}
+
+/* 手机端：两个按钮各占一行，避免「回知识点」的长标题把按钮挤变形 */
+@media (max-width: 640px) {
+  .learn-back .row {
+    gap: 8px;
+  }
+
+  .learn-back .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ------------------------------- 拓展阅读 ------------------------------- */.ext-list {
   display: flex;
   flex-direction: column;
   gap: 10px;

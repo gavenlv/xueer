@@ -15,11 +15,20 @@ import type { Entry } from '../types';
 import { allEntries, subjectOfModule } from '../data';
 import { getModuleMeta } from '../data/subjects';
 import { supplementsOf } from '../lib/relations';
+import { relOfEntry, relPool } from '../lib/relNode';
 import { cn } from '../lib/utils';
 import { Tag } from './common';
 
 export function SupplementList({ entry }: { entry: Entry }) {
-  const groups = useMemo(() => supplementsOf(entry, allEntries), [entry]);
+  /**
+   * 内容池是**全量**的：已加载的模块用完整数据，没加载的用轻量清单补齐
+   * （`relPool`），这样「同一作品·其他模块 / 同作者 / 本篇涉及的字词 /
+   * 相关文学常识」这些跨模块分组在只加载了一个模块的详情页上也不会缩水。
+   */
+  const groups = useMemo(
+    () => supplementsOf(relOfEntry(entry), relPool(allEntries)),
+    [entry],
+  );
   /** null 表示「还没动过」：默认只展开第一组，避免详情页末尾一下子铺开十几行 */
   const [picked, setPicked] = useState<string[] | null>(null);
 

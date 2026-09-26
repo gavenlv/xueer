@@ -1,4 +1,4 @@
-/** 古诗词详情：竖排/横排、逐句遮罩背诵、译文注释、赏析与考点 */
+/** 古诗词详情：竖排/横排、逐句遮罩背诵、译文注释、朗读、逐词释义、赏析与考点 */
 
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -7,6 +7,9 @@ import { useStudy } from '../../store/StudyContext';
 import { PoemText } from '../../components/PoemText';
 import { Tag } from '../../components/common';
 import { ReciteTrainer } from '../../components/ReciteTrainer';
+import { SpeakButton } from '../../components/SpeechBar';
+import { AnnotatedText } from '../../components/WordTip';
+import { glossaryOf } from '../../lib/glossary';
 import { DetailShell, Section } from './DetailShell';
 
 export function PoemDetail({ entry, moduleName }: { entry: PoemEntry; moduleName: string }) {
@@ -18,6 +21,9 @@ export function PoemDetail({ entry, moduleName }: { entry: PoemEntry; moduleName
 
   const progress = getProgress(entry.id);
   const recited = progress.recited ?? 0;
+
+  /** 需要翻译的字词（来自逐句串讲里的「词：释义」），供正文 tooltip 用 */
+  const glossary = useMemo(() => glossaryOf(entry), [entry]);
 
   // 逐句串讲仅在长度匹配时展示，避免错位
   const lineNotes = useMemo(() => {
@@ -107,14 +113,16 @@ export function PoemDetail({ entry, moduleName }: { entry: PoemEntry; moduleName
             hidden={hidden}
             highlight={flash}
             onToggleLine={toggleLine}
+            words={glossary}
           />
           <div className="small muted center" style={{ marginTop: 18 }}>
-            提示：点击任意一句可以遮住它，用来检验自己是否背得下来。
+            提示：带虚线的字词悬停（手机点按）可看释义；点击句子空白处可遮住整句。
+            {glossary.length ? ` 全篇共 ${glossary.length} 个字词带释义。` : ''}
           </div>
         </div>
       </section>
 
-      {/* 背诵训练（三级提示 + 间隔重复） */}
+      {/* 背诵训练（三级提示 + 小段遮罩 + 间隔重复） */}
       <ReciteTrainer poem={poem} entryId={entry.id} />
 
       {/* 名句 */}
@@ -149,7 +157,7 @@ export function PoemDetail({ entry, moduleName }: { entry: PoemEntry; moduleName
 
       {/* 逐句串讲 */}
       {lineNotes ? (
-        <Section title="逐句串讲" icon="🔎">
+        <Section title="逐句串讲" icon="🔎" extra={<span className="small muted">🔊 可逐句朗读</span>}>
           <div className="stack stack--sm">
             {lineNotes.map((row, i) => (
               <div
@@ -158,14 +166,19 @@ export function PoemDetail({ entry, moduleName }: { entry: PoemEntry; moduleName
                 style={{ display: 'block', padding: '11px 13px' }}
               >
                 <div
-                  style={{
-                    fontFamily: 'var(--font-kai)',
-                    fontSize: 16,
-                    letterSpacing: '0.04em',
-                    marginBottom: 3,
-                  }}
+                  className="row row--wrap"
+                  style={{ alignItems: 'center', gap: 6, marginBottom: 3 }}
                 >
-                  {row.line}
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-kai)',
+                      fontSize: 16,
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    <AnnotatedText text={row.line} words={glossary} />
+                  </span>
+                  <SpeakButton text={row.line} label={`第 ${i + 1} 句`} />
                 </div>
                 <div className="note__text">{row.note}</div>
               </div>

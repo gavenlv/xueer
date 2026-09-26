@@ -1,17 +1,21 @@
 /** 内容详情页的公共外壳：面包屑、标题、收藏、练习题入口 */
 
 import type { ReactNode } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import type { Entry } from '../../types';
 import { useStudy } from '../../store/StudyContext';
 import { GRADES } from '../../lib/utils';
+import type { SpeechSegment } from '../../lib/speech';
 import { Crumbs, Tag } from '../../components/common';
 import { MindMapView } from '../../components/MindMapView';
 import { ExtensionList } from '../../components/ExtensionList';
 import { RelatedList } from '../../components/RelatedList';
 import { SupplementList } from '../../components/SupplementList';
+import { SpeechBar } from '../../components/SpeechBar';
 import { extensions, extensionsOfEntry, mindMapsOfEntry, mindMapsOfModule } from '../../data';
 import { lessonMindMap } from '../../lib/lessonMaps';
+import { speechSegmentsOf } from '../../lib/entrySpeech';
 
 /**
  * 常规讲解之外的延伸内容：思维导图 + 拓展阅读。
@@ -125,6 +129,7 @@ export function DetailShell({
   subtitle,
   tags,
   actions,
+  speech,
   children,
 }: {
   entry: Entry;
@@ -134,11 +139,20 @@ export function DetailShell({
   subtitle?: ReactNode;
   tags?: string[];
   actions?: ReactNode;
+  /** 自定义朗读段落；不传则按条目数据推导（`lib/entrySpeech.ts`），传 null 表示不朗读 */
+  speech?: SpeechSegment[] | null;
   children: ReactNode;
 }) {
   const { isStarred, toggleStar, getProgress } = useStudy();
   const starred = isStarred(entry.id);
   const progress = getProgress(entry.id);
+
+  /**
+   * 整页朗读：段落由条目数据推导（`lib/entrySpeech.ts`），所以六个模块的详情页
+   * 都能一键从正文读到译文。放在正文之前，学生一进来就能「边听边看」。
+   * 需要专门排段的页面可用 `speech={null}` 关掉，自己放朗读条。
+   */
+  const segments = useMemo(() => (speech === null ? [] : speech ?? speechSegmentsOf(entry)), [entry, speech]);
 
   return (
     <div className="stack stack--lg">
@@ -182,6 +196,9 @@ export function DetailShell({
           </div>
         </div>
       </div>
+
+      {/* 整页朗读（语速/音色可调）：六个模块共用，段落由条目数据推导 */}
+      <SpeechBar segments={segments} title={`朗读《${entry.title}》`} />
 
       {children}
 

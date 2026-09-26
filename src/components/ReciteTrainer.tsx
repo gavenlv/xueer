@@ -1,10 +1,11 @@
 /**
- * 背诵训练器：三级递进提示 + 自评 + 间隔重复排期。
+ * 背诵训练器：四级递进提示 + 自评 + 间隔重复排期。
  *
  * 训练流程：
  *   ① 通读（全文）
  *   ② 首字提示（每句只留第一个字）
- *   ③ 全遮（只看结构）
+ *   ③ 逐段遮罩（**按小段遮**：五言绝句就是五个字一小段）
+ *   ④ 全遮（只看结构）
  * 学生自评「背下来了 / 没背下来」，据此决定下次复习时间。
  */
 
@@ -19,10 +20,52 @@ import { Tag } from './common';
 const STAGES = [
   { key: 0, name: '通读全文', hint: '先完整读一遍，注意停顿与语气' },
   { key: 1, name: '首字提示', hint: '每句只给第一个字，试着往下接' },
-  { key: 2, name: '完全遮住', hint: '只看句子长度，整首背下来' },
+  {
+    key: 2,
+    name: '逐段遮罩',
+    hint: '点任意小段把它遮住——五言一句就是五个字一小段，一次只练半句，不必整行一起遮',
+  },
+  { key: 3, name: '完全遮住', hint: '只看句子长度，整首背下来' },
 ] as const;
 
 const HANZI = /[\u4e00-\u9fa5]/;
+
+/**
+ * 把一句切成「小段」：先按标点切（逗号、顿号、分号），
+ * 还太长时再按 **5 个汉字** 一断——五言一句正好一段，七言断成两段。
+ */
+export function splitSegments(line: string): string[] {
+  const byPunct: string[] = [];
+  for (const part of line.split(/([，、；])/)) {
+    if (!part) continue;
+    if (/^[，、；]$/.test(part)) {
+      if (byPunct.length) byPunct[byPunct.length - 1] += part;
+      continue;
+    }
+    byPunct.push(part);
+  }
+
+  const out: string[] = [];
+  for (const seg of byPunct) {
+    if (seg.replace(/[^\u4e00-\u9fa5]/g, '').length <= 6) {
+      out.push(seg);
+      continue;
+    }
+    let buf = '';
+    let count = 0;
+    for (const ch of seg) {
+      buf += ch;
+      if (HANZI.test(ch)) count += 1;
+      if (count === 5) {
+        out.push(buf);
+        buf = '';
+        count = 0;
+      }
+    }
+    if (buf) out.push(buf);
+  }
+  return out;
+}
 
 /** 把一句按提示级别遮罩：标点与英文数字保留，汉字按规则替换 */
 function maskLine(line: string, stage: number): string {
@@ -38,6 +81,81 @@ function maskLine(line: string, stage: number): string {
       return '□';
     })
     .join('');
+}
+
+/** 逐段遮罩：每一小段都能单独点住 */
+function SegmentMask({ lines }: { lines: string[] }) {
+  /** 被遮住的小段，键为「行号-段号」 */
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set());
+  const rows = useMemo(() => lines.map((l) => splitSegments(l)), [lines]);
+  const total = rows.reduce((n, r) => n + r.length, 0);
+
+  const toggle = (key: string) => {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  return (
+    <div>
+      <div className="row row--wrap" style={{ marginBottom: 10 }}>
+        <button
+          className="btn btn--sm"
+          onClick={() => {
+            // 隔一段遮一段：遮住一半，剩下一半当提示
+            const next = new Set<string>();
+            rows.forEach((r, ri) => r.forEach((_, si) => si % 2 === 0 && next.add(`${ri}-${si}`)));
+            setHidden(next);
+          }}
+        >
+          🎲 隔段遮
+        </button>
+        <button className="btn btn--sm" onClick={() => setHidden(new Set())}>
+          👁 全部显示
+        </button>
+        <button
+          className="btn btn--sm btn--ghost"
+          onClick={() => {
+            const next = new Set<string>();
+            rows.forEach((r, ri) => r.forEach((_, si) => next.add(`${ri}-${si}`)));
+            setHidden(next);
+          }}
+        >
+          全部遮住
+        </button>
+        <span className="small muted">
+          共 {total} 个小段，已遮 {hidden.size} 个（点一下遮住，再点显示）
+        </span>
+      </div>
+
+      {rows.map((segs, ri) => (
+        <div className="seg-line" key={ri}>
+          <span className="small muted" style={{ width: 22, flexShrink: 0 }}>
+            {ri + 1}
+          </span>
+          {segs.map((seg, si) => {
+            const key = `${ri}-${si}`;
+            const isHidden = hidden.has(key);
+            return (
+              <button
+                key={key}
+                type="button"
+                className={cn('seg', isHidden && 'is-hidden')}
+                onClick={() => toggle(key)}
+                aria-pressed={isHidden}
+                title={isHidden ? '点击显示' : '点击遮住这半句'}
+              >
+                {seg}
+              </button>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function ReciteTrainer({ poem, entryId }: { poem: Poem; entryId: string }) {
@@ -99,19 +217,23 @@ export function ReciteTrainer({ poem, entryId }: { poem: Poem; entryId: string }
           {STAGES[stage].hint}
         </div>
 
-        {/* 逐级遮罩的正文 */}
-        <div className="recite__body">
-          {maskedLines.map((line, i) => (
-            <span
-              key={i}
-              className={cn('recite__line', stage === 2 && 'is-blank')}
-              // 第 3 级：用句长提示代替原字
-              aria-label={stage === 2 ? undefined : line}
-            >
-              {line}
-            </span>
-          ))}
-        </div>
+        {/* 逐段遮罩：按小段单独遮；其余级别按行遮 */}
+        {stage === 2 ? (
+          <SegmentMask lines={poem.lines} />
+        ) : (
+          <div className="recite__body">
+            {maskedLines.map((line, i) => (
+              <span
+                key={i}
+                className={cn('recite__line', stage === 3 && 'is-blank')}
+                // 第 4 级：用句长提示代替原字
+                aria-label={stage === 3 ? undefined : line}
+              >
+                {line}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* 自评 */}
         <div className="recite__judge">

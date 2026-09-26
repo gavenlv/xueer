@@ -31,6 +31,8 @@ import {
   ensureAll,
 } from '../src/data';
 import { allPoems, CONTENT_STATS } from '../src/data/chinese';
+import { imageryOfLines, relOfEntryFull } from '../src/lib/relNode';
+import { litMatchIndex } from '../src/lib/relations';
 import { SUBJECTS } from '../src/data/subjects';
 import type { ModuleId } from '../src/types';
 
@@ -39,6 +41,41 @@ const q = (s: string) => JSON.stringify(s);
 async function main(): Promise<void> {
   await ensureAll();
 
+  /**
+   * 关联索引用的「作者」：古诗词与文言文的 author（以书名作作者的去掉书名号）。
+   * 有了它，「学一补多」的**同作者**分组不必加载其它模块就能跨模块成组。
+   */
+  const authorsOf = (e: (typeof allEntries)[number]): string[] => {
+    if (e.moduleId !== 'poems' && e.moduleId !== 'classical') return [];
+    const raw = (e.data as { author?: string }).author ?? '';
+    const a = raw.replace(/[《》]/g, '').trim();
+    return a.length >= 2 && !['佚名', '无名氏', '不详'].includes(a) ? [raw] : [];
+  };
+
+  /**
+   * 文学常识的**命中表**：哪些条目命中了哪条文学常识、命中多强。
+   *
+   * 「相关文学常识」这一组必须靠**全库的作者名与篇名表**才能算准
+   * （「咏雪」这样的篇名不带书名号，「李煜」这样的作者名也可能只在要点里出现一次），
+   * 浏览器端只加载一个模块，算不全；因此这里拿全量数据一次算好存进清单。
+   * 打分规则仍然是 `lib/relations.ts` 的 `litScoreFor`（生成与校验共用同一份规则）。
+   */
+  const fullPool = allEntries.map((e) => relOfEntryFull(e));
+  const matchFromOf = (e: (typeof allEntries)[number]) => {
+    if (e.moduleId !== 'literature') return [];
+    const lit = fullPool.find((x) => x.id === e.id);
+    return lit ? litMatchIndex(lit, fullPool) : [];
+  };
+
+  /** 古诗词的意象名（`lib/relNode.ts` 的表）：存名字不存诗句，121 首只要两 KB */
+  const imageryOf = (e: (typeof allEntries)[number]): string[] =>
+    e.moduleId === 'poems' ? imageryOfLines((e.data as { lines?: string[] }).lines ?? []) : [];
+
+  /** 词语模块的词条名（「本篇涉及的字词」分组要在未加载词语模块时也能匹配） */
+  const termOf = (e: (typeof allEntries)[number]): string =>
+    e.moduleId === 'vocab' ? ((e.data as { term?: string }).term ?? '') : '';
+
+
   const entryMeta = allEntries.map((e) => ({
     id: e.id,
     moduleId: e.moduleId,
@@ -46,6 +83,18 @@ async function main(): Promise<void> {
     subtitle: e.subtitle,
     grade: e.grade,
     questions: e.questions.length,
+    /** 主题标签（关联「同类作品」用） */
+    tags: e.tags,
+    /** 作者（古诗词/文言文才有） */
+    authors: authorsOf(e),
+    /** 文学常识的命中表（哪些条目命中了它；只有文学常识条目非空） */
+    matchFrom: matchFromOf(e),
+    /** 意象名（只有古诗词非空） */
+    imagery: imageryOf(e),
+    /** 词条名（只有词语模块非空） */
+    term: termOf(e),
+    /** 该条目题目上的知识点标签（关联「同一考点」用） */
+    qTags: [...new Set(e.questions.flatMap((q2) => q2.tags ?? []))],
   }));
 
   const moduleTotals = SUBJECTS.flatMap((s) =>
@@ -89,6 +138,30 @@ async function main(): Promise<void> {
   lines.push('  grade: GradeOrAll;');
   lines.push('  /** 该条目的题目数（不含古诗词现场生成的默写题） */');
   lines.push('  questions: number;');
+  lines.push('  /** 条目标签（「学一补多」的同类作品分组会用到） */');
+  lines.push('  tags: string[];');
+  lines.push('  /** 作者（仅古诗词/文言文非空；用于跨模块的「同作者」分组） */');
+  lines.push('  authors: string[];');
+  lines.push('  /** 文学常识的命中表：哪些条目命中了它、命中多强（仅文学常识条目非空） */');
+  lines.push('  matchFrom: { id: string; score: number }[];');
+  lines.push('  /** 意象名（仅古诗词非空；用于「同类作品」的同意象比较） */');
+  lines.push('  imagery: string[];');
+  lines.push('  /** 词条名（仅词语模块非空；用于「本篇涉及的字词」分组） */');
+  lines.push('  term: string;');
+  lines.push('  /** 该条目题目上的知识点标签（用于跨模块的「同一考点」分组） */');
+  lines.push('  qTags: string[];');
+  lines.push('}');
+  lines.push('');
+  lines.push('/**');
+  lines.push(' * 解析紧凑写的命中表（`"id:score"` 空格分隔，见 `scripts/gen-summary.ts`）。');
+  lines.push(' * 只有文学常识条目的命中表非空，其余传空串直接返回空数组。');
+  lines.push(' */');
+  lines.push('export function parseMatchFrom(raw: string): { id: string; score: number }[] {');
+  lines.push('  if (!raw) return [];');
+  lines.push('  return raw.split(\' \').map((s) => {');
+  lines.push('    const i = s.lastIndexOf(\':\');');
+  lines.push('    return { id: s.slice(0, i), score: Number(s.slice(i + 1)) };');
+  lines.push('  });');
   lines.push('}');
   lines.push('');
   lines.push('export interface ModuleTotals {');
@@ -102,10 +175,19 @@ async function main(): Promise<void> {
   lines.push('/** 每条内容的骨架信息（全部条目，含数学） */');
   lines.push('export const ENTRY_META: EntryMeta[] = [');
   for (const e of entryMeta) {
+    /**
+     * 命中表用紧凑写法 `"id:score"`：它有条目 id 那么长，写成对象会把清单撑大一倍。
+     * 解析在 `lib/relNode.ts` 的 `parseMatchFrom` 里，只有文学常识条目非空。
+     */
+    const mf = e.matchFrom.map((x) => `${x.id}:${x.score}`).join(' ');
     lines.push(
       `  { id: ${q(e.id)}, moduleId: ${q(e.moduleId)}, title: ${q(e.title)}, subtitle: ${q(
         e.subtitle,
-      )}, grade: ${q(e.grade)}, questions: ${e.questions} },`,
+      )}, grade: ${q(e.grade)}, questions: ${e.questions}, tags: ${JSON.stringify(e.tags)}, authors: ${JSON.stringify(
+        e.authors,
+      )}, matchFrom: parseMatchFrom(${q(mf)}), imagery: ${JSON.stringify(e.imagery)}, term: ${q(
+        e.term,
+      )}, qTags: ${JSON.stringify(e.qTags)} },`,
     );
   }
   lines.push('];');

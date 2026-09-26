@@ -15,6 +15,7 @@
 import type { Entry, Extension, GradeId, MindMap, ModuleId, Poem, QuizQuestion } from '../types';
 import { SUBJECTS } from './subjects';
 import { imageryOf, examThemesOf } from '../lib/relations';
+import { relOfEntry } from '../lib/relNode';
 import { matchesKeyword } from '../lib/searchText';
 import * as chinese from './chinese';
 import * as math from './math';
@@ -315,12 +316,12 @@ export function poemExamPoints(): PoemExamPoint[] {
 
   const themes = clusterPoems('主题', (p) => {
     const e = entryOf(p.id);
-    return e ? examThemesOf(e) : [];
+    return e ? examThemesOf(relOfEntry(e)) : [];
   }, 2);
 
   const imageries = clusterPoems('意象', (p) => {
     const e = entryOf(p.id);
-    return e ? imageryOf(e) : [];
+    return e ? imageryOf(relOfEntry(e)) : [];
   }, 2);
 
   const authors = clusterPoems('作者', (p) =>

@@ -1,6 +1,8 @@
-/** 古诗文正文渲染：支持竖排、逐句遮罩（背诵用）与逐句点击 */
+/** 古诗文正文渲染：支持竖排、逐句遮罩（背诵用）、逐句点击与逐词释义提示 */
 
+import type { GlossaryWord } from '../lib/glossary';
 import { cn } from '../lib/utils';
+import { AnnotatedText } from './WordTip';
 
 export interface PoemTextProps {
   lines: string[];
@@ -12,6 +14,13 @@ export interface PoemTextProps {
   onToggleLine?: (index: number) => void;
   /** 高亮的句子下标（如刚揭示的那句） */
   highlight?: number[];
+  /**
+   * 需要翻译的字词：给了就在正文上标虚线下划线，悬停/点按弹释义。
+   *
+   * 遮住的那一句**不加提示**——`.is-blank` 靠 `color: transparent` 把字隐形，
+   * 而虚线用的是边框色，会连虚线一起留在那里，等于把词的长度泄露出去。
+   */
+  words?: GlossaryWord[];
 }
 
 export function PoemText({
@@ -20,6 +29,7 @@ export function PoemText({
   hidden = [],
   onToggleLine,
   highlight = [],
+  words,
 }: PoemTextProps) {
   return (
     <div className={cn('poem-body', vertical && 'poem-body--vertical')}>
@@ -50,7 +60,11 @@ export function PoemText({
             }
             style={onToggleLine ? { cursor: 'pointer' } : undefined}
           >
-            {isHidden ? line.replace(/[^\u4e00-\u9fa5]/g, '') || line : line}
+            {isHidden
+              ? line.replace(/[^\u4e00-\u9fa5]/g, '') || line
+              : words?.length
+                ? <AnnotatedText text={line} words={words} />
+                : line}
           </span>
         );
       })}
