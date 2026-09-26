@@ -108,8 +108,14 @@ type LoaderResult = { entries: Entry[] };
 const LOADERS: Record<EnglishModuleId, () => Promise<LoaderResult>> = {
   'eng-vocab': async () => {
     const m = await import('./modules/vocab');
-    allKnowledge.push(...m.topics);
-    return { entries: buildKnowledgeEntries('eng-vocab', m.topics) };
+    // 分类词表：话题语义场（两批）+ 词性索引 + 中考考点，按用户要求把初中词汇按类别补全
+    const t1 = await import('./modules/vocab-topics-1');
+    const t2 = await import('./modules/vocab-topics-2');
+    const pos = await import('./modules/vocab-pos');
+    const exam = await import('./modules/vocab-exam');
+    const topics = [...m.topics, ...t1.topics, ...t2.topics, ...pos.topics, ...exam.topics];
+    allKnowledge.push(...topics);
+    return { entries: buildKnowledgeEntries('eng-vocab', topics) };
   },
   'eng-grammar': async () => {
     const m = await import('./modules/grammar');
@@ -221,7 +227,27 @@ export const CONTENT_STATS = {
   get papers() {
     return allPapers.length;
   },
+  /** 分类词表里的总词条数（含在不同维度重复出现的词） */
   get words() {
+    return allKnowledge.reduce(
+      (n, t) => n + (t.wordList ?? []).reduce((m, g) => m + g.words.length, 0),
+      0,
+    );
+  },
+  /** 去重后的词条数（用来判断初中词汇覆盖得够不够） */
+  get uniqueWords() {
+    const set = new Set<string>();
+    for (const t of allKnowledge) {
+      for (const g of t.wordList ?? []) {
+        for (const w of g.words) set.add(w.word.toLowerCase());
+      }
+    }
+    return set.size;
+  },
+  get wordGroups() {
+    return allKnowledge.reduce((n, t) => n + (t.wordList?.length ?? 0), 0);
+  },
+  get affixExamples() {
     return allKnowledge.reduce((n, t) => n + (t.affixes ?? []).reduce((m, a) => m + a.examples.length, 0), 0);
   },
   get confusables() {

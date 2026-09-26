@@ -472,8 +472,52 @@ export type EnglishModuleId =
   | 'eng-topics'
   | 'eng-exam';
 
+/**
+ * 物理 / 化学 / 道德与法治 / 体育的模块 id。
+ *
+ * 这四科在学科注册表里已经按 2027—2029 广州中考的 8 个计分科目排好位置、
+ * 模块骨架也列了出来（`pending()` 占位），但**内容还没建**，因此这里先把 id 收进类型，
+ * 否则生成出来的轻量清单（`summary.ts` 会带这些模块）过不了类型检查。
+ * 内容落地时只需补数据层与渲染器，类型不用再动。
+ */
+export type PhysicsModuleId =
+  | 'phy-light'
+  | 'phy-heat'
+  | 'phy-mech'
+  | 'phy-work'
+  | 'phy-electric'
+  | 'phy-magnet'
+  | 'phy-experiment'
+  | 'phy-exam';
+
+export type ChemistryModuleId =
+  | 'chem-matter'
+  | 'chem-substance'
+  | 'chem-acid'
+  | 'chem-equation'
+  | 'chem-experiment'
+  | 'chem-exam';
+
+export type PoliticsModuleId =
+  | 'pol-growth'
+  | 'pol-moral'
+  | 'pol-law'
+  | 'pol-nation'
+  | 'pol-current'
+  | 'pol-exam';
+
+export type PeModuleId = 'pe-endurance' | 'pe-strength' | 'pe-ball' | 'pe-prep';
+
 /** 全部模块 id；新增学科时在此扩展 */
-export type ModuleId = ChineseModuleId | MathModuleId | HistoryModuleId | EnglishModuleId;
+export type ModuleId =
+  | ChineseModuleId
+  | MathModuleId
+  | HistoryModuleId
+  | EnglishModuleId
+  | PhysicsModuleId
+  | ChemistryModuleId
+  | PoliticsModuleId
+  | PeModuleId;
 
 interface EntryBase {
   id: string;
@@ -723,6 +767,32 @@ export interface EnglishWriting {
   usefulExpressions?: string[];
 }
 
+/**
+ * 分类词表里的一个词。
+ *
+ * 初中词汇量上千，逐词做成条目既写不完也查不动；按类别成表才是学生真正用得上的形态：
+ * 一个话题下面几十个词排在一起，**成串记、按需查**。因此每条知识内容可以挂一张词表。
+ */
+export interface EnglishWord {
+  /** 单词或短语 */
+  word: string;
+  /** 音标（可选，只给容易读错的） */
+  phonetic?: string;
+  /** 词性，如 `n.` `v.` `adj.` `adv.` `phr.` */
+  pos?: string;
+  /** 中文释义（多义用「；」分隔） */
+  cn: string;
+  /** 考点提示：搭配、用法、易错、同义替换（能直接用在作文里的那种） */
+  note?: string;
+}
+
+/** 词表分组：一个话题/词性/考点下面的一组词 */
+export interface EnglishWordGroup {
+  /** 分组名，如「家庭成员」「天气词」「不规则动词」 */
+  group: string;
+  words: EnglishWord[];
+}
+
 /** 一条英语知识内容（词汇/语法/阅读/听说/写作/专题通用） */
 export interface EnglishKnowledge {
   id: string;
@@ -736,6 +806,11 @@ export interface EnglishKnowledge {
   summary: string;
   /** 考点分层（与历史同一套：重点/次重点/了解） */
   points: EnglishPoint[];
+  /**
+   * **分类词表**：按话题 / 词性 / 考点整理的初中词汇。
+   * 页面会渲成可搜索的词汇表（音标、词性、释义、考点提示），并按 `group` 分组。
+   */
+  wordList?: EnglishWordGroup[];
   /** 词根词缀（词汇类） */
   affixes?: EnglishAffix[];
   /** 同义词与近义词（含区别） */

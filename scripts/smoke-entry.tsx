@@ -754,6 +754,11 @@ if (!progressTarget) {
   const engPaper = allEntries.find((e) => e.moduleId === 'eng-exam');
 
   const vocabHtml = vocabEntry ? renderEntry(vocabEntry.id) : '';
+  /** 词表类条目要单独找：词汇模块里第一条通常是词根词缀条目，没有分类词表 */
+  const wordListEntry = allEntries.find(
+    (e) => e.moduleId === 'eng-vocab' && ((e.data as { wordList?: unknown[] }).wordList?.length ?? 0) > 0,
+  );
+  const wordListHtml = wordListEntry ? renderEntry(wordListEntry.id) : '';
   const confusableHtml = confusableEntry ? renderEntry(confusableEntry.id) : '';
   const listenHtml = listenEntry ? renderEntry(listenEntry.id) : '';
   const writingHtml = writingEntry ? renderEntry(writingEntry.id) : '';
@@ -762,6 +767,8 @@ if (!progressTarget) {
   const engChecks: [string, boolean][] = [
     ['英语详情页可渲染（考点分层）', Boolean(vocabEntry) && vocabHtml.includes('考点分层')],
     ['词根词缀表', vocabHtml.includes('词根词缀')],
+    // 分类词表（按话题/词性/考点整理的初中词汇）：页面必须渲出词表与搜索框
+    ['分类词表与搜索框', wordListHtml.includes('分类词汇表') && wordListHtml.includes('搜索单词或中文')],
     ['近义辨析（含区别）', confusableHtml.includes('同义/近义辨析') && confusableHtml.includes('区别')],
     ['听说材料区块', listenHtml.includes('听说材料')],
     // 朗读按钮在服务端渲染时不出现（拿不到浏览器语音 API），因此这里断言朗读提示本身

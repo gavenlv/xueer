@@ -15,7 +15,7 @@
  */
 
 import { useState } from 'react';
-import type { EnglishKnowledgeEntry } from '../../types';
+import type { EnglishKnowledgeEntry, EnglishWordGroup } from '../../types';
 import { cn } from '../../lib/utils';
 import { Accordion, Tag } from '../../components/common';
 import { RichText } from '../../components/RichText';
@@ -120,6 +120,82 @@ function PassageBlock({
   );
 }
 
+/**
+ * 分类词汇表：按分组铺开，顶上带搜索框。
+ *
+ * 初中词汇量上千，学生用它的方式有两种——**成串记**（一个话题的词连着背）与
+ * **按需查**（只记得中文、想不起英文）。所以这里既保留分组，也给一个即时过滤框
+ * （中英文都能搜：输入「天气」或 weather 都能命中）。
+ */
+function WordListBlock({ groups }: { groups: EnglishWordGroup[] }) {
+  const [kw, setKw] = useState('');
+  const q = kw.trim().toLowerCase();
+  const total = groups.reduce((n, g) => n + g.words.length, 0);
+  const shown = groups
+    .map((g) => ({
+      group: g.group,
+      words: q ? g.words.filter((w) => w.word.toLowerCase().includes(q) || w.cn.includes(q)) : g.words,
+    }))
+    .filter((g) => g.words.length);
+
+  return (
+    <div className="stack stack--sm">
+      <div className="row row--wrap" style={{ alignItems: 'center', gap: 8 }}>
+        <input
+          className="input"
+          style={{ maxWidth: 240 }}
+          placeholder="搜索单词或中文（如 weather / 天气）"
+          value={kw}
+          onChange={(e) => setKw(e.target.value)}
+        />
+        <span className="small muted">
+          共 {total} 个词
+          {q ? ` · 匹配 ${shown.reduce((n, g) => n + g.words.length, 0)} 个` : ` · ${groups.length} 组`}
+        </span>
+      </div>
+
+      {shown.length === 0 ? <div className="small muted">没有匹配的词，换个关键词试试。</div> : null}
+
+      {shown.map((g) => (
+        <div key={g.group}>
+          <div className="en-wordgroup__title">
+            {g.group}
+            <span className="small muted" style={{ marginLeft: 8, fontWeight: 400 }}>
+              {g.words.length} 词
+            </span>
+          </div>
+          <div className="table-wrap">
+            <table className="table en-wordtable">
+              <thead>
+                <tr>
+                  <th>单词</th>
+                  <th>词性与释义</th>
+                  <th>考点提示</th>
+                </tr>
+              </thead>
+              <tbody>
+                {g.words.map((w, i) => (
+                  <tr key={`${w.word}-${i}`}>
+                    <td className="en-word">
+                      {w.word}
+                      {w.phonetic ? <span className="en-phonetic">/{w.phonetic}/</span> : null}
+                    </td>
+                    <td>
+                      {w.pos ? <span className="en-pos">{w.pos}</span> : null}
+                      {w.cn}
+                    </td>
+                    <td className="small muted">{w.note ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function EnglishDetail({
   entry,
   moduleName,
@@ -187,6 +263,17 @@ export function EnglishDetail({
           ))}
         </div>
       </Section>
+
+      {/* 分类词表（按话题/词性/考点整理的初中词汇） */}
+      {d.wordList?.length ? (
+        <Section
+          title={`分类词汇表（${d.wordList.reduce((n, g) => n + g.words.length, 0)} 词）`}
+          icon="📚"
+          extra={<Tag tone="jade">可按中英文搜索</Tag>}
+        >
+          <WordListBlock groups={d.wordList} />
+        </Section>
+      ) : null}
 
       {/* 词根词缀 */}
       {d.affixes?.length ? (

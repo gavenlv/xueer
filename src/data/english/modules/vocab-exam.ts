@@ -1,0 +1,1620 @@
+/**
+ * 英语·词汇模块内容数据 —— 中考考点分类词表（词汇的第三个维度）。
+ *
+ * 词汇按三个维度各写一套（见 CONTENT-SPEC「六、分类词表」）：
+ *   · 话题语义场（vocab-topics-1 / vocab-topics-2）
+ *   · 词性索引（vocab-pos）
+ *   · 中考考点（本文件）：不规则动词表 · 词形转换（名↔形↔副）· 词形转换（动↔名、动↔形）·
+ *     高频短语动词与固定搭配 · 易错拼写与形近词
+ *
+ * 为什么单独成一套：这五项不是「词义」问题，而是**考法与拼写**问题——
+ * 不规则动词的三态、词形转换的拼写、短语动词的介词，全靠背准，一处写错就直接丢分。
+ * 因此每条词表都配「这一步在哪种题里考、怎么判断」的说明（points[].explain）。
+ *
+ * 约定：
+ * - 条目 id 为 `eng-vocab-exam-1` … `eng-vocab-exam-5`，题目 id 为 `${条目 id}-q1/-q2/…`，全局唯一。
+ * - choice 题恰好 4 个选项，answer 为 'A' | 'B' | 'C' | 'D'，答案唯一；
+ *   fill 题多个可接受写法用半角竖线 `|` 分隔。
+ * - 三态一律写成「原形-过去式-过去分词」，词形转换一律写成「原形 → 派生词 → 派生词」的转换链。
+ * - 词汇不超出初中课标 1600 词与中考常见拓展；例句全部原创，贴近初中校园生活。
+ * - 中文解释用中文标点（引号用「」），英文句子用英文标点。
+ */
+import type { EnglishKnowledge } from '../../../types';
+
+export const topics: EnglishKnowledge[] = [
+  /* ================================================================== */
+  /* 一、不规则动词表                                                     */
+  /* ================================================================== */
+  {
+    id: 'eng-vocab-exam-1',
+    grade: 'all',
+    unit: '中考词汇考点',
+    title: '中考词汇考点·不规则动词表',
+    enTitle: 'Irregular Verbs: A-A-A, A-B-B, A-B-A, A-B-C',
+    summary:
+      '把初中 98 个不规则动词按五种变化类型分成六组，记住「哪一类怎么变」，现在完成时与被动语态就不会写错三态。',
+    points: [
+      {
+        level: '重点',
+        text: '不规则动词的三态主要考现在完成时与被动语态两处',
+        explain:
+          '看到 have/has/had 或 be 动词，就要用过去分词。现在完成时 have done、被动语态 be done 两处都写过去分词；一般过去时才用过去式。选择题与语篇填空都从这里失分最多，判断顺序是「先看空格前的助动词，再想三态里的第几个形式」。',
+      },
+      {
+        level: '重点',
+        text: 'A-B-C 型三个形式都不相同，是混用的重灾区',
+        explain:
+          'write-wrote-written、break-broke-broken、choose-chose-chosen 这类词，出题人常把 wrote 放在 have 后面当干扰项。只要空格前是 have/has/had/be，一律选第三个形式（过去分词）。',
+      },
+      {
+        level: '重点',
+        text: '三态同形的词不要加 -ed',
+        explain:
+          'cut、put、hit、cost、hurt、let、set、read 属于 A-A-A 型，学生最容易写 cutted、putted。另外 read 的过去式与过去分词仍拼作 read，但读 /red/，朗读与听力题会考读音。',
+      },
+      {
+        level: '次重点',
+        text: '-ought / -aught 家族成串记，一次记六个',
+        explain:
+          'buy-bought、bring-brought、think-thought、fight-fought 写 -ought；catch-caught、teach-taught 写 -aught。两组常在同一道题的选项里一起出现，按「买拿想打 -ought，抓住教学 -aught」的口诀整串记。',
+      },
+      {
+        level: '次重点',
+        text: 'hang、lie、lay 是「一词两义、两套变化」的高危词',
+        explain:
+          'hang 表「悬挂」是 hung-hung，表「绞死」是 hanged-hanged；lie 表「躺」是 lay-lain，表「撒谎」是 lied-lied；lay 表「放置」是 laid-laid。判断依据永远是句意，不是拼写。',
+      },
+      {
+        level: '了解',
+        text: '瞬间动词不能与 for / since 引导的延续时间连用',
+        explain:
+          'buy、borrow、begin、die、leave 都是瞬间动词，语篇填空常写成 He has had the bike for three years. 的形式，考的就是把 buy 换成 have had、borrow 换成 have kept。',
+      },
+    ],
+    collocations: [
+      { phrase: 'grow up', cn: '长大', note: '例：He wants to be a doctor when he grows up.' },
+      { phrase: 'fall asleep', cn: '入睡', note: '例：He fell asleep while he was reading.' },
+      { phrase: 'lose one\'s way', cn: '迷路', note: '例：We lost our way in the old town.' },
+      { phrase: 'catch a cold', cn: '感冒', note: '例：She caught a cold and stayed at home.' },
+      { phrase: 'take a rest', cn: '休息一下', note: '例：Let us take a rest under the big tree.' },
+      { phrase: 'write down', cn: '写下，记下', note: '例：Please write down the new words in your notebook.' },
+      { phrase: 'get married', cn: '结婚', note: '例：They got married last autumn.' },
+    ],
+    rules: [
+      {
+        rule: '现在完成时：have / has + 过去分词',
+        form: '主语 + have/has + 过去分词（already、yet、ever、never、just、since、for 是信号词）',
+        example: 'I have already written the report.',
+        cn: '我已经写好报告了。',
+        tip: '写动词前先看空格前有没有 have/has，有就用过去分词；never 后面的动词同样用过去分词。',
+      },
+      {
+        rule: '被动语态：be + 过去分词',
+        form: '主语 + be + 过去分词 + (by ...)',
+        example: 'The bridge was built by the workers in 2010.',
+        cn: '这座桥是工人们 2010 年建成的。',
+        tip: '被动语态只用过去分词，不能用过去式，was broke 一定是错的。',
+      },
+      {
+        rule: '一般过去时只说明过去发生的事，与现在没有联系',
+        form: '主语 + 过去式（yesterday、last week、three days ago、in 2010 等时间状语）',
+        example: 'He lost his key yesterday.',
+        cn: '他昨天把钥匙丢了。',
+        tip: '有明确过去时间就用过去式；要说「钥匙丢了所以现在进不了门」，才用 has lost。',
+      },
+      {
+        rule: '-ought / -aught 家族的变化规律',
+        form: 'buy/bring/think/fight → -ought；catch/teach → -aught',
+        example: 'My father taught me how to ride a bike.',
+        cn: '爸爸教过我骑自行车。',
+        tip: '两组一起背：bought、brought、thought、fought、caught、taught 六个词一次记牢。',
+      },
+      {
+        rule: '一个动词有两种意思，就有两套变化',
+        form: 'hang-hung-hung（悬挂）／hang-hanged-hanged（绞死）；lie-lay-lain（躺）／lie-lied-lied（撒谎）；lay-laid-laid（放置）',
+        example: 'The girl lay on the grass and looked at the sky.',
+        cn: '那个女孩躺在草地上看天空。',
+        tip: '先定句意再定形式：描述「挂在墙上」用 hung，描述「躺着」用 lay。',
+      },
+    ],
+    mistakes: [
+      {
+        wrong: 'I have cutted the paper into two pieces.',
+        right: 'I have cut the paper into two pieces.',
+        why: 'cut 三态同形，没有 cutted 这个形式；put、hit、cost、let 同样不加 -ed。',
+      },
+      {
+        wrong: 'He has wrote three letters to his friend.',
+        right: 'He has written three letters to his friend.',
+        why: '现在完成时用过去分词 written，wrote 是过去式，只能用在一般过去时里。',
+      },
+      {
+        wrong: 'The window was broke by the strong wind last night.',
+        right: 'The window was broken by the strong wind last night.',
+        why: '被动语态是 be + 过去分词，broken 才是过去分词；broke 是过去式。',
+      },
+      {
+        wrong: 'My mother hanged the picture on the wall yesterday.',
+        right: 'My mother hung the picture on the wall yesterday.',
+        why: 'hang 表「悬挂」时过去式是 hung；hanged 只表示「绞死」。',
+      },
+      {
+        wrong: 'The cat lied on the sofa all the afternoon.',
+        right: 'The cat lay on the sofa all the afternoon.',
+        why: 'lie 表「躺」的过去式是 lay、过去分词是 lain；lied 是「撒谎」的过去式。',
+      },
+      {
+        wrong: 'I have bought this bike for three years.',
+        right: 'I have had this bike for three years.',
+        why: 'buy 是瞬间动词，不能与 for 引导的延续时间连用，要说「拥有」就得用 have had。',
+      },
+    ],
+    wordList: [
+      {
+        group: 'A-A-A 型：原形、过去式、过去分词同形',
+        words: [
+          { word: 'cut-cut-cut', pos: 'v.', cn: '切；剪；削减', note: '三态同形，别写 cutted；cut down 砍倒，cut up 切碎。' },
+          { word: 'put-put-put', pos: 'v.', cn: '放；放置', note: 'put on 穿上，put off 推迟，put away 收起来。' },
+          { word: 'let-let-let', pos: 'v.', cn: '让；允许', note: 'let sb do sth，后面不加 to。' },
+          { word: 'hit-hit-hit', pos: 'v.', cn: '打；撞击', note: 'hit sb on the head 打某人的头，注意介词 on。' },
+          { word: 'cost-cost-cost', pos: 'v.', cn: '花费（钱）', note: '主语是物：The book cost me ten yuan.；过去式仍写 cost。' },
+          { word: 'hurt-hurt-hurt', pos: 'v.', cn: '使受伤；疼', note: '三态同形，别双写 t；My leg hurts. 用主动表被动。' },
+          { word: 'shut-shut-shut', pos: 'v.', cn: '关上', note: 'shut down 关闭（工厂、机器）；注意双写 t 只在原形里。' },
+          { word: 'set-set-set', pos: 'v.', cn: '设置；摆放', note: 'set up 建立，set off 出发。' },
+          { word: 'read-read-read', pos: 'v.', phonetic: 'red（过去式与过去分词读音）', cn: '读；阅读', note: '三态拼写相同，但过去式与过去分词读 /red/，听力朗读常考。' },
+          { word: 'spread-spread-spread', pos: 'v.', cn: '传播；展开', note: '不加 -ed；spread the news 传播消息。' },
+          { word: 'quit-quit-quit', pos: 'v.', cn: '放弃；离职', note: 'quit doing sth 停止做某事。' },
+          { word: 'burst-burst-burst', pos: 'v.', cn: '爆裂；突然发作', note: 'burst into tears 突然哭起来。' },
+          { word: 'cast-cast-cast', pos: 'v.', cn: '投；掷；投射', note: 'cast a shadow 投下影子，cast a vote 投票。' },
+          { word: 'split-split-split', pos: 'v.', cn: '分开；裂开', note: 'split up 分开；注意双写 t 只在原形。' },
+        ],
+      },
+      {
+        group: 'A-B-A 型与元音 i-a-u 变化型（过去分词回到原形 / 元音顺次变化）',
+        words: [
+          { word: 'come-came-come', pos: 'v.', cn: '来；到来', note: 'come true 实现，主语常是 dream、wish。' },
+          { word: 'become-became-become', pos: 'v.', cn: '变成；成为', note: '后接名词或形容词：become a teacher。' },
+          { word: 'overcome-overcame-overcome', pos: 'v.', cn: '克服；战胜', note: 'overcome difficulties 克服困难。' },
+          { word: 'run-ran-run', pos: 'v.', cn: '跑；经营', note: 'run out of 用完；过去式 ran 不双写 n。' },
+          { word: 'beat-beat-beaten', pos: 'v.', cn: '打；打败', note: '过去式仍写 beat，过去分词才是 beaten，属 A-A-B 型特例。' },
+          { word: 'begin-began-begun', pos: 'v.', cn: '开始', note: 'begin to do 与 begin doing 都可以；注意 beginning 双写 n。' },
+          { word: 'drink-drank-drunk', pos: 'v.', cn: '喝；饮', note: 'drink to sb 为某人干杯。' },
+          { word: 'sing-sang-sung', pos: 'v.', cn: '唱；唱歌', note: '过去分词 sung，被动语态 The song was sung by her.' },
+          { word: 'swim-swam-swum', pos: 'v.', cn: '游泳', note: '没有 swimmed；go swimming 去游泳。' },
+          { word: 'ring-rang-rung', pos: 'v.', cn: '打电话；（铃）响', note: 'ring up 打电话；名词 ring 是「戒指」。' },
+          { word: 'sink-sank-sunk', pos: 'v.', cn: '下沉；沉没', note: '拓展词，阅读中常与船、石头搭配。' },
+          { word: 'shrink-shrank-shrunk', pos: 'v.', cn: '收缩；缩小', note: '拓展词，注意不要与 sink 混。' },
+        ],
+      },
+      {
+        group: 'A-B-B 型（一）：过去式以 -ought / -aught 或 -t 结尾',
+        words: [
+          { word: 'buy-bought-bought', pos: 'v.', cn: '买', note: 'buy sb sth = buy sth for sb；注意介词是 for。' },
+          { word: 'bring-brought-brought', pos: 'v.', cn: '带来；拿来', note: 'bring 是「带来」，take 是「带走」，方向相反。' },
+          { word: 'think-thought-thought', pos: 'v.', cn: '想；认为', note: 'thought 也是名词「想法」：a good thought。' },
+          { word: 'catch-caught-caught', pos: 'v.', cn: '抓住；赶上', note: 'catch up with 赶上，catch a cold 感冒。' },
+          { word: 'teach-taught-taught', pos: 'v.', cn: '教', note: 'teach sb sth；teach oneself 自学。' },
+          { word: 'fight-fought-fought', pos: 'v.', cn: '打架；战斗', note: 'fight against 与……作斗争。' },
+          { word: 'build-built-built', pos: 'v.', cn: '建造；建设', note: '被动语态 was built；build up 增强。' },
+          { word: 'lend-lent-lent', pos: 'v.', cn: '借出', note: 'lend sth to sb 把某物借给某人，与 borrow from 方向相反。' },
+          { word: 'send-sent-sent', pos: 'v.', cn: '寄；派', note: 'send for sb 派人去请。' },
+          { word: 'spend-spent-spent', pos: 'v.', cn: '花费（时间、钱）', note: 'spend ... on sth / (in) doing sth。' },
+          { word: 'lose-lost-lost', pos: 'v.', cn: '丢失；输掉', note: '与形容词 loose（松的）形近，别混。' },
+          { word: 'feel-felt-felt', pos: 'v.', cn: '感觉；觉得', note: 'feel like doing sth 想要做某事。' },
+          { word: 'keep-kept-kept', pos: 'v.', cn: '保持；保存', note: 'keep doing sth；keep in touch 保持联系。' },
+          { word: 'sleep-slept-slept', pos: 'v.', cn: '睡觉', note: 'sleep late 睡到很晚才起；sleepy 是形容词「困的」。' },
+          { word: 'sweep-swept-swept', pos: 'v.', cn: '扫；打扫', note: 'sweep the floor 扫地。' },
+          { word: 'meet-met-met', pos: 'v.', cn: '遇见；满足', note: 'meet one\'s needs 满足需要；meeting 是名词。' },
+          { word: 'lead-led-led', pos: 'v.', cn: '带领；导致', note: 'lead to 导致，to 是介词，后接名词或 doing。' },
+          { word: 'leave-left-left', pos: 'v.', cn: '离开；留下', note: 'leave sth at home 把某物落在家里。' },
+          { word: 'mean-meant-meant', pos: 'v.', cn: '意思是；意味着', note: 'mean to do 打算做，mean doing 意味着做。' },
+          { word: 'hear-heard-heard', pos: 'v.', cn: '听见', note: 'hear from sb 收到某人来信，hear of 听说。' },
+        ],
+      },
+      {
+        group: 'A-B-B 型（二）：过去式以 -d / -ung / -old / -ood / -ot 等结尾',
+        words: [
+          { word: 'find-found-found', pos: 'v.', cn: '找到；发现', note: 'find out 查明；find it hard to do 觉得做某事难。' },
+          { word: 'hold-held-held', pos: 'v.', cn: '举行；握住', note: 'hold on 别挂电话；hold a meeting 开会。' },
+          { word: 'make-made-made', pos: 'v.', cn: '制作；使得', note: 'be made of 看得出材料，be made from 看不出。' },
+          { word: 'pay-paid-paid', pos: 'v.', cn: '付钱；支付', note: 'pay for sth 为某物付钱；pay attention to 注意。' },
+          { word: 'say-said-said', pos: 'v.', cn: '说', note: 'say 强调说的内容，tell 后接人，speak 强调说语言。' },
+          { word: 'sell-sold-sold', pos: 'v.', cn: '卖；出售', note: 'sell out 卖完；被动 be sold。' },
+          { word: 'tell-told-told', pos: 'v.', cn: '告诉；讲述', note: 'tell sb sth，tell sb to do sth。' },
+          { word: 'stand-stood-stood', pos: 'v.', cn: '站；忍受', note: 'cannot stand doing sth 无法忍受做某事。' },
+          { word: 'understand-understood-understood', pos: 'v.', cn: '理解；懂', note: '过去式与过去分词都写 understood，注意中间是 oo。' },
+          { word: 'sit-sat-sat', pos: 'v.', cn: '坐', note: 'sit down 坐下；现在是 sitting，双写 t。' },
+          { word: 'win-won-won', pos: 'v.', cn: '赢；获胜', note: '过去式 won，不是 winned；win the first prize 得一等奖。' },
+          { word: 'get-got-got', pos: 'v.', cn: '得到；到达', note: 'get used to 习惯于；美式过去分词可写 gotten。' },
+          { word: 'have-had-had', pos: 'v.', cn: '有；吃；使', note: 'had better do sth 最好做某事；have sth done 让别人做某事。' },
+          { word: 'dig-dug-dug', pos: 'v.', cn: '挖；掘', note: 'dig a hole 挖个洞。' },
+          { word: 'stick-stuck-stuck', pos: 'v.', cn: '粘；卡住', note: 'stick to 坚持，to 是介词。' },
+          { word: 'hang-hung-hung', pos: 'v.', cn: '悬挂；挂起', note: '表「悬挂」用 hung；表「绞死」用 hanged，两套变化按句意选。' },
+          { word: 'shine-shone-shone', pos: 'v.', cn: '照耀；发光', note: 'The sun shone brightly.；名词 shine 是「光泽」。' },
+          { word: 'shoot-shot-shot', pos: 'v.', cn: '射击；投篮', note: 'shoot at 朝……射击；注意 oo 变 o。' },
+          { word: 'lay-laid-laid', pos: 'v.', cn: '放置；下（蛋）', note: 'lay 是及物动词，必须带宾语；与 lie（躺）区分。' },
+          { word: 'feed-fed-fed', pos: 'v.', cn: '喂养；饲养', note: 'feed sth to sb / feed sb on sth。' },
+        ],
+      },
+      {
+        group: 'A-B-C 型（一）：过去分词以 -en / -n 结尾',
+        words: [
+          { word: 'be-was/were-been', pos: 'v.', cn: '是；存在', note: '现在完成时 I have been to 去过，have gone to 去了（未回）。' },
+          { word: 'eat-ate-eaten', pos: 'v.', cn: '吃', note: 'Ate 不双写 t；被动 be eaten。' },
+          { word: 'give-gave-given', pos: 'v.', cn: '给', note: 'give sth to sb；被动 be given。' },
+          { word: 'take-took-taken', pos: 'v.', cn: '拿；花费；乘坐', note: 'It takes sb some time to do sth；被动 be taken。' },
+          { word: 'write-wrote-written', pos: 'v.', cn: '写', note: '过去分词 written 双写 t，是最高频的拼写点。' },
+          { word: 'speak-spoke-spoken', pos: 'v.', cn: '说（语言）', note: 'English is spoken in many countries.' },
+          { word: 'break-broke-broken', pos: 'v.', cn: '打破；损坏', note: '被动 be broken；broken 也可作形容词「坏的」。' },
+          { word: 'choose-chose-chosen', pos: 'v.', cn: '选择', note: 'choose to do sth；名词 choice。' },
+          { word: 'drive-drove-driven', pos: 'v.', cn: '驾驶；驱使', note: '过去分词 driven；名词 driver。' },
+          { word: 'ride-rode-ridden', pos: 'v.', cn: '骑；乘', note: '过去分词 ridden 双写 d。' },
+          { word: 'rise-rose-risen', pos: 'v.', cn: '上升；升起', note: '不及物动词，没有被动语态；与 raise（及物）区分。' },
+          { word: 'wake-woke-woken', pos: 'v.', cn: '醒来；唤醒', note: 'wake up 醒来；三态是 wake-woke-woken，别按规则动词写成 waked。' },
+          { word: 'forget-forgot-forgotten', pos: 'v.', cn: '忘记', note: '过去分词双写 t；forget to do 忘记要做，forget doing 忘记做过。' },
+          { word: 'hide-hid-hidden', pos: 'v.', cn: '躲藏；隐藏', note: 'hide from sb 躲避某人；过去分词 hidden。' },
+          { word: 'know-knew-known', pos: 'v.', cn: '知道；认识', note: 'be known for 以……闻名；注意 kn 中 k 不发音。' },
+          { word: 'throw-threw-thrown', pos: 'v.', cn: '扔；投', note: 'throw away 扔掉；过去分词 thrown。' },
+          { word: 'blow-blew-blown', pos: 'v.', cn: '吹；刮', note: 'The wind blew hard.；blow out 吹灭。' },
+          { word: 'grow-grew-grown', pos: 'v.', cn: '生长；种植', note: 'grow up 长大；grow into 长成。' },
+          { word: 'fly-flew-flown', pos: 'v.', cn: '飞；乘飞机', note: '过去分 flown；fly to Beijing 飞往北京。' },
+          { word: 'draw-drew-drawn', pos: 'v.', cn: '画；拉', note: '过去分词 drawn；名词 drawing 图画。' },
+        ],
+      },
+      {
+        group: 'A-B-C 型（二）：-ore / -orn、-ook / -aken、-ore / -olen 等其他变化',
+        words: [
+          { word: 'go-went-gone', pos: 'v.', cn: '去；走', note: 'have gone to 去了（人不在），have been to 去过（人已回）。' },
+          { word: 'do-did-done', pos: 'v.', cn: '做；干', note: '被动 be done；do well in 在……方面做得好。' },
+          { word: 'see-saw-seen', pos: 'v.', cn: '看见；明白', note: '被动 be seen；see sb do sth 看见某人做某事。' },
+          { word: 'wear-wore-worn', pos: 'v.', cn: '穿；戴', note: '过去分词 worn；wear out 穿坏。' },
+          { word: 'tear-tore-torn', pos: 'v.', cn: '撕；扯破', note: '过去分词 torn；名词 tear 是「眼泪」。' },
+          { word: 'fall-fell-fallen', pos: 'v.', cn: '落下；跌倒', note: 'fall asleep 入睡；与 feel（感觉）的过去式 felt 区分。' },
+          { word: 'shake-shook-shaken', pos: 'v.', cn: '摇动；发抖', note: 'shake hands with sb 与某人握手。' },
+          { word: 'steal-stole-stolen', pos: 'v.', cn: '偷；窃取', note: '被动 be stolen；与 steel（钢）形近。' },
+          { word: 'freeze-froze-frozen', pos: 'v.', cn: '结冰；冻住', note: 'frozen 也可作形容词「冷冻的」。' },
+          { word: 'mistake-mistook-mistaken', pos: 'v.', cn: '误解；弄错', note: 'by mistake 错误地；mistake A for B 把 A 误认为 B。' },
+          { word: 'show-showed-shown', pos: 'v.', cn: '出示；表明', note: '过去分词 shown 也可写 showed，被动语态用 shown 更稳。' },
+          { word: 'lie-lay-lain', pos: 'v.', cn: '躺；位于', note: '表「躺」用 lay-lain，表「撒谎」用 lied-lied，务必按句意判断。' },
+        ],
+      },
+    ],
+    questions: [
+      {
+        id: 'eng-vocab-exam-1-q1',
+        type: 'choice',
+        stem: 'I have ______ this book twice, and I want to read it again.',
+        options: ['read', 'reads', 'reading', 'readed'],
+        answer: 'A',
+        explanation:
+          'have 后面要接过去分词，read 的过去分词仍是 read（三态同形），此处读 /red/。B 项 reads 是第三人称单数；C 项 reading 不能作完成时的分词；D 项 readed 这个拼写根本不存在。',
+        difficulty: 2,
+        tags: ['不规则动词', '现在完成时', '三态同形'],
+      },
+      {
+        id: 'eng-vocab-exam-1-q2',
+        type: 'choice',
+        stem: 'The window ______ by the strong wind last night.',
+        options: ['was broken', 'was broke', 'broke', 'has broken'],
+        answer: 'A',
+        explanation:
+          '主语 the window 是动作的承受者，用被动语态 be + 过去分词，break 的过去分词是 broken。B 项 broke 是过去式，被动语态里不能用；C 项是主动语态，窗户不能自己打破自己；D 项与 last night 的过去时间不符。',
+        difficulty: 2,
+        tags: ['不规则动词', '被动语态', '过去分词'],
+      },
+      {
+        id: 'eng-vocab-exam-1-q3',
+        type: 'choice',
+        stem: 'My father ______ the picture on the wall and then went out.',
+        options: ['hung', 'hanged', 'hang', 'hanging'],
+        answer: 'A',
+        explanation:
+          '句意是把画「挂」在墙上，hang 表「悬挂」时过去式与过去分词都是 hung。B 项 hanged 只表示「绞死」；C 项是原形，与后面的 went 时态不一致；D 项不能单独作谓语。',
+        difficulty: 2,
+        tags: ['不规则动词', 'hang', '一词两义'],
+      },
+      {
+        id: 'eng-vocab-exam-1-q4',
+        type: 'fill',
+        stem: '用所给动词的适当形式填空。\nHe has never ______ (see) such a big fish before.',
+        answer: 'seen',
+        explanation:
+          'has never 后面要接过去分词，see 的过去分词是 seen。注意 see-saw-seen 三态各不相同，不能填 saw。',
+        difficulty: 1,
+        tags: ['不规则动词', '现在完成时', 'A-B-C 型'],
+      },
+      {
+        id: 'eng-vocab-exam-1-q5',
+        type: 'fill',
+        stem: '用所给动词的适当形式填空。\nThe old bridge ______ (build) in 1930 and is still in use today.',
+        answer: 'was built',
+        explanation:
+          '桥是「被建造」的，用被动语态 be + 过去分词；事情发生在 1930 年，be 用过去式 was，build 的过去分词是 built，所以填 was built。',
+        difficulty: 2,
+        tags: ['不规则动词', '被动语态', 'A-B-B 型'],
+      },
+      {
+        id: 'eng-vocab-exam-1-q6',
+        type: 'fill',
+        stem: '用所给动词的适当形式填空。\nThe dog ______ (lie) on the floor quietly a moment ago.',
+        answer: 'lay',
+        explanation:
+          'a moment ago 说明用一般过去时；lie 表「躺」的过去式是 lay。若填 lied 就变成「撒谎」，若填 laid 则用了 lay（放置）的过去式，都与句意不符。',
+        difficulty: 3,
+        tags: ['不规则动词', 'lie/lay', '一般过去时'],
+      },
+    ],
+  },
+
+  /* ================================================================== */
+  /* 二、词形转换（一）：名词↔形容词、形容词↔副词                          */
+  /* ================================================================== */
+  {
+    id: 'eng-vocab-exam-2',
+    grade: 'all',
+    unit: '中考词汇考点',
+    title: '中考词汇考点·词形转换（一）：名词↔形容词、形容词↔副词',
+    enTitle: 'Word Formation (1): Noun - Adjective - Adverb',
+    summary:
+      '按后缀把名词变形容词、形容词变副词串成转换链（如 health → healthy → healthily），解决语篇填空里「给名词要填副词」这类送分题。',
+    points: [
+      {
+        level: '重点',
+        text: '词形转换是语篇填空的固定题型，一般 10 空里占 3 至 5 空',
+        explain:
+          '这类题给出提示词，要求按句子成分换成另一词性。第一步永远是看空格在句中的位置：作表语或定语要形容词，修饰动词、形容词或另一个副词要副词，作主语或宾语要名词。',
+      },
+      {
+        level: '重点',
+        text: '名词变形容词看后缀，形容词变副词看拼写规则',
+        explain:
+          '-ful / -less / -y / -ous / -al / -ive 是名词转形容词的主力后缀；形容词变副词多在词尾加 -ly，但 happy → happily、true → truly、possible → possibly 有拼写变化，正是扣分点。',
+      },
+      {
+        level: '重点',
+        text: '-ly 结尾的词不一定是副词',
+        explain:
+          'friendly、lovely、lonely、likely 都是形容词，不能修饰动词。中考常考 Our teacher is friendly to us.，若写成 friendlily 就错了；要表达「以友好的方式」得用 in a friendly way。',
+      },
+      {
+        level: '次重点',
+        text: '同根词按「名词—形容词—副词」三格一起背',
+        explain:
+          'health-healthy-healthily、care-careful-carefully、luck-lucky-luckily。成串记住以后，无论考场上要哪一格都能立刻取出，比单独记「healthy 是健康的」有效得多。',
+      },
+      {
+        level: '次重点',
+        text: '副词的位置也是考点',
+        explain:
+          '方式副词一般放在动词或宾语之后：He speaks English fluently.；频度副词 usually、often、always 放在行为动词之前、be 动词与助动词之后。写作中位置放错同样扣分。',
+      },
+      {
+        level: '了解',
+        text: '系动词后面必须用形容词，不能用副词',
+        explain:
+          'be、look、sound、taste、smell、feel、become、get 是系动词，后面接形容词作表语。The soup tastes good. 不能说 tastes well，这是语法填空的高频陷阱。',
+      },
+    ],
+    collocations: [
+      { phrase: 'keep healthy', cn: '保持健康', note: '例：Doing exercise every day helps us keep healthy. 这里不能用 health。' },
+      { phrase: 'be careful with', cn: '小心对待', note: '例：Be careful with the hot water. 介词固定用 with。' },
+      { phrase: 'be helpful to', cn: '对……有帮助', note: '例：Reading English stories is helpful to your writing.' },
+      { phrase: 'speak English fluently', cn: '流利地说英语', note: '例：She can speak English fluently. 修饰动词用副词。' },
+      { phrase: 'feel lonely', cn: '感到孤独', note: '例：He felt lonely when he first came to the city. lonely 是形容词。' },
+      { phrase: 'live a happy life', cn: '过着幸福的生活', note: '例：The old couple live a happy life in the countryside.' },
+    ],
+    rules: [
+      {
+        rule: '名词 + -ful / -less 构成形容词，表示「有……的／无……的」',
+        form: 'care → careful / careless；use → useful / useless；hope → hopeful / hopeless',
+        example: 'Be careful with the hot water.',
+        cn: '小心热水。',
+        tip: '-ful 只有一个 l，别写成 full；-less 表「没有」，如 hopeless 无望的、homeless 无家可归的。',
+      },
+      {
+        rule: '形容词 + -ly 构成方式副词',
+        form: 'quick → quickly；careful → carefully；clear → clearly',
+        example: 'She answered the question quickly and correctly.',
+        cn: '她快速而正确地回答了问题。',
+        tip: '副词修饰动词、形容词或另一个副词，放在被修饰的动词之后最稳。',
+      },
+      {
+        rule: '以「辅音字母 + y」结尾的形容词变副词，改 y 为 i 再加 -ly',
+        form: 'happy → happily；easy → easily；heavy → heavily；lucky → luckily',
+        example: 'The children played happily in the park.',
+        cn: '孩子们在公园里玩得很开心。',
+        tip: '先改 y 为 i 再加 ly，把 happily 写成 happyly 是语篇填空最常见的拼写错。',
+      },
+      {
+        rule: '以 -le 结尾的形容词变副词，去 e 加 y',
+        form: 'possible → possibly；simple → simply；terrible → terribly；comfortable → comfortably',
+        example: 'He explained the rule simply and clearly.',
+        cn: '他简单清楚地讲解了这个规则。',
+        tip: '这类词是「去 e 加 y」，不是直接加 ly；whole → wholly 更是特殊，要单独记。',
+      },
+      {
+        rule: '系动词后接形容词，不接副词',
+        form: 'be / look / sound / taste / smell / feel / become / get + 形容词',
+        example: 'The music sounds beautiful.',
+        cn: '这音乐听起来很美。',
+        tip: '看到这些系动词，先排除所有 -ly 副词选项；well 只在表示「身体好」时才是形容词。',
+      },
+    ],
+    mistakes: [
+      {
+        wrong: 'He is very carefuly when he crosses the road.',
+        right: 'He is very careful when he crosses the road.',
+        why: 'is 后面作表语要用形容词 careful；carefully 是副词，只能修饰动词。',
+      },
+      {
+        wrong: 'My sister can sing beautiful.',
+        right: 'My sister can sing beautifully.',
+        why: '修饰动词 sing 要用副词 beautifully，beautiful 是形容词，不能修饰动词。',
+      },
+      {
+        wrong: 'The soup tastes well.',
+        right: 'The soup tastes good.',
+        why: 'taste 是系动词，后面接形容词作表语；well 多作副词「好地」，不表示「味道好」。',
+      },
+      {
+        wrong: 'He is a friendlily boy and everyone likes him.',
+        right: 'He is a friendly boy and everyone likes him.',
+        why: 'friendly 本身就是形容词，没有 friendlily 这种副词形式。',
+      },
+      {
+        wrong: 'Because of his careless, he lost the match.',
+        right: 'Because of his carelessness, he lost the match.',
+        why: '介词 of 后面要接名词，careless 是形容词，应换成名词 carelessness。',
+      },
+      {
+        wrong: 'The two brothers are very difference in character.',
+        right: 'The two brothers are very different in character.',
+        why: 'are 后面要用形容词 different；difference 是名词，不能作表语。',
+      },
+    ],
+    wordList: [
+      {
+        group: '名词 → 形容词：-ful / -less',
+        words: [
+          { word: 'care → careful / careless', pos: 'n. → adj.', cn: '小心 → 仔细的／粗心的', note: '副词是 carefully；careless 的副词 carelessly，三个词一起记。' },
+          { word: 'use → useful / useless', pos: 'n. → adj.', cn: '使用 → 有用的／无用的', note: 'be useful to sb 对某人有帮助。' },
+          { word: 'help → helpful / helpless', pos: 'n. → adj.', cn: '帮助 → 有帮助的／无助的', note: 'be helpful to sb；helpless 表示「无法自救的」。' },
+          { word: 'hope → hopeful / hopeless', pos: 'n. → adj.', cn: '希望 → 有希望的／无望的', note: 'be hopeful about sth 对某事抱希望。' },
+          { word: 'harm → harmful / harmless', pos: 'n. → adj.', cn: '伤害 → 有害的／无害的', note: 'be harmful to 对……有害，介词固定用 to。' },
+          { word: 'thank → thankful', pos: 'n. → adj.', cn: '感谢 → 感激的', note: 'be thankful to sb for sth 因某事感激某人。' },
+          { word: 'wonder → wonderful', pos: 'n. → adj.', cn: '惊奇 → 精彩的', note: '口语中 Wonderful! 表示「太棒了」。' },
+          { word: 'beauty → beautiful', pos: 'n. → adj.', cn: '美 → 美丽的', note: 'beauty 改 y 为 i 再加 -ful，副词 beautifully。' },
+          { word: 'colour → colourful', pos: 'n. → adj.', cn: '颜色 → 色彩鲜艳的', note: '作文写节日、风景时常用。' },
+          { word: 'success → successful', pos: 'n. → adj.', cn: '成功 → 成功的', note: '副词 successfully；be successful in doing sth。' },
+          { word: 'peace → peaceful', pos: 'n. → adj.', cn: '和平 → 和平的；宁静的', note: 'a peaceful village 宁静的村庄。' },
+          { word: 'power → powerful', pos: 'n. → adj.', cn: '力量 → 强大的', note: '作文写科技、团队时可用。' },
+          { word: 'meaning → meaningful', pos: 'n. → adj.', cn: '意义 → 有意义的', note: 'a meaningful activity 一次有意义的活动。' },
+          { word: 'cheer → cheerful', pos: 'n. → adj.', cn: '欢呼 → 兴高采烈的', note: '描述人物性格时可用。' },
+        ],
+      },
+      {
+        group: '名词 → 形容词：-y / -ous / -ive / -ly（注意 -ly 也构成形容词）',
+        words: [
+          { word: 'health → healthy → healthily', pos: 'n. → adj. → adv.', cn: '健康 → 健康的 → 健康地', note: '三格连环考；keep healthy 不能说 keep health。' },
+          { word: 'wind → windy', pos: 'n. → adj.', cn: '风 → 有风的', note: '天气话题必备；It is windy today.' },
+          { word: 'rain → rainy', pos: 'n. → adj.', cn: '雨 → 下雨的', note: 'a rainy day 阴雨天；注意 rain 作动词是「下雨」。' },
+          { word: 'snow → snowy', pos: 'n. → adj.', cn: '雪 → 下雪的', note: '同类还有 cloudy、sunny、foggy。' },
+          { word: 'sun → sunny', pos: 'n. → adj.', cn: '太阳 → 晴朗的', note: '双写 n 再加 y，别写 suny。' },
+          { word: 'cloud → cloudy', pos: 'n. → adj.', cn: '云 → 多云的', note: '天气报告常用 It will be cloudy.' },
+          { word: 'fog → foggy', pos: 'n. → adj.', cn: '雾 → 有雾的', note: '双写 g 再加 y。' },
+          { word: 'luck → lucky → luckily', pos: 'n. → adj. → adv.', cn: '运气 → 幸运的 → 幸运地', note: 'Luckily, nobody was hurt. 句首副词用逗号隔开。' },
+          { word: 'noise → noisy → noisily', pos: 'n. → adj. → adv.', cn: '噪音 → 吵闹的 → 吵闹地', note: 'noise 去 e 加 y；It is too noisy here.' },
+          { word: 'fun → funny', pos: 'n. → adj.', cn: '乐趣 → 滑稽的；有趣的', note: 'fun 也可直接作形容词：a fun day。' },
+          { word: 'danger → dangerous', pos: 'n. → adj.', cn: '危险 → 危险的', note: 'It is dangerous to swim in the river.' },
+          { word: 'fame → famous', pos: 'n. → adj.', cn: '名声 → 著名的', note: 'be famous for 以……闻名，be famous as 作为……而闻名。' },
+          { word: 'humour → humorous', pos: 'n. → adj.', cn: '幽默 → 幽默的', note: '拼写有 or，别写 humerous。' },
+          { word: 'friend → friendly', pos: 'n. → adj.', cn: '朋友 → 友好的', note: '-ly 结尾但仍是形容词，be friendly to sb。' },
+          { word: 'love → lovely', pos: 'n. → adj.', cn: '爱 → 可爱的', note: '同样是 -ly 结尾的形容词，不能说 lovelily。' },
+        ],
+      },
+      {
+        group: '名词 → 形容词：-al / -ant / -ent / -t',
+        words: [
+          { word: 'nature → natural', pos: 'n. → adj.', cn: '自然 → 自然的', note: '副词 naturally；natural resources 自然资源。' },
+          { word: 'nation → national', pos: 'n. → adj.', cn: '国家 → 国家的', note: 'National Day 国庆节。' },
+          { word: 'tradition → traditional', pos: 'n. → adj.', cn: '传统 → 传统的', note: 'traditional festivals 传统节日，作文高频。' },
+          { word: 'person → personal', pos: 'n. → adj.', cn: '个人 → 个人的', note: 'personal information 个人信息。' },
+          { word: 'music → musical', pos: 'n. → adj.', cn: '音乐 → 音乐的', note: 'musical instrument 乐器。' },
+          { word: 'medicine → medical', pos: 'n. → adj.', cn: '药；医学 → 医学的', note: 'medical care 医疗护理。' },
+          { word: 'education → educational', pos: 'n. → adj.', cn: '教育 → 有教育意义的', note: 'an educational film 一部有教育意义的影片。' },
+          { word: 'culture → cultural', pos: 'n. → adj.', cn: '文化 → 文化的', note: 'cultural differences 文化差异。' },
+          { word: 'environment → environmental', pos: 'n. → adj.', cn: '环境 → 环境的', note: 'environmental protection 环境保护。' },
+          { word: 'importance → important', pos: 'n. → adj.', cn: '重要性 → 重要的', note: 'It is important for sb to do sth。' },
+          { word: 'difference → different', pos: 'n. → adj.', cn: '不同 → 不同的', note: 'be different from 与……不同。' },
+          { word: 'silence → silent', pos: 'n. → adj.', cn: '沉默 → 沉默的', note: 'keep silent 保持沉默。' },
+          { word: 'patience → patient', pos: 'n. → adj.', cn: '耐心 → 耐心的', note: 'be patient with sb 对某人有耐心；patient 也是名词「病人」。' },
+          { word: 'confidence → confident', pos: 'n. → adj.', cn: '信心 → 自信的', note: 'be confident of / about sth。' },
+          { word: 'independence → independent', pos: 'n. → adj.', cn: '独立 → 独立的', note: 'be independent of 不依赖……。' },
+        ],
+      },
+      {
+        group: '形容词 → 副词：直接加 -ly',
+        words: [
+          { word: 'quick → quickly', pos: 'adj. → adv.', cn: '快的 → 快速地', note: '注意不是 quikly；修饰动词放句末。' },
+          { word: 'slow → slowly', pos: 'adj. → adv.', cn: '慢的 → 缓慢地', note: 'Please drive slowly. 驾驶类句子常用。' },
+          { word: 'clear → clearly', pos: 'adj. → adv.', cn: '清楚的 → 清楚地', note: 'speak clearly 说清楚。' },
+          { word: 'careful → carefully', pos: 'adj. → adv.', cn: '仔细的 → 仔细地', note: 'listen carefully 仔细听；与 careful 的分工是必考。' },
+          { word: 'usual → usually', pos: 'adj. → adv.', cn: '通常的 → 通常', note: '频度副词，放在行为动词前、be 动词后。' },
+          { word: 'safe → safely', pos: 'adj. → adv.', cn: '安全的 → 安全地', note: 'arrive safely 安全到达；名词 safety。' },
+          { word: 'quiet → quietly', pos: 'adj. → adv.', cn: '安静的 → 安静地', note: 'He came in quietly. 与 quite（相当）别混。' },
+          { word: 'sudden → suddenly', pos: 'adj. → adv.', cn: '突然的 → 突然', note: 'Suddenly, it began to rain. 常用于记叙文。' },
+          { word: 'bad → badly', pos: 'adj. → adv.', cn: '坏的 → 严重地；差', note: 'be badly hurt 伤得很重，不是「坏地」。' },
+          { word: 'polite → politely', pos: 'adj. → adv.', cn: '有礼貌的 → 有礼貌地', note: 'speak to sb politely。' },
+          { word: 'recent → recently', pos: 'adj. → adv.', cn: '最近的 → 最近', note: '常与现在完成时连用：I have recently read a book.' },
+          { word: 'final → finally', pos: 'adj. → adv.', cn: '最后的 → 最后；终于', note: '作文里表示过程结尾的首选词。' },
+          { word: 'real → really', pos: 'adj. → adv.', cn: '真的 → 真正地；确实', note: 'real + ly 有两个 l，别写 realy。' },
+          { word: 'serious → seriously', pos: 'adj. → adv.', cn: '严肃的；严重的 → 严重地', note: 'be seriously ill 病得很重。' },
+          { word: 'proud → proudly', pos: 'adj. → adv.', cn: '自豪的 → 自豪地', note: 'be proud of 为……自豪。' },
+        ],
+      },
+      {
+        group: '形容词 → 副词：拼写有变化（y→i、去 e、特殊）',
+        words: [
+          { word: 'happy → happily', pos: 'adj. → adv.', cn: '快乐的 → 快乐地', note: '改 y 为 i 再加 ly，写 happyly 是典型错。' },
+          { word: 'easy → easily', pos: 'adj. → adv.', cn: '容易的 → 容易地', note: '同上；注意不是 easilly。' },
+          { word: 'heavy → heavily', pos: 'adj. → adv.', cn: '重的 → 大量地；沉重地', note: 'It rained heavily last night. 雨下得很大。' },
+          { word: 'angry → angrily', pos: 'adj. → adv.', cn: '生气的 → 生气地', note: '改 y 为 i；angry with sb 生某人的气。' },
+          { word: 'busy → busily', pos: 'adj. → adv.', cn: '忙的 → 忙碌地', note: 'be busy doing sth 忙于做某事。' },
+          { word: 'lucky → luckily', pos: 'adj. → adv.', cn: '幸运的 → 幸运的是', note: 'Luckily 放句首时后面加逗号。' },
+          { word: 'noisy → noisily', pos: 'adj. → adv.', cn: '吵闹的 → 吵闹地', note: '注意 noisy 变副词也改 y 为 i。' },
+          { word: 'healthy → healthily', pos: 'adj. → adv.', cn: '健康的 → 健康地', note: 'eat healthily 吃得健康，写作加分表达。' },
+          { word: 'early → early', pos: 'adj. → adv.', cn: '早的 → 早', note: '形式相同：get up early 早起。' },
+          { word: 'late → late / lately', pos: 'adj. → adv.', cn: '迟的 → 迟／最近', note: 'lately 意思是「最近」，不是「迟」，常与完成时连用。' },
+          { word: 'hard → hard / hardly', pos: 'adj. → adv.', cn: '硬的；困难的 → 努力地／几乎不', note: 'hardly 是「几乎不」，意思与 hard 无关，是高频陷阱。' },
+          { word: 'true → truly', pos: 'adj. → adv.', cn: '真的 → 真正地', note: '去 e 加 ly；Yours truly 用于书信结尾。' },
+          { word: 'possible → possibly', pos: 'adj. → adv.', cn: '可能的 → 可能地', note: '去 e 加 y，别写成 possiblely；Possibly 也可放句首。' },
+          { word: 'full → fully', pos: 'adj. → adv.', cn: '满的 → 完全地', note: '两个 l 加 ly；be full of 充满。' },
+          { word: 'high → high / highly', pos: 'adj. → adv.', cn: '高的 → 高高地／高度地', note: 'jump high 跳得高；highly 多修饰形容词，如 highly possible。' },
+        ],
+      },
+      {
+        group: '形容词 → 名词：-ness / -th / -ty / -ce',
+        words: [
+          { word: 'kind → kindness', pos: 'adj. → n.', cn: '善良的 → 善良', note: 'Thank you for your kindness. 感谢信常用。' },
+          { word: 'dark → darkness', pos: 'adj. → n.', cn: '黑暗的 → 黑暗', note: 'in the darkness 在黑暗中。' },
+          { word: 'ill → illness', pos: 'adj. → n.', cn: '生病的 → 疾病', note: 'ill 只作表语；作定语用 sick。' },
+          { word: 'weak → weakness', pos: 'adj. → n.', cn: '虚弱的 → 弱点', note: '作文谈「我的不足」可用。' },
+          { word: 'sad → sadness', pos: 'adj. → n.', cn: '悲伤的 → 悲伤', note: '不可数名词，不加 s。' },
+          { word: 'careless → carelessness', pos: 'adj. → n.', cn: '粗心的 → 粗心', note: 'Because of his carelessness … 是常见句式。' },
+          { word: 'busy → business', pos: 'adj. → n.', cn: '忙的 → 生意；事务', note: '拼写与词义都变了，需单独记；on business 出差。' },
+          { word: 'true → truth', pos: 'adj. → n.', cn: '真的 → 真相', note: 'tell the truth 说实话。' },
+          { word: 'strong → strength', pos: 'adj. → n.', cn: '强壮的 → 力量', note: '拼写变化较大，元音变 e，末尾加 gth。' },
+          { word: 'long → length', pos: 'adj. → n.', cn: '长的 → 长度', note: 'the length of the room 房间的长度。' },
+          { word: 'wide → width', pos: 'adj. → n.', cn: '宽的 → 宽度', note: '与 length、height、depth 一起记。' },
+          { word: 'high → height', pos: 'adj. → n.', cn: '高的 → 高度', note: '拼写为 height，不是 hight。' },
+          { word: 'young → youth', pos: 'adj. → n.', cn: '年轻的 → 青年；青春', note: '拓展词，阅读中常见。' },
+          { word: 'safe → safety', pos: 'adj. → n.', cn: '安全的 → 安全', note: 'traffic safety 交通安全。' },
+          { word: 'important → importance', pos: 'adj. → n.', cn: '重要的 → 重要性', note: 'the importance of doing sth 做某事的重要性。' },
+        ],
+      },
+    ],
+    questions: [
+      {
+        id: 'eng-vocab-exam-2-q1',
+        type: 'fill',
+        stem: '用括号中单词的适当形式填空。\nEating more vegetables is good for your ______ (healthy).',
+        answer: 'health',
+        explanation:
+          '形容词性物主代词 your 后面要接名词，所以把形容词 healthy 变回名词 health。要表达「保持健康」则用 keep healthy，那里才用形容词。',
+        difficulty: 1,
+        tags: ['词形转换', '名↔形', '语篇填空'],
+      },
+      {
+        id: 'eng-vocab-exam-2-q2',
+        type: 'choice',
+        stem: 'The girl danced ______ at the party last night.',
+        options: ['beautifully', 'beautiful', 'beauty', 'beautify'],
+        answer: 'A',
+        explanation:
+          '修饰动词 danced 要用副词，beautiful 的副词是 beautifully。B 项是形容词，不能修饰动词；C 项是名词；D 项是动词「美化」。',
+        difficulty: 1,
+        tags: ['词形转换', '形↔副', '副词修饰动词'],
+      },
+      {
+        id: 'eng-vocab-exam-2-q3',
+        type: 'choice',
+        stem: 'You must be ______ with your spelling, or you will lose marks in the writing task.',
+        options: ['careful', 'carefully', 'care', 'careless'],
+        answer: 'A',
+        explanation:
+          'be 动词后面作表语要用形容词，句意是提醒「要细心」，所以用 careful。B 项是副词，不能作表语；C 项是名词；D 项 careless 表示「粗心的」，与句意相反。',
+        difficulty: 2,
+        tags: ['词形转换', '系动词', '形容词作表语'],
+      },
+      {
+        id: 'eng-vocab-exam-2-q4',
+        type: 'fill',
+        stem: '用括号中单词的适当形式填空。\nHe failed the exam because of his ______ (careless).',
+        answer: 'carelessness',
+        explanation:
+          '介词 of 后面要接名词，careless 是形容词，先变名词 carelessness（careless + ness）。注意这个词不可数，不加 s。',
+        difficulty: 2,
+        tags: ['词形转换', '形→名', '-ness'],
+      },
+      {
+        id: 'eng-vocab-exam-2-q5',
+        type: 'choice',
+        stem: 'Our new neighbour is very ______ to us.',
+        options: ['friendly', 'friendlily', 'friend', 'friendliness'],
+        answer: 'A',
+        explanation:
+          'be 后面作表语用形容词，friendly 虽然以 -ly 结尾，却是形容词，表示「友好的」。B 项 friendlily 这个词不存在；C 项是名词；D 项也是名词「友好」。',
+        difficulty: 3,
+        tags: ['词形转换', '-ly 形容词', '易错拼写'],
+      },
+      {
+        id: 'eng-vocab-exam-2-q6',
+        type: 'fill',
+        stem: '用括号中单词的适当形式填空。\nThe children sang and danced ______ (happy) at the party.',
+        answer: 'happily',
+        explanation:
+          '修饰动词 sang and danced 要用副词。happy 以「辅音字母 + y」结尾，变副词时先改 y 为 i，再加 -ly，所以是 happily。',
+        difficulty: 1,
+        tags: ['词形转换', '形↔副', 'y→i'],
+      },
+    ],
+  },
+
+  /* ================================================================== */
+  /* 三、词形转换（二）：动词↔名词、动词↔形容词                            */
+  /* ================================================================== */
+  {
+    id: 'eng-vocab-exam-3',
+    grade: 'all',
+    unit: '中考词汇考点',
+    title: '中考词汇考点·词形转换（二）：动词↔名词、动词↔形容词',
+    enTitle: 'Word Formation (2): Verb - Noun and Verb - Adjective',
+    summary:
+      '按 -tion / -sion / -ment / -ed / -ing / -able 等后缀把动词变成名词或形容词，专治语篇填空里「给动词不知道怎么变」的题。',
+    points: [
+      {
+        level: '重点',
+        text: '动词变名词是语篇填空与语法选择的高频考点，-tion / -sion / -ment 覆盖大半',
+        explain:
+          '空格前有 a、an、the、my 这类限定词，或者空格作主语，通常要填名词。看到提示词是动词，先想 -tion（invent → invention）、-sion（decide → decision）、-ment（develop → development）三条路。',
+      },
+      {
+        level: '重点',
+        text: '动词变形容词主要考两类：分词形容词与 -ful / -ive / -able',
+        explain:
+          '空格作定语或表语时要形容词。表示人的感受用 -ed（I am interested），表示事物本身令人如何用 -ing（The film is interesting）；enjoyable、comfortable、creative、active 都是必会拼写。',
+      },
+      {
+        level: '重点',
+        text: '-tion 与 -sion 的选择有规律可循',
+        explain:
+          '动词以 -de 结尾多变成 -sion（decide → decision，conclude → conclusion）；以 -ss 结尾用 -ssion（discuss → discussion，express → expression）；其余多为 -tion（invent → invention，educate → education）。',
+      },
+      {
+        level: '次重点',
+        text: '有些词形变化带来拼写变化，必须单独记',
+        explain:
+          'argue → argument（去 e）、equip → equipment（不可数）、true → truth、strong → strength。这四个是初中阶段最常考的例外，抄写时按音节读，边读边写。',
+      },
+      {
+        level: '次重点',
+        text: '不可数的抽象名词不要加 -s',
+        explain:
+          'information、advice、progress、knowledge、equipment 都是不可数名词，语篇填空与书面表达里加 -s 就扣分；要计数用 a piece of information 这样的量词结构。',
+      },
+      {
+        level: '了解',
+        text: '动词变名词也能表示「人」或「物」',
+        explain:
+          'teach → teacher、invent → inventor、visit → visitor 表示人；build → building、mean → meaning、feel → feeling 表示物或抽象概念。句意谈「人」就优先选 -er / -or。',
+      },
+    ],
+    collocations: [
+      { phrase: 'come to a conclusion', cn: '得出结论', note: '例：We finally came to a conclusion after the discussion.' },
+      { phrase: 'give a performance', cn: '表演', note: '例：The students gave a wonderful performance at the party.' },
+      { phrase: 'make an agreement', cn: '达成协议', note: '例：The two sides made an agreement at last.' },
+      { phrase: 'show great interest in', cn: '对……表现出浓厚兴趣', note: '例：He shows great interest in science. interest 用作名词。' },
+      { phrase: 'be deeply moved', cn: '深受感动', note: '例：We were deeply moved by the old man\'s story.' },
+      { phrase: 'take an active part in', cn: '积极参加', note: '例：She takes an active part in class activities. active 是形容词。' },
+      { phrase: 'have a discussion about', cn: '就……进行讨论', note: '例：We had a discussion about how to save water.' },
+    ],
+    rules: [
+      {
+        rule: '动词 + -tion / -ation 构成抽象名词',
+        form: 'educate → education；invent → invention；invite → invitation；communicate → communication',
+        example: 'The invention of the telephone changed our lives.',
+        cn: '电话的发明改变了我们的生活。',
+        tip: '空格前是 the 或 a、提示词是动词时，先试 -tion；information 不可数，不加 s。',
+      },
+      {
+        rule: '以 -de、-ss、-mit 结尾的动词多构成 -sion / -ssion 名词',
+        form: 'decide → decision；conclude → conclusion；discuss → discussion；permit → permission',
+        example: 'We had a long discussion about the plan.',
+        cn: '我们就这个计划讨论了很长时间。',
+        tip: 'discussion 双写 s，decision 只有一个 s，两处拼写都是扣分点。',
+      },
+      {
+        rule: '-ed / -ing 分词形容词：人用 -ed，物用 -ing',
+        form: 'interest → interested（人）／interesting（物）；excite → excited／exciting',
+        example: 'I am interested in science, and the science show is really interesting.',
+        cn: '我对科学感兴趣，这个科学节目真的很有趣。',
+        tip: '主语是人一般选 -ed；主语是 it、the book、the film 等，一般选 -ing。',
+      },
+      {
+        rule: '动词 + -ful / -able / -ive 构成形容词',
+        form: 'enjoy → enjoyable；comfort → comfortable；create → creative；act → active',
+        example: 'We had an enjoyable trip to the museum.',
+        cn: '我们去博物馆的旅行很愉快。',
+        tip: 'comfortable 的拼写是 com-fort-able，别漏掉 or；unforgettable 表示「难忘的」。',
+      },
+      {
+        rule: '动词 + -ment 构成名词，多为不可数',
+        form: 'develop → development；equip → equipment；improve → improvement；agree → agreement',
+        example: 'Reading widely helps the development of your language skills.',
+        cn: '广泛阅读有助于你语言能力的发展。',
+        tip: 'equipment 不可数，不能说 equipments；argue 变名词要去 e 写 argument。',
+      },
+    ],
+    mistakes: [
+      {
+        wrong: 'We had a heated discuss about the plan.',
+        right: 'We had a heated discussion about the plan.',
+        why: 'discuss 是动词，have a discussion 才正确；同理 decide 的名词是 decision。',
+      },
+      {
+        wrong: 'His invent of the machine surprised us all.',
+        right: 'His invention of the machine surprised us all.',
+        why: '形容词性物主代词 his 后面要接名词，所以用 invention。',
+      },
+      {
+        wrong: 'I am very boring with this book.',
+        right: 'I am very bored with this book.',
+        why: '人作主语表示感受用 -ed 形容词 bored；boring 表示事物本身令人乏味。',
+      },
+      {
+        wrong: 'The teacher gave us many informations about the trip.',
+        right: 'The teacher gave us much information about the trip.',
+        why: 'information 不可数，没有复数形式，也不能与 many 连用。',
+      },
+      {
+        wrong: 'The PE equipment in our school are new.',
+        right: 'The PE equipment in our school is new.',
+        why: 'equipment 是不可数名词，谓语要用单数 is。',
+      },
+      {
+        wrong: 'His argue made the meeting much longer.',
+        right: 'His argument made the meeting much longer.',
+        why: 'argue 变名词要先去 e 再加 -ment，写成 argument。',
+      },
+    ],
+    wordList: [
+      {
+        group: '动词 → 名词：-tion / -sion / -ation',
+        words: [
+          { word: 'decide → decision', pos: 'v. → n.', cn: '决定 → 决定', note: '-de 结尾变 -sion，拼写是 decision，不是 decidion。' },
+          { word: 'invent → invention', pos: 'v. → n.', cn: '发明 → 发明（物）', note: 'the invention of paper 纸的发明；发明者是 inventor。' },
+          { word: 'discuss → discussion', pos: 'v. → n.', cn: '讨论 → 讨论', note: '-ss 结尾变 -ssion，双写 s；have a discussion about。' },
+          { word: 'educate → education', pos: 'v. → n.', cn: '教育 → 教育', note: 'get a good education 接受良好教育。' },
+          { word: 'celebrate → celebration', pos: 'v. → n.', cn: '庆祝 → 庆祝活动', note: 'hold a celebration 举行庆祝活动。' },
+          { word: 'invite → invitation', pos: 'v. → n.', cn: '邀请 → 邀请（函）', note: 'accept an invitation 接受邀请。' },
+          { word: 'express → expression', pos: 'v. → n.', cn: '表达 → 表达；表情', note: '-ss 结尾用 -ssion；a useful expression 有用的表达。' },
+          { word: 'protect → protection', pos: 'v. → n.', cn: '保护 → 保护', note: 'environmental protection 环境保护。' },
+          { word: 'pollute → pollution', pos: 'v. → n.', cn: '污染 → 污染', note: 'air pollution 空气污染，不可数。' },
+          { word: 'introduce → introduction', pos: 'v. → n.', cn: '介绍 → 介绍', note: 'the introduction of the book 书的引言。' },
+          { word: 'produce → production', pos: 'v. → n.', cn: '生产 → 生产；产量', note: '与 product（产品）区分。' },
+          { word: 'communicate → communication', pos: 'v. → n.', cn: '交流 → 交流', note: 'communication skills 沟通技巧。' },
+          { word: 'organize → organization', pos: 'v. → n.', cn: '组织 → 组织；机构', note: '拼写为 -ization，注意 z。' },
+          { word: 'prepare → preparation', pos: 'v. → n.', cn: '准备 → 准备（工作）', note: 'make preparations for 为……做准备。' },
+          { word: 'inform → information', pos: 'v. → n.', cn: '告知 → 信息', note: '不可数名词，没有 informations 这种写法。' },
+        ],
+      },
+      {
+        group: '动词 → 名词：-ment / -ance / -ence / -er / -or / -ing',
+        words: [
+          { word: 'develop → development', pos: 'v. → n.', cn: '发展 → 发展', note: 'with the development of 随着……的发展。' },
+          { word: 'achieve → achievement', pos: 'v. → n.', cn: '实现 → 成就', note: 'a great achievement 一项伟大成就。' },
+          { word: 'agree → agreement', pos: 'v. → n.', cn: '同意 → 协议；同意', note: 'reach an agreement 达成协议。' },
+          { word: 'argue → argument', pos: 'v. → n.', cn: '争辩 → 争论', note: '去 e 再加 -ment，写成 argument。' },
+          { word: 'improve → improvement', pos: 'v. → n.', cn: '改进 → 改进', note: 'There is much room for improvement. 还有很大改进空间。' },
+          { word: 'treat → treatment', pos: 'v. → n.', cn: '治疗 → 治疗', note: 'get medical treatment 接受治疗。' },
+          { word: 'enjoy → enjoyment', pos: 'v. → n.', cn: '享受 → 乐趣', note: 'for enjoyment 为了娱乐。' },
+          { word: 'manage → management', pos: 'v. → n.', cn: '管理 → 管理', note: 'business management 企业管理。' },
+          { word: 'equip → equipment', pos: 'v. → n.', cn: '装备 → 设备', note: '不可数名词：a piece of equipment。' },
+          { word: 'appear → appearance', pos: 'v. → n.', cn: '出现 → 外貌；出现', note: 'care about one\'s appearance 在意自己的外貌。' },
+          { word: 'perform → performance', pos: 'v. → n.', cn: '表演 → 表演；表现', note: 'give a performance 表演一场。' },
+          { word: 'differ → difference', pos: 'v. → n.', cn: '不同 → 差别', note: 'make a difference 起作用、有影响。' },
+          { word: 'visit → visitor', pos: 'v. → n.', cn: '参观 → 参观者', note: '-or 表「人」；同类还有 inventor、actor。' },
+          { word: 'mean → meaning', pos: 'v. → n.', cn: '意味着 → 意思', note: 'the meaning of the word 这个词的意思。' },
+          { word: 'feel → feeling', pos: 'v. → n.', cn: '感觉 → 感受', note: 'I know your feelings. 我理解你的感受。' },
+        ],
+      },
+      {
+        group: '动词 → 形容词：-ed / -ing 分词形容词（人用 -ed，物用 -ing）',
+        words: [
+          { word: 'interest → interested / interesting', pos: 'v. → adj.', cn: '使感兴趣 → 感兴趣的／有趣的', note: 'be interested in doing sth；an interesting book。' },
+          { word: 'excite → excited / exciting', pos: 'v. → adj.', cn: '使激动 → 激动的／令人激动的', note: 'be excited about sth 对某事感到兴奋。' },
+          { word: 'surprise → surprised / surprising', pos: 'v. → adj.', cn: '使惊讶 → 惊讶的／令人惊讶的', note: 'be surprised at 对……感到惊讶。' },
+          { word: 'bore → bored / boring', pos: 'v. → adj.', cn: '使厌烦 → 厌烦的／乏味的', note: 'I am bored.／The film is boring.，主语决定用哪个。' },
+          { word: 'amaze → amazed / amazing', pos: 'v. → adj.', cn: '使惊奇 → 惊奇的／令人惊奇的', note: 'What an amazing idea! 写作常用。' },
+          { word: 'relax → relaxed / relaxing', pos: 'v. → adj.', cn: '放松 → 放松的／令人放松的', note: 'a relaxing weekend 令人放松的周末。' },
+          { word: 'frighten → frightened / frightening', pos: 'v. → adj.', cn: '使害怕 → 害怕的／吓人的', note: 'be frightened of 害怕。' },
+          { word: 'disappoint → disappointed / disappointing', pos: 'v. → adj.', cn: '使失望 → 失望的／令人失望的', note: 'be disappointed with / at。' },
+          { word: 'satisfy → satisfied / satisfying', pos: 'v. → adj.', cn: '使满意 → 满意的／令人满意的', note: 'be satisfied with 对……满意。' },
+          { word: 'please → pleased / pleasing', pos: 'v. → adj.', cn: '使高兴 → 高兴的／令人愉快的', note: 'be pleased with/to do；pleasant 也表「令人愉快的」。' },
+          { word: 'confuse → confused / confusing', pos: 'v. → adj.', cn: '使困惑 → 困惑的／令人困惑的', note: 'I am confused about the rule.' },
+          { word: 'worry → worried / worrying', pos: 'v. → adj.', cn: '使担心 → 担心的／令人担心的', note: 'be worried about 担心。' },
+          { word: 'tire → tired / tiring', pos: 'v. → adj.', cn: '使疲劳 → 疲劳的／累人的', note: 'be tired of 厌倦。' },
+          { word: 'touch → touched / touching', pos: 'v. → adj.', cn: '感动 → 感动的／感人的', note: 'a touching story 一个感人的故事。' },
+          { word: 'encourage → encouraged / encouraging', pos: 'v. → adj.', cn: '鼓励 → 受鼓舞的／令人鼓舞的', note: 'encourage sb to do sth 是动词用法。' },
+        ],
+      },
+      {
+        group: '动词 → 形容词：-ful / -ive / -able / -ous / -ant',
+        words: [
+          { word: 'depend → dependent', pos: 'v. → adj.', cn: '依赖 → 依赖的', note: 'be dependent on 依赖……。' },
+          { word: 'create → creative', pos: 'v. → adj.', cn: '创造 → 有创造力的', note: 'a creative student 有创造力的学生。' },
+          { word: 'attract → attractive', pos: 'v. → adj.', cn: '吸引 → 有吸引力的', note: 'an attractive city 一座有吸引力的城市。' },
+          { word: 'act → active', pos: 'v. → adj.', cn: '行动 → 积极的；活跃的', note: 'take an active part in 积极参加；名词是 action。' },
+          { word: 'protect → protective', pos: 'v. → adj.', cn: '保护 → 保护性的', note: '与名词 protection 成串记。' },
+          { word: 'produce → productive', pos: 'v. → adj.', cn: '生产 → 多产的；高效的', note: 'a productive day 高效的一天。' },
+          { word: 'differ → different', pos: 'v. → adj.', cn: '不同 → 不同的', note: '名词是 difference；be different from 与……不同。' },
+          { word: 'imagine → imaginative', pos: 'v. → adj.', cn: '想象 → 富有想象力的', note: '名词 imagination。' },
+          { word: 'enjoy → enjoyable', pos: 'v. → adj.', cn: '享受 → 令人愉快的', note: 'an enjoyable trip 愉快的旅行。' },
+          { word: 'comfort → comfortable', pos: 'v. → adj.', cn: '安慰 → 舒适的', note: '拼写 com-fort-able；反义词 uncomfortable。' },
+          { word: 'suit → suitable', pos: 'v. → adj.', cn: '适合 → 合适的', note: 'be suitable for 适合……。' },
+          { word: 'accept → acceptable', pos: 'v. → adj.', cn: '接受 → 可接受的', note: 'It is acceptable to do sth。' },
+          { word: 'believe → believable', pos: 'v. → adj.', cn: '相信 → 可信的', note: '反义词 unbelievable 难以置信的。' },
+          { word: 'forget → forgettable / unforgettable', pos: 'v. → adj.', cn: '忘记 → 容易被忘的／难忘的', note: 'unforgettable 是写作高分词。' },
+          { word: 'value → valuable', pos: 'v. → adj.', cn: '重视 → 宝贵的', note: 'valuable advice 宝贵的建议。' },
+        ],
+      },
+    ],
+    questions: [
+      {
+        id: 'eng-vocab-exam-3-q1',
+        type: 'fill',
+        stem: '用括号中单词的适当形式填空。\nThe doctor made a quick ______ (decide) to save the boy.',
+        answer: 'decision',
+        explanation:
+          'a quick 后面需要名词，decide 的名词是 decision，属于 -de 变 -sion 的一类。注意拼写只有一个 s。',
+        difficulty: 2,
+        tags: ['词形转换', '动→名', '-sion'],
+      },
+      {
+        id: 'eng-vocab-exam-3-q2',
+        type: 'fill',
+        stem: '用括号中单词的适当形式填空。\nThe ______ (invent) of paper is one of China\'s greatest contributions to the world.',
+        answer: 'invention',
+        explanation:
+          '句子的主语位置需要名词，invent 的名词是 invention（-tion 后缀）。要表示「发明家」才用 inventor。',
+        difficulty: 1,
+        tags: ['词形转换', '动→名', '-tion'],
+      },
+      {
+        id: 'eng-vocab-exam-3-q3',
+        type: 'choice',
+        stem: 'I am ______ in the story because it is really ______.',
+        options: [
+          'interested; interesting',
+          'interesting; interested',
+          'interested; interested',
+          'interesting; interesting',
+        ],
+        answer: 'A',
+        explanation:
+          '第一空主语是 I（人），表示「感到有兴趣」用 -ed 形容词 interested；第二空主语是 it（物），表示「本身有趣」用 -ing 形容词 interesting。',
+        difficulty: 2,
+        tags: ['词形转换', '分词形容词', '动→形'],
+      },
+      {
+        id: 'eng-vocab-exam-3-q4',
+        type: 'fill',
+        stem: '用括号中单词的适当形式填空。\nDoing sports every day is ______ (enjoy) and healthy.',
+        answer: 'enjoyable',
+        explanation:
+          'is 后面作表语要用形容词，enjoy 加 -able 构成 enjoyable「令人愉快的」，与后面的 healthy 并列。',
+        difficulty: 2,
+        tags: ['词形转换', '动→形', '-able'],
+      },
+      {
+        id: 'eng-vocab-exam-3-q5',
+        type: 'choice',
+        stem: 'The students had a long ______ about how to protect the environment.',
+        options: ['discussion', 'discuss', 'discussing', 'discussed'],
+        answer: 'A',
+        explanation:
+          'a long 后面需要名词，discuss 的名词是 discussion，且 -ss 结尾要写成 -ssion（双写 s）。B 项是动词，C、D 项是分词形式，都不能作 had 的宾语。',
+        difficulty: 2,
+        tags: ['词形转换', '动→名', '-ssion'],
+      },
+      {
+        id: 'eng-vocab-exam-3-q6',
+        type: 'fill',
+        stem: '用括号中单词的适当形式填空。\nThe man who invented the new machine is a famous ______ (invent) in our country.',
+        answer: 'inventor',
+        explanation:
+          '句意是「他是一个著名的发明家」，指人要用 -or 后缀，所以填 inventor。若填 invention 就变成「发明物」，与 a famous 搭配讲不通。',
+        difficulty: 3,
+        tags: ['词形转换', '动→名', '表人的后缀'],
+      },
+    ],
+  },
+
+  /* ================================================================== */
+  /* 四、高频短语动词与固定搭配                                            */
+  /* ================================================================== */
+  {
+    id: 'eng-vocab-exam-4',
+    grade: 'all',
+    unit: '中考词汇考点',
+    title: '中考词汇考点·高频短语动词与固定搭配',
+    enTitle: 'Phrasal Verbs and Fixed Collocations',
+    summary:
+      '把 take / make / get / turn / put / come / go / look / give / keep 十个高频动词的搭配与 be + 形容词 + 介词成套整理，解决选择、完形与完成句子的搭配题。',
+    points: [
+      {
+        level: '重点',
+        text: '短语动词是选择题与完形填空的必考点，判断第一步是看宾语',
+        explain:
+          '先看空格后接名词还是接 doing：give up doing、look forward to doing、be used to doing 都只能接动名词；再看代词放哪里：「动词 + 副词」型短语代词必须放中间。这两点决定大部分题的答案。',
+      },
+      {
+        level: '重点',
+        text: '同一动词配不同介词或副词，意思完全不同',
+        explain:
+          'take off（脱下）、take up（开始从事）、take place（举行）、take after（长得像）意思各不相同。答题时先按句意确定「动作方向」，再核对搭配，不要凭「见过这个词」就选。',
+      },
+      {
+        level: '重点',
+        text: '不及物短语动词没有被动语态',
+        explain:
+          'take place、come true、happen、break out 都不及物，看到 be taken place、be come true、was happened 一律排除。判断办法很简单：短语后面不需要宾语，就不可能变成被动句。',
+      },
+      {
+        level: '次重点',
+        text: 'be + 形容词 + 介词是固定搭配题的主战场，介词不能换',
+        explain:
+          'be good at（擅长）、be good for（对……有益）、be good with（善于与……相处）三个搭配含义不同；be interested in、be proud of、be strict with、be angry with 都要连介词一起背。',
+      },
+      {
+        level: '次重点',
+        text: '代词宾语的位置是常见干扰项',
+        explain:
+          '「动词 + 副词」型短语（put away、turn on、give up）接代词时必须放中间：put it away；「动词 + 介词」型短语（look after、wait for）代词只能放后面：look after them。',
+      },
+      {
+        level: '了解',
+        text: '一词多义的短语按「搭配对象」归类记忆',
+        explain:
+          'put on 搭配衣帽或节目，put off 搭配会议、比赛、计划，put up 搭配海报、帐篷，put out 搭配火。按搭配对象归类，比按中文解释死记牢得多。',
+      },
+    ],
+    confusables: [
+      {
+        a: 'take off',
+        b: 'put off',
+        diff: 'take off 是「脱下」或「起飞」，put off 是「推迟」；两个短语只差一个动词，考试常同时出现在选项里。',
+        exampleA: 'It is warm inside, so you can take off your coat.',
+        exampleB: 'The class meeting was put off until next Monday.',
+      },
+      {
+        a: 'look for',
+        b: 'find',
+        diff: 'look for 强调「寻找」这个动作与过程，find 强调「找到」的结果；过程用 look for，结果用 find。',
+        exampleA: 'I am looking for my English notebook everywhere.',
+        exampleB: 'At last I found my notebook under the desk.',
+      },
+      {
+        a: 'be used to',
+        b: 'get used to',
+        diff: 'be used to 表示「习惯于」的状态，get used to 表示「渐渐习惯」的变化过程；两者 to 都是介词，后面接名词或 doing。',
+        exampleA: 'He is used to getting up early every day.',
+        exampleB: 'You will get used to the life here soon.',
+      },
+      {
+        a: 'take place',
+        b: 'happen',
+        diff: 'take place 多指按计划举行的活动，happen 多指偶然发生的事；两者都是不及物动词，都没有被动语态。',
+        exampleA: 'The school sports meeting will take place next Friday.',
+        exampleB: 'The traffic accident happened at seven this morning.',
+      },
+    ],
+    rules: [
+      {
+        rule: '「动词 + 副词」型短语接代词时，代词放中间',
+        form: 'put away / turn on / give up / pick up + it/them → put it away',
+        example: 'Your books are everywhere. Please put them away.',
+        cn: '你的书到处都是，请把它们收起来。',
+        tip: '看到空格里是 it、them，就去找「动词 + 代词 + 副词」的语序；接名词则两种语序都可以。',
+      },
+      {
+        rule: '「动词 + 介词」型短语的宾语（含代词）只能放在介词后面',
+        form: 'look after sb / wait for sb / listen to sb / laugh at sb',
+        example: 'The old man needs someone to look after him.',
+        cn: '这位老人需要有人照顾他。',
+        tip: '不能说 look him after；介词后面接代词用宾格。',
+      },
+      {
+        rule: 'be + 形容词 + 介词是固定搭配，介词随形容词而定',
+        form: 'be good at / be interested in / be proud of / be strict with sb / be full of',
+        example: 'Our teacher is strict with us, but she is also kind.',
+        cn: '我们老师对我们很严格，但也很和蔼。',
+        tip: '背搭配时连介词一起背；只背 good、interested 等于没背。',
+      },
+      {
+        rule: '不及物短语动词没有被动语态',
+        form: 'take place、come true、happen、break out 只用主动形式',
+        example: 'The sports meeting will take place next Friday.',
+        cn: '运动会将于下周五举行。',
+        tip: '短语后面不带宾语，就不可能变成被动句，be taken place 一定是错的。',
+      },
+      {
+        rule: 'to 后面接 doing 的固定短语',
+        form: 'look forward to doing；be used to doing；pay attention to doing；get used to doing',
+        example: 'I am looking forward to hearing from you soon.',
+        cn: '我盼望着尽快收到你的来信。',
+        tip: '这里的 to 是介词，不是不定式符号，后面必须接动词 -ing 形式。',
+      },
+    ],
+    mistakes: [
+      {
+        wrong: 'Please turn on it. The room is very dark.',
+        right: 'Please turn it on. The room is very dark.',
+        why: 'turn on 是「动词 + 副词」型短语，代词宾语必须放在动词和副词中间。',
+      },
+      {
+        wrong: 'The traffic accident was happened near our school last night.',
+        right: 'The traffic accident happened near our school last night.',
+        why: 'happen 是不及物动词，没有被动语态，直接用作谓语即可。',
+      },
+      {
+        wrong: 'I am looking forward to see you at the party.',
+        right: 'I am looking forward to seeing you at the party.',
+        why: 'look forward to 里的 to 是介词，后面接动词 -ing 形式。',
+      },
+      {
+        wrong: 'Eating too much sugar is bad to your teeth.',
+        right: 'Eating too much sugar is bad for your teeth.',
+        why: 'be bad for 是固定搭配，意为「对……有害」，介词不能用 to。',
+      },
+      {
+        wrong: 'He is very good in maths and he often helps others.',
+        right: 'He is very good at maths and he often helps others.',
+        why: 'be good at 表示「擅长」，介词固定用 at。',
+      },
+      {
+        wrong: 'My mother gave up to smoke last year.',
+        right: 'My mother gave up smoking last year.',
+        why: 'give up 后面接动名词，不能接不定式。',
+      },
+    ],
+    wordList: [
+      {
+        group: 'take / make 家族',
+        words: [
+          { word: 'take off', pos: 'phr.', cn: '脱下；（飞机）起飞', note: '例：Take it off, please. 代词放中间。' },
+          { word: 'take part in', pos: 'phr.', cn: '参加（活动）', note: '例：Many students took part in the singing competition. 必须带 in。' },
+          { word: 'take care of', pos: 'phr.', cn: '照顾；照料', note: '例：She takes care of her little brother. 相当于 look after。' },
+          { word: 'take away', pos: 'phr.', cn: '拿走；带走', note: '例：Please take the cups away. 代词放中间：take them away。' },
+          { word: 'take place', pos: 'phr.', cn: '发生；举行', note: '例：The meeting will take place in the hall. 不及物，无被动。' },
+          { word: 'take up', pos: 'phr.', cn: '开始从事；占用（时间、空间）', note: '例：He took up swimming last year.' },
+          { word: 'take after', pos: 'phr.', cn: '（外貌或性格）像', note: '例：She takes after her mother.' },
+          { word: 'take medicine', pos: 'phr.', cn: '吃药', note: '动词用 take，不能用 eat 或 drink。' },
+          { word: 'take a photo', pos: 'phr.', cn: '拍照', note: '复数 take photos；为某人拍照用 take a photo of sb。' },
+          { word: 'take notes', pos: 'phr.', cn: '做笔记', note: '例：Please take notes while listening.' },
+          { word: 'take one\'s time', pos: 'phr.', cn: '慢慢来，别着急', note: '例：Take your time. There is no hurry.' },
+          { word: 'make friends with', pos: 'phr.', cn: '与……交朋友', note: '例：He soon made friends with his classmates. friends 用复数。' },
+          { word: 'make sure', pos: 'phr.', cn: '确保；查明', note: '后接 of sth 或 that 从句：make sure that the door is locked。' },
+          { word: 'make a decision', pos: 'phr.', cn: '做决定', note: '例：You should make a decision by yourself. 也可说 make up one\'s mind。' },
+          { word: 'make up', pos: 'phr.', cn: '编造；组成；化妆', note: '例：be made up of 由……组成。' },
+          { word: 'make progress', pos: 'phr.', cn: '取得进步', note: 'progress 不可数，不加 s：make great progress。' },
+          { word: 'make a difference', pos: 'phr.', cn: '有影响；起作用', note: '例：Your help made a big difference to me. 作文可用。' },
+          { word: 'make sense', pos: 'phr.', cn: '讲得通；有道理', note: '例：His explanation makes sense.' },
+        ],
+      },
+      {
+        group: 'get / turn / put 家族',
+        words: [
+          { word: 'get up', pos: 'phr.', cn: '起床；起身', note: '过去式 got up；get up early 早起。' },
+          { word: 'get on / get along with', pos: 'phr.', cn: '与……相处', note: '例：He gets on well with his new classmates.' },
+          { word: 'get ready for', pos: 'phr.', cn: '为……做准备', note: '后接名词或动名词：get ready for the exam。' },
+          { word: 'get lost', pos: 'phr.', cn: '迷路', note: 'get + 过去分词表示状态变化。' },
+          { word: 'get used to', pos: 'phr.', cn: '习惯于', note: 'to 是介词，后接名词或 doing：get used to getting up early。' },
+          { word: 'get together', pos: 'phr.', cn: '聚会；相聚', note: '例：We get together every Spring Festival.' },
+          { word: 'get off', pos: 'phr.', cn: '下（车、飞机）', note: '与 get on（上车）互为反义。' },
+          { word: 'get rid of', pos: 'phr.', cn: '摆脱；除掉', note: '例：It is hard to get rid of a bad habit.' },
+          { word: 'turn on', pos: 'phr.', cn: '打开（电器）', note: '例：Turn it on, please. 代词放中间。' },
+          { word: 'turn off', pos: 'phr.', cn: '关闭（电器）', note: '例：Remember to turn off the lights.' },
+          { word: 'turn up', pos: 'phr.', cn: '调大（音量）；出现', note: '与 turn down 互为反义。' },
+          { word: 'turn down', pos: 'phr.', cn: '调小（音量）；拒绝', note: '例：He turned down the invitation. 拒绝邀请。' },
+          { word: 'turn into', pos: 'phr.', cn: '变成', note: '例：Water turns into ice in winter. 相当于 change into。' },
+          { word: 'turn to', pos: 'phr.', cn: '求助于；翻到', note: '例：You can turn to your teacher for help.' },
+          { word: 'put on', pos: 'phr.', cn: '穿上；上演', note: '例：Put on your coat. It is cold outside. 与 take off 反义。' },
+          { word: 'put off', pos: 'phr.', cn: '推迟', note: '宾语常是 meeting、match、plan。' },
+          { word: 'put away', pos: 'phr.', cn: '把……收起来', note: '例：Put them away before dinner. 代词放中间。' },
+          { word: 'put up', pos: 'phr.', cn: '举起；张贴；搭建', note: '例：put up a poster 张贴海报，put up a tent 搭帐篷。' },
+          { word: 'put out', pos: 'phr.', cn: '扑灭（火）', note: '宾语常是 fire、candle。' },
+        ],
+      },
+      {
+        group: 'come / go / look 家族',
+        words: [
+          { word: 'come true', pos: 'phr.', cn: '实现', note: '主语常是 dream、wish、plan，无被动语态。' },
+          { word: 'come up with', pos: 'phr.', cn: '想出（主意、办法）', note: '后接 idea、plan、answer。' },
+          { word: 'come from', pos: 'phr.', cn: '来自；出生于', note: '相当于 be from。' },
+          { word: 'come on', pos: 'phr.', cn: '加油；快点', note: '口语中用于鼓励或催促。' },
+          { word: 'come in', pos: 'phr.', cn: '进来', note: '例：May I come in?。' },
+          { word: 'come back', pos: 'phr.', cn: '回来', note: '例：He came back from Beijing last week.' },
+          { word: 'come out', pos: 'phr.', cn: '出版；开花；（太阳）出来', note: '例：The flowers come out in spring.' },
+          { word: 'come across', pos: 'phr.', cn: '偶然遇到；偶然发现', note: '例：I came across an old friend in the street.' },
+          { word: 'go on', pos: 'phr.', cn: '继续；（事情）发生', note: 'go on doing 继续做同一件事，go on to do 接着做另一件事。' },
+          { word: 'go over', pos: 'phr.', cn: '复习；检查', note: '例：Go over your notes before the exam.' },
+          { word: 'go out', pos: 'phr.', cn: '出去；（灯）熄灭', note: '主语是灯时表示熄灭。' },
+          { word: 'go through', pos: 'phr.', cn: '经历；仔细检查', note: '后接 difficulties、papers 等。' },
+          { word: 'go away', pos: 'phr.', cn: '走开；离开', note: '例：The pain will go away soon.' },
+          { word: 'look after', pos: 'phr.', cn: '照顾；照料', note: '例：look after him 代词放介词后。' },
+          { word: 'look for', pos: 'phr.', cn: '寻找', note: '强调动作过程，与 find（找到）区分。' },
+          { word: 'look up', pos: 'phr.', cn: '查阅；抬头看', note: '例：look up the word in the dictionary；代词放中间：look it up。' },
+          { word: 'look forward to', pos: 'phr.', cn: '盼望；期待', note: 'to 是介词，后接名词或 doing。' },
+          { word: 'look out', pos: 'phr.', cn: '小心；当心', note: '例：Look out! The car is coming.' },
+        ],
+      },
+      {
+        group: 'give / keep / run / hand / bring 等家族',
+        words: [
+          { word: 'give up', pos: 'phr.', cn: '放弃；戒掉', note: '后接动名词：give up smoking；代词放中间：give it up。' },
+          { word: 'give out', pos: 'phr.', cn: '分发；发出', note: '例：The teacher gave out the test papers.' },
+          { word: 'give away', pos: 'phr.', cn: '赠送；泄露（秘密）', note: '例：He gave away his old books to the children.' },
+          { word: 'give back', pos: 'phr.', cn: '归还', note: '例：Please give back the book to me. 相当于 return。' },
+          { word: 'give in', pos: 'phr.', cn: '让步；屈服', note: '不及物：He never gives in to difficulties.' },
+          { word: 'keep on', pos: 'phr.', cn: '继续（做）', note: '后接 doing：keep on working。' },
+          { word: 'keep away from', pos: 'phr.', cn: '远离', note: '例：Keep away from the fire.' },
+          { word: 'keep in touch', pos: 'phr.', cn: '保持联系', note: '例：We keep in touch by email. 与 with sb 连用。' },
+          { word: 'keep up with', pos: 'phr.', cn: '跟上；赶上', note: '例：He runs fast and I cannot keep up with him.' },
+          { word: 'keep doing sth', pos: 'phr.', cn: '一直做某事', note: '强调持续不断；与 keep on doing 意思相近。' },
+          { word: 'run out of', pos: 'phr.', cn: '用完；耗尽', note: '例：We ran out of water in the desert. 主语是人。' },
+          { word: 'run after', pos: 'phr.', cn: '追赶；追求', note: '例：The dog ran after the ball.' },
+          { word: 'run away', pos: 'phr.', cn: '逃跑；跑开', note: '例：The little boy ran away from home.' },
+          { word: 'hand in', pos: 'phr.', cn: '上交；提交', note: '例：Hand in your homework tomorrow morning.' },
+          { word: 'hand out', pos: 'phr.', cn: '分发', note: '与 give out 意思相近。' },
+          { word: 'bring up', pos: 'phr.', cn: '抚养；提出（话题）', note: '被动常用：He was brought up by his grandparents.' },
+          { word: 'bring back', pos: 'phr.', cn: '归还；使想起', note: '例：The song brought back my childhood memories.' },
+          { word: 'call up', pos: 'phr.', cn: '打电话给……', note: '例：I will call you up this evening. 代词放中间。' },
+        ],
+      },
+      {
+        group: 'be + 形容词 + 介词 固定搭配',
+        words: [
+          { word: 'be good at', pos: 'phr.', cn: '擅长', note: '后接名词或 doing：be good at swimming。' },
+          { word: 'be good for', pos: 'phr.', cn: '对……有益', note: '例：Vegetables are good for your health.' },
+          { word: 'be good with', pos: 'phr.', cn: '善于应付（人、物）', note: '例：She is good with children.' },
+          { word: 'be interested in', pos: 'phr.', cn: '对……感兴趣', note: '后接名词或 doing；主语是人。' },
+          { word: 'be afraid of', pos: 'phr.', cn: '害怕', note: '后接名词或 doing：be afraid of making mistakes。' },
+          { word: 'be proud of', pos: 'phr.', cn: '为……感到自豪', note: '例：We are proud of our school team.' },
+          { word: 'be full of', pos: 'phr.', cn: '充满', note: '例：The hall was full of students. 相当于 be filled with。' },
+          { word: 'be famous for', pos: 'phr.', cn: '以……而闻名', note: '例：Guangzhou is famous for its food.' },
+          { word: 'be famous as', pos: 'phr.', cn: '作为……而闻名', note: '例：He is famous as a writer.' },
+          { word: 'be angry with sb', pos: 'phr.', cn: '生某人的气', note: '例：My mother was angry with me.' },
+          { word: 'be angry about sth', pos: 'phr.', cn: '因某事生气', note: '例：He was angry about the noise.' },
+          { word: 'be strict with sb', pos: 'phr.', cn: '对某人严格', note: '对人用 with，对事用 in：be strict in his work。' },
+          { word: 'be worried about', pos: 'phr.', cn: '担心', note: '例：She is worried about her son\'s study.' },
+          { word: 'be busy with', pos: 'phr.', cn: '忙于', note: '也可说 be busy doing sth。' },
+          { word: 'be late for', pos: 'phr.', cn: '迟到', note: '例：Do not be late for class again.' },
+          { word: 'be ready for', pos: 'phr.', cn: '为……做好准备', note: '例：We are ready for the sports meeting.' },
+          { word: 'be different from', pos: 'phr.', cn: '与……不同', note: '例：My hobby is different from yours.' },
+          { word: 'be surprised at', pos: 'phr.', cn: '对……感到惊讶', note: '例：We were surprised at the news.' },
+        ],
+      },
+    ],
+    questions: [
+      {
+        id: 'eng-vocab-exam-4-q1',
+        type: 'choice',
+        stem: 'Your clothes are all over the bed. Please ______ before you go out.',
+        options: ['put them away', 'put away them', 'put on them', 'put them on'],
+        answer: 'A',
+        explanation:
+          'put away 是「动词 + 副词」型短语，代词宾语必须放在中间，所以是 put them away。B 项语序错误；C 项语序错误且 put on 是「穿上」；D 项 put them on 意为「穿上它们」，与收拾衣物的句意不符。',
+        difficulty: 3,
+        tags: ['短语动词', '代词位置', 'put 家族'],
+      },
+      {
+        id: 'eng-vocab-exam-4-q2',
+        type: 'choice',
+        stem: 'Our school sports meeting will ______ next Friday if it does not rain.',
+        options: ['take place', 'be taken place', 'take part', 'be happened'],
+        answer: 'A',
+        explanation:
+          'take place 意为「举行」，是不及物短语，主语是运动会，正好符合。B 项 take place 没有被动语态，be taken place 是错的；C 项 take part 必须加 in 才能接宾语；D 项 happen 同样是不及物动词，不能用被动。',
+        difficulty: 2,
+        tags: ['短语动词', '不及物短语', '被动语态'],
+      },
+      {
+        id: 'eng-vocab-exam-4-q3',
+        type: 'choice',
+        stem: 'I am looking forward to ______ from you soon.',
+        options: ['hearing', 'hear', 'heard', 'be heard'],
+        answer: 'A',
+        explanation:
+          'look forward to 中的 to 是介词，后面要接动名词 hearing。B 项是不定式，只有在 to 作不定式符号时才用；C、D 项形式与搭配都不成立。',
+        difficulty: 2,
+        tags: ['短语动词', 'to 作介词', 'look 家族'],
+      },
+      {
+        id: 'eng-vocab-exam-4-q4',
+        type: 'choice',
+        stem: 'Vegetables are good ______ your health, and Tom is good ______ cooking.',
+        options: ['for; at', 'at; for', 'to; in', 'for; with'],
+        answer: 'A',
+        explanation:
+          'be good for 表示「对……有益」，第一空配 health；be good at 表示「擅长」，第二空配 cooking。其余组合都不符合两个固定搭配。',
+        difficulty: 2,
+        tags: ['固定搭配', 'be good for/at', '介词'],
+      },
+      {
+        id: 'eng-vocab-exam-4-q5',
+        type: 'fill',
+        stem: '根据中文提示补全句子，每空一词。\n我不喜欢早起，但我已经习惯了。\nI do not like getting up early, but I have ______ ______ ______ it.',
+        answer: 'got used to|gotten used to',
+        explanation:
+          'get used to 表示「习惯于」，to 是介词，后面接代词 it。前面有 have，所以用 get 的过去分词 got（美式也可写 gotten），三空依次是 got / gotten、used、to。',
+        difficulty: 3,
+        tags: ['短语动词', 'get used to', '现在完成时'],
+      },
+      {
+        id: 'eng-vocab-exam-4-q6',
+        type: 'fill',
+        stem: '用所给词的适当形式填空。\nThe old man ______ (look) after by his neighbours when he was ill.',
+        answer: 'looked',
+        explanation:
+          '老人是「被照顾」的，用被动语态；look after 是「动词 + 介词」型短语，变被动时介词 after 必须保留，所以只把 look 变成过去分词 looked，构成 was looked after。',
+        difficulty: 3,
+        tags: ['短语动词', '被动语态', 'look after'],
+      },
+    ],
+  },
+
+  /* ================================================================== */
+  /* 五、易错拼写与形近词                                                  */
+  /* ================================================================== */
+  {
+    id: 'eng-vocab-exam-5',
+    grade: 'all',
+    unit: '中考词汇考点',
+    title: '中考词汇考点·易错拼写与形近词',
+    enTitle: 'Common Spelling Mistakes and Confusable Words',
+    summary:
+      '按双写辅音、ie/ei、-ful/-full、-tion/-sion、形近词五类整理易错拼写，把作文与语篇填空里那些「会读不会写、写了就写错」的词一次清理干净。',
+    points: [
+      {
+        level: '重点',
+        text: '形近词判断第一步定词性，第二步才定词义',
+        explain:
+          'advice/advise、affect/effect、breath/breathe 都是「名词与动词」配对。空格缺谓语就用动词，缺主语或宾语、或前面有 a、the、my 就用名词。先看成分再看意思，比凭感觉选准确得多。',
+      },
+      {
+        level: '重点',
+        text: '双写辅音与 ie/ei 是拼写题的固定考法',
+        explain:
+          '重读闭音节加 -ing/-ed 要双写末尾辅音（begin → beginning，stop → stopped）；ie 一般写在 ei 前面，但 c 后面写 ei（receive、ceiling）。作文与语篇填空里拼错一个字母就直接丢分。',
+      },
+      {
+        level: '重点',
+        text: '-ful 只有一个 l，-ly 的加法要看词尾',
+        explain:
+          'careful、useful、beautiful 都只有一个 l；real + ly 是 really（两个 l），final + ly 是 finally，happy 要先改 y 为 i 再加 ly。这三条覆盖了后缀拼写题的大部分失分点。',
+      },
+      {
+        level: '次重点',
+        text: '-tion 与 -sion 的选择由动词词尾决定',
+        explain:
+          'decide → decision、conclude → conclusion 用 -sion；discuss → discussion、express → expression 用 -ssion；其余多与 -tion（education、information、attention）。',
+      },
+      {
+        level: '次重点',
+        text: '同音或近音的词要靠句意与搭配区分',
+        explain:
+          'there/their、its/it\'s、whose/who\'s、than/then 在听力与完形中常被设成干扰项。判断办法是把缩写还原成完整形式（it is、who is），还原后通顺才用带撇号的那个。',
+      },
+      {
+        level: '了解',
+        text: '拼写错误集中在「多一个字母、少一个字母、写错字母顺序」三类',
+        explain:
+          'becuase、freind、tommorrow、quie 都是真实高频错写。抄写时按音节读，边读边写，比一遍遍抄整词有效；听写后一定要回头核对字母顺序。',
+      },
+    ],
+    confusables: [
+      {
+        a: 'advice',
+        b: 'advise',
+        diff: 'advice 是不可数名词「建议」，advise 是动词「建议」，句型是 advise sb to do sth。看句子缺什么成分：缺谓语用动词，作宾语用名词。',
+        exampleA: 'My teacher gave me some useful advice on reading.',
+        exampleB: 'My teacher advised me to read more English books.',
+      },
+      {
+        a: 'affect',
+        b: 'effect',
+        diff: 'affect 是动词「影响」，effect 是名词「影响、效果」，固定搭配是 have an effect on sth。',
+        exampleA: 'The bad weather affected our trip to the island.',
+        exampleB: 'The noise had a bad effect on my study.',
+      },
+      {
+        a: 'quiet',
+        b: 'quite',
+        diff: 'quiet 是形容词「安静的」，quite 是副词「相当」，修饰形容词或副词；两词只差字母 e 与 t 的位置。',
+        exampleA: 'Please keep quiet in the reading room.',
+        exampleB: 'The film we saw yesterday was quite interesting.',
+      },
+      {
+        a: 'beside',
+        b: 'besides',
+        diff: 'beside 是介词「在……旁边」；besides 是介词或副词「除……之外（还有）」，表示追加。',
+        exampleA: 'She sat beside her mother all the time.',
+        exampleB: 'Besides English, he also learns French.',
+      },
+      {
+        a: 'through',
+        b: 'thought',
+        diff: 'through 是介词「穿过」，指从内部穿过；thought 是 think 的过去式，也可作名词「想法」。',
+        exampleA: 'The train went through a long tunnel.',
+        exampleB: 'I thought about the question for a while.',
+      },
+    ],
+    rules: [
+      {
+        rule: '重读闭音节结尾的动词，加 -ing / -ed 时双写末尾辅音',
+        form: '「辅音 + 元音 + 辅音」结尾 → 双写：begin → beginning；stop → stopped；plan → planned',
+        example: 'The film is beginning, so please be quiet.',
+        cn: '电影要开始了，请安静。',
+        tip: '先看是不是「辅 + 元 + 辅」结尾，再看重音是否落在最后一个音节，两个条件都满足才双写；visit 就不是重读闭音节，所以写 visiting。',
+      },
+      {
+        rule: 'ie 与 ei 的拼写规律：i 在 e 前，c 后写 ei',
+        form: 'believe、field、piece、achieve 用 ie；receive、ceiling 用 ei',
+        example: 'I received a letter from my pen friend last week.',
+        cn: '上周我收到了笔友的一封信。',
+        tip: 'receive、ceiling 是 c 后写 ei 的典型词，其余多数写 ie；recieve 是最常见的拼写错。',
+      },
+      {
+        rule: '-ful 后缀只有一个 l，-ly 的加法要看形容词词尾',
+        form: 'care + ful → careful；real + ly → really；final + ly → finally；happy → happily',
+        example: 'Be careful, and you will finally get it right.',
+        cn: '细心一点，你最终会做对的。',
+        tip: '-ful 与 full 不同：作后缀时只写一个 l，full 单独作形容词时才写两个 l。',
+      },
+      {
+        rule: '名词后缀 -tion / -sion / -ssion 由动词词尾决定',
+        form: 'invent → invention；decide → decision；discuss → discussion',
+        example: 'The students had a discussion about the decision.',
+        cn: '学生们就这个决定进行了讨论。',
+        tip: '-de 结尾用 -sion，-ss 结尾用 -ssion，其余多半用 -tion。',
+      },
+      {
+        rule: '同音异形词靠句意与搭配区分',
+        form: 'there（那里）／their（他们的）；its（它的）／it\'s（它是）；whose（谁的）／who\'s（谁在）',
+        example: 'Their school is over there, and it is very big.',
+        cn: '他们的学校在那边，规模很大。',
+        tip: '看到撇号先想「是不是 is/has 的缩写」，把它还原成完整形式，句子通顺才用它。',
+      },
+    ],
+    mistakes: [
+      {
+        wrong: 'We will have a class meeting at the begining of next week.',
+        right: 'We will have a class meeting at the beginning of next week.',
+        why: 'begin 加 -ing 要双写 n，正确写法是 beginning，只写一个 n 是典型拼写错。',
+      },
+      {
+        wrong: 'My teacher gave me some useful advices about writing.',
+        right: 'My teacher gave me some useful advice about writing.',
+        why: 'advice 是不可数名词，没有复数形式，要计数用 a piece of advice。',
+      },
+      {
+        wrong: 'The noise had a bad affect on my study.',
+        right: 'The noise had a bad effect on my study.',
+        why: 'have an effect on 是固定搭配，这里需要名词 effect；affect 是动词，不能作 had 的宾语。',
+      },
+      {
+        wrong: 'He is quiet good at maths.',
+        right: 'He is quite good at maths.',
+        why: '修饰形容词 good 要用副词 quite（相当）；quiet 是形容词「安静的」，两词字母顺序不同。',
+      },
+      {
+        wrong: 'I recieved a letter from my pen friend yesterday.',
+        right: 'I received a letter from my pen friend yesterday.',
+        why: 'receive 的拼写是 c 后写 ei，写成 recieve 是最常见的拼写错。',
+      },
+      {
+        wrong: 'Walks in the park is good for our healthy.',
+        right: 'Walking in the park is good for our health.',
+        why: '动名词作主语用 walking；介词 for 后面要接名词 health，不能接形容词 healthy。',
+      },
+    ],
+    wordList: [
+      {
+        group: '双写辅音：加 -ing / -ed / -er 时的高频易错词',
+        words: [
+          { word: 'beginning', phonetic: 'bɪˈɡɪnɪŋ', pos: 'n.', cn: '开始；开端', note: 'begin 双写 n；at the beginning of 在……之初，别写 begining。' },
+          { word: 'running', pos: 'v.-ing', cn: '跑（现在分词）', note: 'run 是「辅 + 元 + 辅」结尾，双写 n；go running 去跑步。' },
+          { word: 'sitting', pos: 'v.-ing', cn: '坐（现在分词）', note: 'sit 双写 t；sit down 的进行式是 sitting down。' },
+          { word: 'getting', pos: 'v.-ing', cn: '得到（现在分词）', note: 'get 双写 t，别写 geting。' },
+          { word: 'putting', pos: 'v.-ing', cn: '放（现在分词）', note: 'put 双写 t；putting 与 puting 只差一个字母，常错。' },
+          { word: 'swimming', pos: 'v.-ing', cn: '游泳（现在分词）', note: 'swim 双写 m；go swimming 去游泳。' },
+          { word: 'planning', pos: 'v.-ing', cn: '计划（现在分词）', note: 'plan 双写 n；planning 也作名词「规划」。' },
+          { word: 'stopped', pos: 'v.-ed', cn: '停止（过去式）', note: 'stop 双写 p；stop doing sth 停止做某事。' },
+          { word: 'planned', pos: 'v.-ed', cn: '计划（过去式）', note: 'plan 双写 n 再加 ed。' },
+          { word: 'biggest', pos: 'adj.', cn: '最大的', note: 'big 是「辅 + 元 + 辅」结尾，比较级与最高级都双写 g。' },
+          { word: 'hotter', pos: 'adj.', cn: '更热的', note: 'hot 双写 t；最高级 hottest。' },
+          { word: 'thinner', pos: 'adj.', cn: '更瘦的', note: 'thin 双写 n；比较级 thinner，最高级 thinnest。' },
+          { word: 'preferred', pos: 'v.-ed', cn: '更喜欢（过去式）', note: 'prefer 重音在最后，双写 r 再加 ed。' },
+          { word: 'forgotten', pos: 'v.-pp.', cn: '忘记（过去分词）', note: 'forget 双写 t；forgotten 是过去分词，过去式是 forgot。' },
+          { word: 'winning', pos: 'v.-ing', cn: '赢（现在分词）', note: 'win 双写 n；the winning team 获胜的队伍。' },
+        ],
+      },
+      {
+        group: 'ie / ei 与字母顺序易错词',
+        words: [
+          { word: 'believe', pos: 'v.', cn: '相信', note: 'ie 顺序；I believe in you. 常见错写 beileve。' },
+          { word: 'receive', phonetic: 'rɪˈsiːv', pos: 'v.', cn: '收到；接待', note: 'c 后写 ei；最常错写成 recieve。' },
+          { word: 'achieve', pos: 'v.', cn: '实现；达到', note: 'ie 顺序；achieve one\'s dream 实现梦想。' },
+          { word: 'field', pos: 'n.', cn: '田野；领域', note: 'ie 顺序；注意与 filled 区分。' },
+          { word: 'piece', pos: 'n.', cn: '一块；一片', note: 'ie 顺序；a piece of paper 一张纸。' },
+          { word: 'thief', pos: 'n.', cn: '小偷', note: 'ie 顺序；复数 thieves 改 f 为 v。' },
+          { word: 'friend', pos: 'n.', cn: '朋友', note: '读音是 /frend/，但拼写是 ie；make friends with 与……交朋友。' },
+          { word: 'science', pos: 'n.', cn: '科学', note: 'ie 顺序；形容词 scientific，注意拼写变化大。' },
+          { word: 'quiet', phonetic: 'ˈkwaɪət', pos: 'adj.', cn: '安静的', note: 'e 在 t 前；keep quiet 保持安静。' },
+          { word: 'quite', phonetic: 'kwaɪt', pos: 'adv.', cn: '相当；十分', note: 'e 在 t 后；修饰形容词：quite good。' },
+          { word: 'foreign', phonetic: 'ˈfɒrən', pos: 'adj.', cn: '外国的', note: 'ei 顺序且 g 不发音；a foreign language 外语。' },
+          { word: 'height', pos: 'n.', cn: '高度；身高', note: 'ei 顺序，结尾是 ht；what is your height。' },
+          { word: 'weight', pos: 'n.', cn: '重量；体重', note: 'ei 顺序，与 wait 同音不同义。' },
+          { word: 'ceiling', pos: 'n.', cn: '天花板', note: 'c 后写 ei；同类还有 receive。' },
+          { word: 'neither', pos: 'pron./adv.', cn: '两者都不', note: 'ei 顺序；neither of them 他们俩都不。' },
+        ],
+      },
+      {
+        group: '后缀拼写：-ful / -full 与 -ly / -ally',
+        words: [
+          { word: 'careful', pos: 'adj.', cn: '仔细的；小心的', note: 'care + ful，只有一个 l；be careful with。' },
+          { word: 'beautiful', pos: 'adj.', cn: '美丽的', note: 'beauty 改 y 为 i 再加 ful；副词 beautifully。' },
+          { word: 'useful', pos: 'adj.', cn: '有用的', note: '一个 l；be useful to sb。' },
+          { word: 'helpful', pos: 'adj.', cn: '有帮助的', note: '一个 l；反义词 helpless。' },
+          { word: 'wonderful', pos: 'adj.', cn: '精彩的；极好的', note: '一个 l；口语中 Wonderful! 表示赞叹。' },
+          { word: 'successful', pos: 'adj.', cn: '成功的', note: '双写 s 再加 ful；副词 successfully。' },
+          { word: 'cheerful', pos: 'adj.', cn: '兴高采烈的', note: '一个 l；描述人物性格可用。' },
+          { word: 'thankful', pos: 'adj.', cn: '感激的', note: '一个 l；be thankful to sb for sth。' },
+          { word: 'finally', pos: 'adv.', cn: '最后；终于', note: 'final + ly；作文表示过程结尾的首选词。' },
+          { word: 'really', pos: 'adv.', cn: '真正地；确实', note: 'real + ly 有两个 l；常用于加强语气。' },
+          { word: 'usually', pos: 'adv.', cn: '通常', note: 'usual + ly；频度副词放在行为动词前、be 动词后。' },
+          { word: 'happily', pos: 'adv.', cn: '快乐地', note: 'happy 改 y 为 i 再加 ly；写 happyly 是典型错。' },
+          { word: 'easily', pos: 'adv.', cn: '容易地', note: 'easy 改 y 为 i；注意不是 easilly。' },
+          { word: 'actually', pos: 'adv.', cn: '事实上；实际上', note: 'actual + ly，注意 -ally；口语与作文都常用。' },
+          { word: 'especially', pos: 'adv.', cn: '尤其；特别是', note: '注意 -ally；especially 后接被强调的成分。' },
+        ],
+      },
+      {
+        group: '名词后缀拼写：-tion / -sion / -cian',
+        words: [
+          { word: 'decision', pos: 'n.', cn: '决定', note: 'decide → decision，一个 s；make a decision。' },
+          { word: 'discussion', pos: 'n.', cn: '讨论', note: 'discuss → discussion，双写 s；have a discussion about。' },
+          { word: 'conclusion', pos: 'n.', cn: '结论', note: 'conclude → conclusion；come to a conclusion 得出结论。' },
+          { word: 'permission', pos: 'n.', cn: '许可', note: 'permit → permission；ask for permission 请求许可。' },
+          { word: 'expression', pos: 'n.', cn: '表达；表情', note: 'express → expression，双写 s。' },
+          { word: 'impression', pos: 'n.', cn: '印象', note: 'impress → impression；leave a good impression on sb。' },
+          { word: 'television', pos: 'n.', cn: '电视', note: '-sion 结尾；watch television 看电视。' },
+          { word: 'education', pos: 'n.', cn: '教育', note: 'educate → education，-tion 结尾；不可数。' },
+          { word: 'information', pos: 'n.', cn: '信息', note: '不可数，没有 informations；a piece of information。' },
+          { word: 'attention', pos: 'n.', cn: '注意；关注', note: 'pay attention to 注意，to 是介词。' },
+          { word: 'question', pos: 'n.', cn: '问题', note: '-tion 结尾，注意 qu 的拼写；ask a question。' },
+          { word: 'suggestion', pos: 'n.', cn: '建议', note: 'suggest → suggestion，双写 g；名词是可数的，这一点与 advice 不同。' },
+          { word: 'competition', pos: 'n.', cn: '比赛；竞赛', note: 'compete → competition；take part in a competition。' },
+          { word: 'invitation', pos: 'n.', cn: '邀请（函）', note: 'invite → invitation；accept an invitation。' },
+          { word: 'musician', pos: 'n.', cn: '音乐家', note: '-cian 表示人；同类还有 politician、Australian。' },
+        ],
+      },
+      {
+        group: '形近词（一）：一名一动、词性不同',
+        words: [
+          { word: 'advice / advise', pos: 'n. / v.', cn: '建议（名词）／建议（动词）', note: '缺谓语用 advise，作宾语用不可数名词 advice。' },
+          { word: 'affect / effect', pos: 'v. / n.', cn: '影响（动词）／影响（名词）', note: 'have an effect on 是固定搭配。' },
+          { word: 'practice / practise', pos: 'n. / v.', cn: '练习（名词）／练习（动词）', note: '英式分清名动，美式都用 practice；Practice makes perfect.' },
+          { word: 'breath / breathe', pos: 'n. / v.', cn: '呼吸（名词）／呼吸（动词）', note: 'take a deep breath 深吸一口气；breathe 结尾有 e。' },
+          { word: 'safe / save', pos: 'adj. / v.', cn: '安全的／拯救；节省', note: 'be safe 是形容词；save water 节约用水。' },
+          { word: 'belief / believe', pos: 'n. / v.', cn: '信念／相信', note: 'belief 是名词，believe 是动词，结尾字母不同。' },
+          { word: 'choice / choose', pos: 'n. / v.', cn: '选择（名词）／选择（动词）', note: 'make a choice，choose to do sth。' },
+          { word: 'lose / loose', pos: 'v. / adj.', cn: '丢失／松的', note: 'lose 是动词，loose 是形容词；别写 loose your key。' },
+          { word: 'rise / raise', pos: 'v. / v.', cn: '上升（不及物）／举起、提高（及物）', note: 'rise 没有宾语，raise 必须带宾语：raise your hand。' },
+          { word: 'lie / lay', pos: 'v. / v.', cn: '躺；撒谎／放置', note: 'lie on the bed 躺；lay the book on the desk 放。' },
+          { word: 'steal / steel', pos: 'v. / n.', cn: '偷／钢', note: 'steal 过去式 stole；steel 是名词，注意读音相同。' },
+          { word: 'accept / except', pos: 'v. / prep.', cn: '接受／除……之外', note: '句中需要谓语用 accept，表示「除了」用 except。' },
+          { word: 'beside / besides', pos: 'prep. / prep.', cn: '在……旁边／除……之外（还有）', note: 'besides 表示追加，常放句首加逗号。' },
+          { word: 'through / thought / though', pos: 'prep. / n. / conj.', cn: '穿过／想法／虽然', note: '介词用 through，名词「想法」是 thought，连词「虽然」是 though。' },
+          { word: 'weather / whether', pos: 'n. / conj.', cn: '天气／是否', note: 'whether 引导从句，常与 or not 连用。' },
+        ],
+      },
+      {
+        group: '形近词（二）：读音相近、拼写相近',
+        words: [
+          { word: 'there / their', pos: 'adv. / pron.', cn: '那里／他们的', note: 'over there 在那边；their books 他们的书。' },
+          { word: 'its / it\'s', pos: 'pron. / 缩写', cn: '它的／它是', note: 'it\'s = it is 或 it has，还原后通顺才用撇号。' },
+          { word: 'whose / who\'s', pos: 'pron. / 缩写', cn: '谁的／谁是', note: 'who\'s = who is；Whose bag is this?。' },
+          { word: 'than / then', pos: 'conj. / adv.', cn: '比／然后', note: '比较级后用 than；表示时间顺序用 then。' },
+          { word: 'of / off', pos: 'prep. / adv.', cn: '……的／离开、关掉', note: 'off 多一个 f；turn off、take off 都用 off。' },
+          { word: 'form / from', pos: 'n. / prep.', cn: '形式；表格／从……', note: 'be from 来自；fill in a form 填表。' },
+          { word: 'desert / dessert', pos: 'n. / n.', cn: '沙漠／甜点', note: '甜点多一个 s，可以记成「甜点要两份（两个 s）」。' },
+          { word: 'price / prize', pos: 'n. / n.', cn: '价格／奖品', note: 'the price of 价格；win the first prize 得一等奖。' },
+          { word: 'hard / hardly', pos: 'adv. / adv.', cn: '努力地／几乎不', note: 'hardly 与 hard 意思无关：He hardly spoke. 他几乎没说话。' },
+          { word: 'alone / lonely', pos: 'adv. / adj.', cn: '独自／孤独的', note: 'live alone 独自生活；feel lonely 感到孤独。' },
+          { word: 'hear / here', pos: 'v. / adv.', cn: '听见／这里', note: 'hear from sb 收到某人来信；Come here.' },
+          { word: 'wear / where', pos: 'v. / adv.', cn: '穿／在哪里', note: 'wear a coat 穿外套；Where are you from?。' },
+          { word: 'whole / hole', pos: 'adj. / n.', cn: '整个的／洞', note: 'the whole day 一整天；dig a hole 挖个洞。' },
+          { word: 'weak / week', pos: 'adj. / n.', cn: '虚弱的／星期', note: 'be weak in 在……方面弱；last week 上周。' },
+          { word: 'through / threw', pos: 'prep. / v.-ed', cn: '穿过／扔掉（过去式）', note: 'threw 是 throw 的过去式，读音相同但词性不同。' },
+        ],
+      },
+    ],
+    questions: [
+      {
+        id: 'eng-vocab-exam-5-q1',
+        type: 'choice',
+        stem: 'The heavy rain had a bad ______ on the traffic in our city.',
+        options: ['effect', 'affect', 'effective', 'affects'],
+        answer: 'A',
+        explanation:
+          'have a bad effect on 是固定搭配，a bad 后面需要名词，所以用 effect。B 项 affect 是动词；C 项是形容词；D 项是动词的第三人称单数形式，都不能作 had 的宾语。',
+        difficulty: 2,
+        tags: ['形近词', 'affect/effect', '固定搭配'],
+      },
+      {
+        id: 'eng-vocab-exam-5-q2',
+        type: 'fill',
+        stem: '用括号中单词的适当形式填空。\nThe film is ______ (begin) at eight o\'clock, so we must hurry.',
+        answer: 'beginning',
+        explanation:
+          'is 后面接现在分词构成现在进行时，表示按计划即将发生的事。begin 是「辅音 + 元音 + 辅音」结尾的重读闭音节，要双写 n 再加 -ing，写成 beginning。',
+        difficulty: 2,
+        tags: ['易错拼写', '双写辅音', '现在进行时'],
+      },
+      {
+        id: 'eng-vocab-exam-5-q3',
+        type: 'choice',
+        stem: 'My uncle ______ a letter from his old friend last week.',
+        options: ['received', 'recieved', 'receive', 'receiving'],
+        answer: 'A',
+        explanation:
+          'last week 说明用一般过去时，要用 receive 的过去式；拼写上 c 后面写 ei，正确形式是 received。B 项字母顺序写错，C 项是原形，D 项是现在分词。',
+        difficulty: 2,
+        tags: ['易错拼写', 'ie/ei', '一般过去时'],
+      },
+      {
+        id: 'eng-vocab-exam-5-q4',
+        type: 'choice',
+        stem: 'Their school is over ______, and ______ very big.',
+        options: ['there; it\'s', 'their; its', 'there; its', 'their; it\'s'],
+        answer: 'A',
+        explanation:
+          '第一空表示「在那边」，用副词 there；第二空意为「它是」，用 it\'s（it is 的缩写）。B、D 项的 their 是「他们的」，不能表示地点；C 项 its 是「它的」，与后面的形容词 big 搭配不成立。',
+        difficulty: 2,
+        tags: ['形近词', '同音词', '缩写'],
+      },
+      {
+        id: 'eng-vocab-exam-5-q5',
+        type: 'fill',
+        stem: '根据中文提示补全句子，每空一词。\n吸烟对你的健康有害。\nSmoking is harmful to your ______.',
+        answer: 'health',
+        explanation:
+          '形容词性物主代词 your 后面要接名词，所以把形容词 healthy 换成名词 health；harmful to 表示「对……有害」，是固定搭配。',
+        difficulty: 1,
+        tags: ['易错拼写', '名↔形', '固定搭配'],
+      },
+      {
+        id: 'eng-vocab-exam-5-q6',
+        type: 'fill',
+        stem: '根据中文提示补全句子，每空一词。\n他的粗心导致了这场事故。\nHis ______ led to the accident.',
+        answer: 'carelessness',
+        explanation:
+          'his 后面要接名词，careless 的名词是 carelessness（careless + ness）。注意这个词不可数，不加 s；led 是 lead 的过去式，读题时别误当成「导致」的现在式。',
+        difficulty: 3,
+        tags: ['易错拼写', '-ness', '形→名'],
+      },
+    ],
+  },
+];

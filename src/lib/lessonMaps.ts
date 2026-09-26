@@ -424,6 +424,7 @@ function englishMap(entry: Entry): MindNode[] {
     enTitle?: string;
     summary?: string;
     points?: { level: string; text: string; explain?: string }[];
+    wordList?: { group: string; words: { word: string; cn: string }[] }[];
     affixes?: { affix: string; meaning: string; examples: { word: string; cn: string }[] }[];
     confusables?: { a: string; b: string; diff: string }[];
     collocations?: { phrase: string; cn: string }[];
@@ -457,6 +458,17 @@ function englishMap(entry: Entry): MindNode[] {
       })
       .filter((x): x is MindNode => x !== null);
     if (levelKids.length) kids.push(node('考点分层', '先看重点', levelKids));
+  }
+
+  if (d.wordList?.length) {
+    const words = d.wordList.reduce((n, g) => n + g.words.length, 0);
+    kids.push(
+      node(
+        '分类词表',
+        `${words} 词 / ${d.wordList.length} 组`,
+        d.wordList.map((g) => node(clip(g.group, 16), `${g.words.length} 词`)),
+      ),
+    );
   }
 
   if (d.affixes?.length) {

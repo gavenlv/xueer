@@ -1544,15 +1544,22 @@ for (const e of allEntries.filter((x) => x.moduleId.startsWith('eng-'))) {
   switch (e.moduleId) {
     case 'eng-vocab': {
       /**
-       * 词汇条目的材料是**分散**的：词根词缀条目讲词缀、辨析条目讲区别、搭配条目讲短语，
-       * 硬要求每条都写满四类材料只会逼出凑数内容。所以这里只要求
-       * 「每条至少有一类材料」，搭配与易错的下限放到**模块级**统计。
+       * 词汇条目的材料是**分散**的：词根词缀条目讲词缀、辨析条目讲区别、搭配条目讲短语、
+       * 分类词表条目就是一张词表。硬要求每条都写满四类材料只会逼出凑数内容，
+       * 所以这里只要求「每条至少有一类材料」，搭配与易错的下限放到**模块级**统计。
        */
       const hasAny =
         (d.affixes?.length ?? 0) > 0 ||
         (d.confusables?.length ?? 0) > 0 ||
-        (d.collocations?.length ?? 0) > 0;
-      need(hasAny, '词汇条目既没有词根词缀、也没有近义辨析或高频搭配');
+        (d.collocations?.length ?? 0) > 0 ||
+        (d.wordList?.length ?? 0) > 0;
+      need(hasAny, '词汇条目既没有词根词缀、近义辨析、高频搭配，也没有分类词表');
+      // 挂词表的条目：分组与词量要够，否则「按类别整理词汇」就成了摆设
+      if (d.wordList?.length) {
+        const words = d.wordList.reduce((n, g) => n + g.words.length, 0);
+        need(d.wordList.length >= 3, `分类词表只有 ${d.wordList.length} 组（应 ≥3）`);
+        need(words >= 40, `分类词表只有 ${words} 个词（应 ≥40）`);
+      }
       break;
     }
     case 'eng-grammar':
@@ -1660,6 +1667,47 @@ console.log(
 );
 console.log(
   `      知识点材料         考点 ${engPoints} 条 · 词缀例词 ${engAffixExamples} 个 · 近义辨析 ${engConfusables} 组 · 语篇 ${engPassages} 篇 · 听说脚本 ${engScripts} 段`,
+);
+
+/* 英语分类词表：初中词汇按类别整理（话题 / 词性 / 考点） */
+const engWordSet = new Set<string>();
+let engWordTotal = 0;
+let engWordGroups = 0;
+const engWordByUnit = new Map<string, number>();
+const badWords: string[] = [];
+
+for (const e of allEntries.filter((x) => x.moduleId.startsWith('eng-') && x.moduleId !== 'eng-exam')) {
+  const d = e.data as EnglishKnowledge;
+  for (const g of d.wordList ?? []) {
+    engWordGroups += 1;
+    if (!g.group?.trim()) err(`[英语·词表] ${d.id}: 有分组缺少名字`);
+    if (g.words.length < 8) warn(`[英语·词表] ${d.id}「${g.group}」只有 ${g.words.length} 个词，分组太碎`);
+    for (const w of g.words) {
+      engWordTotal += 1;
+      engWordByUnit.set(d.unit, (engWordByUnit.get(d.unit) ?? 0) + 1);
+      const key = w.word.trim().toLowerCase();
+      if (!key) {
+        err(`[英语·词表] ${d.id}「${g.group}」有词条缺少单词`);
+        continue;
+      }
+      // 单词里不该混入中文（最常见的是把释义写进了 word 字段）
+      if (/[\u4e00-\u9fa5]/.test(w.word)) badWords.push(`${d.id}「${w.word}」`);
+      if (!w.cn?.trim()) err(`[英语·词表] ${d.id}「${w.word}」缺少中文释义`);
+      engWordSet.add(key);
+    }
+  }
+}
+if (badWords.length) {
+  err(`[英语·词表] 有 ${badWords.length} 个词条把中文写进了 word 字段：${badWords.slice(0, 5).join('、')}`);
+}
+// 词汇总量是「按类别把初中词汇整理好」的直接证据：低于门槛说明还没补全
+if (engWordSet.size < 1000) {
+  warn(`[英语·词表] 去重后只有 ${engWordSet.size} 个词，离覆盖初中课标词汇（约 1600）还有距离`);
+}
+
+console.log(
+  `  英语词汇表        ${engWordTotal} 个词条 / 去重 ${engWordSet.size} 词 · ${engWordGroups} 组` +
+    `（${[...engWordByUnit].map(([k, v]) => `${k} ${v}`).join(' · ')}）`,
 );
 
 /* ------------------------ 汇总报告 ------------------------ */

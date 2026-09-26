@@ -141,6 +141,8 @@ export function searchTextOf(entry: Entry): string {
         e.unit,
         e.summary,
         e.points.map((p) => `${p.text}${p.explain ?? ''}`),
+        // 分类词表：上千个词全进检索（学生只记得一个词或一句中文释义也要能搜到）
+        e.wordList?.map((g) => `${g.group}${g.words.map((w) => `${w.word}${w.pos ?? ''}${w.cn}${w.note ?? ''}`).join('')}`),
         e.affixes?.map((a) => `${a.affix}${a.meaning}${a.examples.map((x) => `${x.word}${x.cn}`).join('')}`),
         e.confusables?.map((c) => `${c.a}${c.b}${c.diff}${c.exampleA ?? ''}${c.exampleB ?? ''}`),
         e.collocations?.map((c) => `${c.phrase}${c.cn}`),
