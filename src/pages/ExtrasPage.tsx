@@ -10,6 +10,7 @@ import { extensions, mindMaps } from '../data';
 import { getModuleMeta } from '../data/subjects';
 import type { Extension, ModuleId, MindNode } from '../types';
 import { cn, gradeShort } from '../lib/utils';
+import { useDataScope, DataLoading } from '../lib/useData';
 import { Crumbs, EmptyState, PageHeader, Tag, type Tone } from '../components/common';
 import { MindMapView } from '../components/MindMapView';
 import { ExtensionList } from '../components/ExtensionList';
@@ -36,6 +37,10 @@ function countNodes(node: MindNode): number {
 
 export default function ExtrasPage() {
   const [tab, setTab] = useState<Tab>('maps');
+  // 这一页只用到思维导图与拓展阅读，单独点名 extras，不加载任何模块正文
+  const ready = useDataScope(['extras']);
+
+  if (!ready) return <DataLoading label="正在加载导图与拓展…" />;
 
   return (
     <div className="stack stack--lg">

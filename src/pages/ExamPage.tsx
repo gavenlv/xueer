@@ -6,13 +6,14 @@
 
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { examPointsByModule, findQuestion, poemExamPoints } from '../data';
+import { examPointsByModule, findQuestion, moduleIdsOfSubject, poemExamPoints } from '../data';
 import { allPoems } from '../data/chinese';
 import { getModuleMeta } from '../data/subjects';
 import { useStudy } from '../store/StudyContext';
 import type { ModuleId } from '../types';
 import { makeReciteQuestions } from '../lib/quiz';
 import { cn } from '../lib/utils';
+import { useDataScope, DataLoading } from '../lib/useData';
 import {
   EmptyState,
   PageHeader,
@@ -27,6 +28,10 @@ export default function ExamPage() {
   const { state } = useStudy();
   const [keyword, setKeyword] = useState('');
   const [moduleFilter, setModuleFilter] = useState<ModuleId | 'all'>('all');
+  /** 考点要从**全部**题目的知识点标签聚合出来，因此这一页需要加载全部数据 */
+  const ready = useDataScope(
+    moduleIdsOfSubject('chinese').concat(moduleIdsOfSubject('math')),
+  );
   /**
    * 考点总数已经 600+，一次全铺出来会把页面撑到近 400 KB HTML、手机上必卡。
    * 因此每个模块先只显示前若干个，点「展开全部」再看剩下的；
@@ -94,6 +99,8 @@ export default function ExamPage() {
     (n, g) => n + g.points.filter((p) => (wrongByTag.get(p.tag) ?? 0) > 0).length,
     0,
   );
+
+  if (!ready) return <DataLoading label="正在汇总考点…" />;
 
   return (
     <div className="stack stack--lg">
@@ -193,6 +200,11 @@ export default function ExamPage() {
                   {p.titles.length > 6 ? ` …等 ${p.titles.length} 首` : ''}
                 </div>
 
+                {/* 先学再练：点篇目进详情页看译文、串讲与本课思维导图 */}
+                <Link className="btn btn--sm" to={`/s/chinese/poems/${p.entryIds[0]}`}>
+                  📖 先学《{p.titles[0]}》
+                </Link>
+
                 <Link
                   className="btn btn--primary btn--sm"
                   to={`/practice/poems?poems=${p.entryIds.join(',')}`}
@@ -272,6 +284,24 @@ export default function ExamPage() {
                             {t === 'choice' ? '选择' : t === 'fill' ? '填空' : '简答'} {n}
                           </Tag>
                         ))}
+                      </div>
+
+                      {/* 先学再练：考点不是只拿来刷题的——先给两条「学」的路 */}
+                      <div className="row row--wrap" style={{ gap: 6 }}>
+                        {p.entryIds[0] ? (
+                          <Link
+                            className="btn btn--sm"
+                            to={`/s/chinese/${p.moduleId}/${p.entryIds[0]}`}
+                          >
+                            📖 先学一遍
+                          </Link>
+                        ) : null}
+                        <Link
+                          className="btn btn--sm"
+                          to={`/s/chinese/${p.moduleId}?tag=${encodeURIComponent(p.tag)}`}
+                        >
+                          📚 看相关 {p.entryIds.length} 条
+                        </Link>
                       </div>
 
                       <Link

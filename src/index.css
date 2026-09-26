@@ -1731,6 +1731,73 @@ button.mm-label:hover {
   }
 }
 
+/* --------------------- 名著「情节主线」与「记忆口诀」 --------------------- */
+/* 情节链：用一条竖线把每一环串起来，视觉上就是「串成一条线」 */
+.chain {
+  position: relative;
+  padding-left: 4px;
+}
+
+.chain__item {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding-bottom: 14px;
+}
+
+/* 连接线：最后一环不画，避免尾巴悬空 */
+.chain__item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 28px;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, var(--c-primary-soft), var(--c-line));
+}
+
+.chain__dot {
+  flex-shrink: 0;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--c-primary-soft);
+  color: var(--c-primary-ink);
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  z-index: 1;
+}
+
+.chain__text {
+  padding-top: 2px;
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: var(--c-ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* 记忆口诀：一眼能认出来的提示块 */
+.mnemonic {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--c-gold-soft);
+  border: 1px solid #f0e2bd;
+  color: #7a5710;
+  font-size: 14.5px;
+  line-height: 1.8;
+  font-weight: 600;
+}
+
+.mnemonic__icon {
+  flex-shrink: 0;
+}
+
 /* ------------------------------- 拓展阅读 ------------------------------- */
 .ext-list {
   display: flex;
@@ -2164,10 +2231,24 @@ button.mm-label:hover {
   border: 0;
 }
 
-/* -------------------------------- 响应式 -------------------------------- */
+/* -------------------------------- 响应式 --------------------------------
+ *
+ * 断点必须**成对**：顶栏导航在 ≤899px 隐藏，底部标签栏就必须在 ≤899px 显示。
+ * 曾经写成顶栏 ≤899 隐藏、标签栏 ≥721 隐藏，于是 721–899px（平板竖屏、
+ * 分屏后的窄窗口）两个导航同时消失，页面上没有任何入口——改断点时务必同步这一对。
+ */
 @media (min-width: 900px) {
   .brand__sub {
     display: block;
+  }
+
+  /* 与顶栏导航同一个断点 */
+  .tabbar {
+    display: none;
+  }
+
+  .app__main {
+    padding-bottom: 40px;
   }
 }
 
@@ -2204,6 +2285,29 @@ button.mm-label:hover {
   .grid--3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  /* 平板/窄窗口：正文与次要信息都比桌面放大一点，触摸阅读更省力 */
+  body {
+    font-size: 15.5px;
+  }
+
+  .list-item__meta,
+  .small {
+    font-size: 13px;
+  }
+
+  /* 触摸环境下按钮要够大（≥44px 是通行的最小热区） */
+  .btn {
+    min-height: 44px;
+  }
+
+  .btn--sm {
+    min-height: 38px;
+  }
+
+  .chip {
+    min-height: 36px;
+  }
 }
 
 @media (max-width: 560px) {
@@ -2225,14 +2329,49 @@ button.mm-label:hover {
   .stat__value {
     font-size: 20px;
   }
-}
 
-@media (min-width: 721px) {
-  .tabbar {
-    display: none;
+  /* 手机：正文字号再抬一点，中文 13px 在手机上太吃力 */
+  body {
+    font-size: 16px;
   }
 
-  .app__main {
-    padding-bottom: 40px;
+  .list-item__meta,
+  .small {
+    font-size: 13.5px;
+  }
+
+  .page-title {
+    font-size: 19px;
+  }
+
+  /* 顶栏在刘海屏横屏时会被状态栏压住，留出安全区 */
+  .topbar {
+    height: auto;
+    min-height: var(--topbar-h);
+    padding-top: env(safe-area-inset-top);
+    display: flex;
+    align-items: center;
+  }
+
+  .topbar__inner {
+    padding: 0 12px;
+    width: 100%;
+  }
+
+  /* 长串英文/公式/无空格内容不许撑破卡片导致整页横向滚动 */
+  .prose,
+  .note__text,
+  .list-item__title,
+  .quiz__stem,
+  .option {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* 横向滚动的容器要有边界感，避免整页跟着滑 */
+  .container {
+    max-width: 100%;
+    overflow-x: hidden;
   }
 }
+

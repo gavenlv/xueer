@@ -19,7 +19,7 @@ import {
 } from '../lib/utils';
 import { permuteOptions } from '../lib/quiz';
 import { ProgressBar, Tag } from './common';
-import { RichText } from './Tex';
+import { RichText } from './RichText';
 
 interface Record0 {
   user: string;

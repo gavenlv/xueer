@@ -2,12 +2,13 @@
 
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { contentStats, entriesOfModule, entryIndex, extensions, findQuestion, mindMaps } from '../data';
+import { contentStats, entriesOfModule, entryIndex, extensions, findQuestion, mindMaps, moduleIdsOfSubject } from '../data';
 import { SUBJECTS } from '../data/subjects';
 import type { ModuleId } from '../types';
 import { getModuleMeta } from '../data/subjects';
 import { useStreak, useStudy } from '../store/StudyContext';
 import { dateKey, formatDuration, pct, shiftDate } from '../lib/utils';
+import { useDataScope, DataLoading } from '../lib/useData';
 import { EmptyState, PageHeader, ProgressBar, SectionTitle, Stat, Tag } from '../components/common';
 
 const DAYS = 14;
@@ -15,6 +16,8 @@ const DAYS = 14;
 export default function StatsPage() {
   const { state, resetAll } = useStudy();
   const streak = useStreak();
+  /** 学习报告要跨模块汇总（每个模块的进度、掌握度、错题），因此这里加载全部数据 */
+  const ready = useDataScope(moduleIdsOfSubject('chinese').concat(moduleIdsOfSubject('math')));
 
   /* 累计统计 */
   const totals = useMemo(() => {
@@ -93,6 +96,8 @@ export default function StatsPage() {
   );
 
   const hasData = totals.answered > 0 || totals.studied > 0;
+
+  if (!ready) return <DataLoading label="正在汇总学习数据…" />;
 
   return (
     <div className="stack stack--lg">

@@ -3,15 +3,24 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { getModuleMeta, SUBJECTS } from '../data/subjects';
-import { allPoems } from '../data/chinese';
-import { entryIndex, statsOfModule, statsOfSubject } from '../data';
+import { totalsOfModule, totalsOfSubject } from '../data/totals';
+import { DAILY_LINES, ENTRY_META } from '../data/summary';
 import type { ModuleId } from '../types';
 import { useStreak, useStudy } from '../store/StudyContext';
 import { dateKey, pct, timeAgo } from '../lib/utils';
-import type { Entry, ItemProgress } from '../types';
+import type { ItemProgress } from '../types';
 import { ProgressBar, SectionTitle, Stat, Tag } from '../components/common';
 
 const DAILY_GOAL = 20;
+
+/**
+ * 首页是**总览页**，刻意不加载任何模块的正文数据：
+ * 它只用 `data/summary.ts` 那份轻量清单（id / 标题 / 模块 / 题量 / 名句池），
+ * 因此首屏不会被内容文本拖慢。清单由 `pnpm gen` 生成、`pnpm validate` 校验。
+ *
+ * @data-summary-only 声明本页只用轻量清单（校验脚本据此跳过「必须调用 useDataScope」的检查）
+ */
+const META_BY_ID = new Map(ENTRY_META.map((m) => [m.id, m]));
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -33,7 +42,7 @@ export default function Home() {
   const overall = useMemo(() => {
     const ids = Object.keys(state.progress);
     const studied = ids.filter((id) => (state.progress[id]?.studied ?? 0) > 0).length;
-    const total = entryIndex.size;
+    const total = ENTRY_META.length;
     let correct = 0;
     let answered = 0;
     for (const p of Object.values(state.progress)) {
@@ -61,18 +70,18 @@ export default function Home() {
       .filter(([, p]) => p.lastAt > 0)
       .sort((a, b) => b[1].lastAt - a[1].lastAt)
       .slice(0, 3)
-      .map(([id, p]) => ({ entry: entryIndex.get(id), progress: p }))
-      .filter((x): x is { entry: Entry; progress: ItemProgress } => x.entry !== undefined);
+      .map(([id, p]) => ({ entry: META_BY_ID.get(id), progress: p }))
+      .filter(
+        (x): x is { entry: NonNullable<ReturnType<typeof META_BY_ID.get>>; progress: ItemProgress } =>
+          x.entry !== undefined,
+      );
   }, [state.progress]);
 
-  /* 每日一句：按日期稳定选取 */
+  /* 每日一句：按日期稳定选取（名句池来自轻量清单，不必加载整本诗词） */
   const dailyQuote = useMemo(() => {
-    const pool = allPoems.flatMap((p) =>
-      (p.famousLines ?? []).map((line) => ({ line, poem: p })),
-    );
-    if (!pool.length) return null;
+    if (!DAILY_LINES.length) return null;
     const seed = Number(dateKey().replace(/-/g, ''));
-    return pool[seed % pool.length];
+    return DAILY_LINES[seed % DAILY_LINES.length];
   }, []);
 
   /* 收藏 */
@@ -80,8 +89,8 @@ export default function Home() {
     () =>
       Object.entries(state.progress)
         .filter(([, p]) => p.starred)
-        .map(([id]) => entryIndex.get(id))
-        .filter(Boolean),
+        .map(([id]) => META_BY_ID.get(id))
+        .filter((x): x is NonNullable<typeof x> => x !== undefined),
     [state.progress],
   );
 
@@ -153,7 +162,7 @@ export default function Home() {
             <Tag tone="gold">🖋 每日一句</Tag>
             <Link
               className="small"
-              to={`/s/chinese/poems/${dailyQuote.poem.id}`}
+              to={`/s/chinese/poems/${dailyQuote.entryId}`}
               style={{ color: 'var(--c-primary)' }}
             >
               查看全篇 →
@@ -167,10 +176,10 @@ export default function Home() {
               letterSpacing: '0.04em',
             }}
           >
-            {dailyQuote.line}
+            {dailyQuote.text}
           </div>
           <div className="small muted" style={{ marginTop: 6 }}>
-            —— {dailyQuote.poem.dynasty}·{dailyQuote.poem.author}《{dailyQuote.poem.title}》
+            —— {dailyQuote.from}
           </div>
         </section>
       ) : null}
@@ -214,7 +223,7 @@ export default function Home() {
 
       {/* 各学科模块（学科无关：新增学科会自动出现；hidden 的学科不展示） */}
       {SUBJECTS.filter((s) => s.available && !s.hidden).map((subject) => {
-        const st = statsOfSubject(subject.id);
+        const st = totalsOfSubject(subject.id);
         return (
           <section className="stack stack--sm" key={subject.id}>
             <SectionTitle
@@ -229,7 +238,7 @@ export default function Home() {
             </SectionTitle>
             <div className="grid grid--auto">
               {subject.modules.map((m) => {
-                const ms = statsOfModule(m.id as ModuleId);
+                const ms = totalsOfModule(m.id as ModuleId);
                 return (
                   <Link key={m.id} className="module-card" to={`/s/${subject.id}/${m.id}`}>
                     <span className="module-card__accent" style={{ background: m.color }} />

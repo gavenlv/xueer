@@ -234,8 +234,7 @@ export interface WritingLesson {
 /* 模块六：文学常识与名著导读                                          */
 /* ------------------------------------------------------------------ */
 
-export interface LiteratureItem {
-  id: string;
+export interface LiteratureItem {  id: string;
   grade: GradeOrAll;
   /**
    * 名著导读：统编版新教材（2024 修订版）「整本书阅读」必读篇目，中考名著阅读的考查范围。
@@ -260,7 +259,41 @@ export interface LiteratureItem {
     theme?: string;
     /** 艺术特色 */
     features?: string[];
+    /**
+     * 分章（分回、分篇）内容简介：按这本书**实际的结构**逐章串下来，
+     * 让「整本书」在学生脑子里先有骨架，再填细节。小说按回目/章节，
+     * 散文集按单篇，诗歌选本按卷/体裁，科普著作按卷/主题。
+     */
+    chapters?: { name: string; summary: string }[];
+    /**
+     * 情节脉络：一环一句，**按顺序**串起来就是全书主线。
+     * 与 `plots`（挑几个经典情节细讲）不同，这里求「少而连贯」，
+     * 是学生背诵与答题时调取情节的索引。
+     */
+    plotChain?: string[];
+    /** 记忆口诀/结构提示：谐音、首字串联、数字概括等 */
+    mnemonic?: string[];
   };
+  questions: QuizQuestion[];
+}
+
+/**
+ * 名著的「章节脉络 + 情节链 + 记忆口诀 + 考点题」补充数据。
+ *
+ * 12 部必读名著的正文已经很长，把这些结构化补充单独成文件维护：
+ * 一部的补充集中在一处，便于逐部撰写、逐部核对，也不会把既有条目改乱。
+ * 装配时由 `src/data/chinese/index.ts` 按 `id` 合并回对应的名著条目。
+ */
+export interface BookPlot {
+  /** 对应的文学常识条目 id（如 `l-xiyouji`） */
+  id: string;
+  /** 分章/分回/分篇内容简介，按书本身的结构顺序 */
+  chapters: { name: string; summary: string }[];
+  /** 情节脉络：一环一句，按顺序串成全书主线 */
+  plotChain: string[];
+  /** 记忆口诀/结构提示 */
+  mnemonic: string[];
+  /** 按广州中考「整本书阅读」标准命制的考点题 */
   questions: QuizQuestion[];
 }
 
@@ -368,8 +401,15 @@ interface EntryBase {
   grade: GradeOrAll;
   /** 标签，用于筛选与展示 */
   tags: string[];
-  /** 预拼接的检索文本（小写） */
-  searchText: string;
+  /**
+   * 检索文本（小写）。
+   *
+   * **已废弃为可选**：它几乎是把标题、作者、正文、译文、要点原样再拼一遍，
+   * 等于让同一段文字在发布包里出现两次（语文内容里这份重复超过 1 MB）。
+   * 现在改由 `src/lib/searchText.ts` 的 `searchTextOf(entry)` 按需推导并记忆，
+   * 搜索与知识联动都走那个函数。字段保留只为兼容历史数据，装配时一律不再写入。
+   */
+  searchText?: string;
   /** 该条目下的练习题 */
   questions: QuizQuestion[];
 }

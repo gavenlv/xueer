@@ -1,12 +1,14 @@
 /** 模块列表页：按学段 / 标签 / 关键词筛选内容条目 */
 
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { getModuleMeta, getSubject } from '../data/subjects';
 import { filterTagsOfModule, entriesOfModule } from '../data';
 import { useStudy } from '../store/StudyContext';
 import type { GradeId, ModuleId } from '../types';
 import { GRADES, cn, pct, timeAgo } from '../lib/utils';
+import { useDataScope, DataLoading } from '../lib/useData';
+import { matchesKeyword } from '../lib/searchText';
 import {
   EmptyState,
   PageHeader,
@@ -17,13 +19,22 @@ import {
 
 export default function ModulePage() {
   const { subjectId = 'chinese', moduleId = 'poems' } = useParams();
+  const [search] = useSearchParams();
   const subject = getSubject(subjectId);
   const meta = getModuleMeta(moduleId);
   const { state, grade, setGrade, toggleStar } = useStudy();
+  // 只加载本模块的内容数据：打开古诗词就不必下载作文与名著那几块
+  const ready = useDataScope([moduleId as ModuleId]);
 
   const [keyword, setKeyword] = useState('');
-  const [gradeFilter, setGradeFilter] = useState<GradeId | 'all'>(grade);
-  const [tagFilter, setTagFilter] = useState<string>('all');
+  /**
+   * 学段与标签支持从地址栏读入：中考考点页的「先学一遍 / 看相关条目」要能直接
+   * 跳到「筛好这一类考点」的列表，否则学生点进去还得自己再筛一次。
+   */
+  const [gradeFilter, setGradeFilter] = useState<GradeId | 'all'>(
+    (search.get('grade') as GradeId | 'all' | null) ?? grade,
+  );
+  const [tagFilter, setTagFilter] = useState<string>(search.get('tag') ?? 'all');
 
   const allEntries = useMemo(() => entriesOfModule(moduleId as ModuleId), [moduleId]);
 
@@ -37,7 +48,7 @@ export default function ModulePage() {
     return allEntries.filter((e) => {
       if (gradeFilter !== 'all' && e.grade !== gradeFilter && e.grade !== 'all') return false;
       if (tagFilter !== 'all' && !e.tags.includes(tagFilter)) return false;
-      if (kw && !e.searchText.includes(kw)) return false;
+      if (kw && !matchesKeyword(e, kw)) return false;
       return true;
     });
   }, [allEntries, gradeFilter, tagFilter, keyword]);
@@ -48,6 +59,8 @@ export default function ModulePage() {
   if (!subject || !meta) {
     return <EmptyState icon="🧭" title="没有这个模块" desc="请回到学科页重新选择。" />;
   }
+
+  if (!ready) return <DataLoading />;
 
   const { module: m } = meta;
 

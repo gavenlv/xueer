@@ -7,9 +7,23 @@
 
 declare const process: { exitCode: number };
 
+import { readFileSync, readdirSync } from 'node:fs';
+
 import katex from 'katex';
-import { allEntries, contentStats, entryIndex, mindMaps, extensions, poemExamPoints } from '../src/data';
+import {
+  allEntries,
+  contentStats,
+  entryIndex,
+  mindMaps,
+  extensions,
+  poemExamPoints,
+  ensureAll,
+} from '../src/data';
 import { allPoems } from '../src/data/chinese';
+import { BOOK_EXAM_POINT_TAGS } from '../src/lib/bookExams';
+import { DAILY_LINES, ENTRY_META, MODULE_TOTALS } from '../src/data/summary';
+import { lessonMindMap } from '../src/lib/lessonMaps';
+import { searchTextOf } from '../src/lib/searchText';
 import { SUBJECTS } from '../src/data/subjects';
 import { makeReciteQuestions } from '../src/lib/quiz';
 import { relatedEntries, supplementsOf } from '../src/lib/relations';
@@ -22,6 +36,13 @@ import {
   isDue,
 } from '../src/lib/recite';
 import type { Entry, MindNode, ModuleId, QuizQuestion } from '../src/types';
+
+/**
+ * 内容数据已改为**按需加载**（见 `src/data/chinese/index.ts`）：
+ * 页面各自声明需要的模块，而这里在校验开始前一次性把全部模块加载进来，
+ * 之后所有同步查询 API 照旧可用——因此下面几百条断言完全不用改写。
+ */
+await ensureAll();
 
 /** 全部学科的模块 id（校验器必须覆盖所有学科，不能只看语文） */
 const ALL_MODULE_IDS = SUBJECTS.flatMap((s) => s.modules.map((m) => m.id)) as ModuleId[];
@@ -114,7 +135,20 @@ for (const entry of allEntries as Entry[]) {
   if (!entry.title || !entry.title.trim()) err(`${where}: 缺少 title`);
   if (!VALID_GRADES.has(entry.grade)) err(`${where}: grade 非法（${String(entry.grade)}）`);
   if (!Array.isArray(entry.tags)) err(`${where}: tags 不是数组`);
-  if (typeof entry.searchText !== 'string' || !entry.searchText) err(`${where}: searchText 为空`);
+  /**
+   * 检索文本已改为**推导**（`lib/searchText.ts`）而不是随条目存储——它原本把正文
+   * 原样再拼一遍，等于让同一段文字在包里出现两次。因此这里不能再查字段，
+   * 改为查「推导结果非空且确实包含标题」：既保证每个模块都有对应的推导分支，
+   * 也防止某天新加模块时忘了补分支、搜索与知识联动静默失效。
+   */
+  const st = searchTextOf(entry);
+  if (!st) err(`${where}: 推导出的检索文本为空（searchTextOf 缺该模块的分支？）`);
+  else if (!st.includes(entry.title.toLowerCase())) {
+    err(`${where}: 检索文本里没有标题，按标题搜不到这条内容`);
+  }
+  if (entry.searchText !== undefined) {
+    warn(`${where}: 装配时仍写入了 searchText 字段，会让发布包重复存储正文`);
+  }
 
   checkQuestions(entry.questions, where, seenQuestionIds);
 
@@ -457,7 +491,251 @@ if (authorsWithoutEntry.size) {
   );
 }
 
-/* ------------------- 古诗词考点（主题/意象/作者聚类）校验 ------------------- */
+/* --------------- 按需加载：轻量清单是否过期 / 页面是否声明了数据范围 --------------- */
+
+/**
+ * 首页与学科页不加载内容正文，只读 `src/data/summary.ts` 那份**生成**的轻量清单。
+ * 清单一旦过期，页面上的数字就会悄悄错掉——所以这里逐项比对清单与真实数据。
+ */
+{
+  const metaById = new Map(ENTRY_META.map((m) => [m.id, m]));
+  if (ENTRY_META.length !== allEntries.length) {
+    err(
+      `[轻量清单] 清单里 ${ENTRY_META.length} 条，实际 ${allEntries.length} 条 → 请运行 pnpm gen 重新生成`,
+    );
+  }
+  for (const e of allEntries) {
+    const m = metaById.get(e.id);
+    if (!m) {
+      err(`[轻量清单] 缺少条目 ${e.id}（${e.title}）→ 请运行 pnpm gen 重新生成`);
+      continue;
+    }
+    if (m.title !== e.title || m.moduleId !== e.moduleId || m.grade !== e.grade) {
+      err(`[轻量清单] 条目 ${e.id} 的骨架信息与实际不符 → 请运行 pnpm gen 重新生成`);
+    }
+    if (m.questions !== e.questions.length) {
+      err(
+        `[轻量清单] 条目 ${e.id} 的题量 ${m.questions} 与实际 ${e.questions.length} 不符 → 请运行 pnpm gen`,
+      );
+    }
+  }
+
+  const totalsById = new Map(MODULE_TOTALS.map((m) => [m.id, m]));
+  for (const s of SUBJECTS) {
+    for (const mod of s.modules) {
+      const t = totalsById.get(mod.id as ModuleId);
+      if (!t) {
+        err(`[轻量清单] 缺少模块 ${mod.id} 的汇总 → 请运行 pnpm gen 重新生成`);
+        continue;
+      }
+      const list = allEntries.filter((e) => e.moduleId === mod.id);
+      const qs = list.reduce((n, e) => n + e.questions.length, 0);
+      if (t.entries !== list.length || t.questions !== qs) {
+        err(
+          `[轻量清单] 模块 ${mod.id} 汇总为 ${t.entries} 条 / ${t.questions} 题，` +
+            `实际 ${list.length} 条 / ${qs} 题 → 请运行 pnpm gen 重新生成`,
+        );
+      }
+    }
+  }
+  if (!DAILY_LINES.length) err('[轻量清单] 每日一句池为空 → 请运行 pnpm gen 重新生成');
+}
+
+/**
+ * 内容数据按需加载：**页面必须声明自己需要哪些模块**（`useDataScope([...])`），
+ * 否则它在浏览器里会渲染出空列表。这个错误在服务端渲染里看不见（校验脚本预加载了
+ * 全部数据，页面首帧就是「已就绪」），所以只能静态检查页面源码。
+ */
+{
+  const pages = readdirSync('src/pages').filter((f) => f.endsWith('.tsx'));
+  /** 这几个是**轻量**数据模块（学科注册表、生成好的骨架清单、汇总），读取它们不需要加载正文 */
+  const LIGHT = /from '\.\.\/data\/(summary|totals|subjects)'/g;
+  for (const f of pages) {
+    const src = readFileSync(`src/pages/${f}`, 'utf8');
+    // 页面可以显式声明「只用轻量清单」，见 Home / SubjectPage 顶部注释
+    if (src.includes('@data-summary-only')) continue;
+    const heavy = src.replace(LIGHT, '');
+    const usesData = /from '\.\.\/data'|from '\.\.\/data\//.test(heavy);
+    if (usesData && !src.includes('useDataScope')) {
+      err(`[按需加载] src/pages/${f} 读取了内容数据却没有调用 useDataScope(...)，浏览器里会渲染成空列表`);
+    }
+  }
+}
+
+
+
+/**
+ * 「本课思维导图」是 `src/lib/lessonMaps.ts` 从条目自身数据推导出来的，不落库。
+ * 因此它的质量完全取决于原始数据——某一课的数据缺了（比如古诗词没有赏析、
+ * 文言文没有注释），图就会静默变空或只剩一个光杆中心。这里逐条生成并检查：
+ * 语文六个模块的覆盖率、节点文字长度、层级深度、节点数量。
+ */
+let lessonMapTotal = 0;
+const lessonMapByModule = new Map<string, { total: number; withMap: number }>();
+for (const e of allEntries) {
+  const s = lessonMapByModule.get(e.moduleId) ?? { total: 0, withMap: 0 };
+  s.total += 1;
+
+  const m = lessonMindMap(e);
+  if (m) {
+    s.withMap += 1;
+    lessonMapTotal += 1;
+
+    let nodes = 0;
+    let maxDepth = 0;
+    const walk = (n: MindNode, depth: number) => {
+      nodes += 1;
+      maxDepth = Math.max(maxDepth, depth);
+      if (!n.label?.trim()) err(`[课时导图] ${e.id}: 有节点没有文字`);
+      else if (n.label.length > 30) {
+        warn(`[课时导图] ${e.id}: 节点文字 ${n.label.length} 字，会让导图过宽（${n.label.slice(0, 20)}…）`);
+      }
+      for (const k of n.children ?? []) walk(k, depth + 1);
+    };
+    walk(m.root, 0);
+
+    if (maxDepth > 5) err(`[课时导图] ${e.id}: 层级 ${maxDepth} 层，过深`);
+    if (nodes > 140) warn(`[课时导图] ${e.id}: 节点 ${nodes} 个，偏多`);
+    if ((m.root.children ?? []).length < 2) {
+      err(`[课时导图] ${e.id}: 只有 ${(m.root.children ?? []).length} 个一级分支，讲不出东西`);
+    }
+  }
+  lessonMapByModule.set(e.moduleId, s);
+}
+
+// 语文六个模块应当**每一课都有**导图（数学是公式速查类，不适用）
+const LESSON_MODULES = ['poems', 'vocab', 'classical', 'reading', 'writing', 'literature'];
+for (const mid of LESSON_MODULES) {
+  const s = lessonMapByModule.get(mid);
+  if (!s) continue;
+  if (s.withMap < s.total) {
+    err(`[课时导图] ${mid} 模块只有 ${s.withMap} / ${s.total} 个条目能生成导图，应有全部`);
+  }
+}
+
+
+
+/**
+ * 顶栏导航（.topnav）与底部标签栏（.tabbar）是**互为替代**的两套导航：
+ * 窄屏用底部栏、宽屏用顶栏。曾经写成「顶栏 ≤899px 隐藏、标签栏 ≥721px 隐藏」，
+ * 于是 721–899px（平板竖屏、分屏窄窗口）两个导航同时消失，页面上没有任何入口。
+ * 这类缺陷跑路由渲染、跑类型检查都发现不了，只能直接核对样式里的断点，
+ * 因此在这里把「两个断点必须一致」固化成规则。
+ */
+const css = readFileSync('src/index.css', 'utf8');
+const hideTopnav = /@media\s*\(max-width:\s*(\d+)px\)\s*\{[^@]*?\.topnav\s*\{[^}]*display:\s*none/s.exec(css);
+const hideTabbar = /@media\s*\(min-width:\s*(\d+)px\)\s*\{[^@]*?\.tabbar\s*\{[^}]*display:\s*none/s.exec(css);
+if (!hideTopnav) {
+  err('[响应式] 找不到「隐藏 .topnav」的 max-width 媒体查询，断点可能被改坏了');
+} else if (!hideTabbar) {
+  err('[响应式] 找不到「隐藏 .tabbar」的 min-width 媒体查询，断点可能被改坏了');
+} else {
+  const topnavMax = Number(hideTopnav[1]);
+  const tabbarMin = Number(hideTabbar[1]);
+  if (tabbarMin !== topnavMax + 1) {
+    err(
+      `[响应式] 两套导航的断点对不上：顶栏在 ≤${topnavMax}px 隐藏，底部标签栏在 ≥${tabbarMin}px 隐藏。` +
+        (tabbarMin > topnavMax + 1
+          ? `于是 ${topnavMax + 1}–${tabbarMin - 1}px 区间两套导航都没有，页面上没有任何入口。`
+          : `于是 ${tabbarMin}–${topnavMax}px 区间两套导航同时出现，底部栏会盖住内容。`) +
+        `两处断点必须相差 1（当前正确值：顶栏 ≤899 / 标签栏 ≥900）。`,
+    );
+  }
+}
+
+
+
+/* --------------- 名著「整本书阅读」：章节脉络 / 情节链 / 口诀 / 考点 --------------- */
+
+/**
+ * 12 部必读名著的章节脉络、情节链、记忆口诀与考点题写在**单独的文件**里，
+ * 靠 `BookPlot.id` 挂回名著条目。挂接一旦对不上（id 写错、条目没有 book 字段），
+ * 数据会**静默失效**——页面照常渲染，只是那部名著什么都没有。
+ * 所以这里逐部核对：能挂上、条数够、考点用的是受控词、题量与题型达标。
+ */
+/**
+ * 注意：这里**不直接 import `books-plot-*.ts`**，而是校验加载后合并进条目的结果。
+ *
+ * 原因很实在：数据模块现在是**动态 import** 的，如果校验入口再静态 import 同一批文件，
+ * 打包时就会形成「入口 → 动态块 → 入口」的循环依赖；而入口里有顶层 await（先把数据
+ * 加载完再断言），循环会让它永远等不到结果——表现为 `Detected unsettled top-level await`。
+ * 改为校验合并结果还更贴近事实：页面看到的正是这份合并后的数据。
+ */
+const bookPlotEntries = allEntries.filter(
+  (e) => e.moduleId === 'literature' && e.data.book?.chapters?.length,
+);
+const bookPlotIds = new Set<string>();
+let bookPlotBad = 0;
+let bookPlotQuestions = 0;
+
+for (const entry of bookPlotEntries) {
+  const book = entry.data.book;
+  if (!book) continue;
+  const at = `[名著脉络] ${entry.id}`;
+  if (bookPlotIds.has(entry.id)) err(`${at}: 同一部名著出现了两条脉络数据`);
+  bookPlotIds.add(entry.id);
+
+  if ((book.chapters?.length ?? 0) < 8) {
+    bookPlotBad += 1;
+    err(`${at}: 章节简介只有 ${book.chapters?.length ?? 0} 条，至少 8 条才撑得起整本书`);
+  }
+  if ((book.plotChain?.length ?? 0) < 6) {
+    bookPlotBad += 1;
+    err(`${at}: 情节主线只有 ${book.plotChain?.length ?? 0} 环，至少 6 环才能串成主线`);
+  }
+  if ((book.mnemonic?.length ?? 0) < 2) {
+    bookPlotBad += 1;
+    err(`${at}: 记忆口诀至少 2 条`);
+  }
+  for (const c of book.chapters ?? []) {
+    if (!c.name?.trim() || !c.summary?.trim()) err(`${at}: 有章节缺 name 或 summary`);
+    else if (c.summary.length < 30) {
+      warn(`${at}: 章节「${c.name}」简介只有 ${c.summary.length} 字，可能过于简略`);
+    }
+  }
+  for (const step of book.plotChain ?? []) {
+    if (!step?.trim()) err(`${at}: 情节主线里有空的一环`);
+  }
+
+  // 本部考点题：数量、题型、考点词表
+  const qs = entry.questions.filter((q) => q.id.includes('-gz-'));
+  bookPlotQuestions += qs.length;
+  if (qs.length < 6) {
+    bookPlotBad += 1;
+    err(`${at}: 考点题只有 ${qs.length} 道，至少 6 道`);
+  }
+  const shorts = qs.filter((q) => q.type === 'short').length;
+  if (shorts < 2) {
+    bookPlotBad += 1;
+    err(`${at}: 广州附加题以简答为主，至少要有 2 道简答题，实际 ${shorts} 道`);
+  }
+  const covered = new Set<string>();
+  for (const q of qs) {
+    const tags = q.tags ?? [];
+    const points = tags.filter((t) => BOOK_EXAM_POINT_TAGS.includes(t));
+    if (!points.length) {
+      err(`${at}: 题目 ${q.id} 没有使用受控考点词（${tags.join('/')}），考点页会漏掉它`);
+    }
+    for (const p of points) covered.add(p);
+    if (q.type === 'short' && !(q.rubric ?? []).length) {
+      err(`${at}: 简答题 ${q.id} 缺少 rubric 踩分点`);
+    }
+  }
+  if (covered.size < 4) {
+    bookPlotBad += 1;
+    err(`${at}: 只覆盖了 ${covered.size} 个考点（${[...covered].join('、')}），一部名著应覆盖至少 4 类`);
+  }
+}
+
+// 12 部必读名著（category 为「名著导读」）都应拿到章节脉络
+const requiredBooks = allEntries.filter(
+  (e) => e.moduleId === 'literature' && e.data.category === '名著导读',
+);
+const booksWithoutPlot = requiredBooks.filter((e) => !e.data.book?.chapters?.length);
+for (const e of booksWithoutPlot) {
+  err(`[名著脉络] 必读名著「${e.title}」还没有章节脉络数据（chapters 为空）`);
+}
+
 
 /**
  * 古诗词不预置题目，走的是另一套聚类考点。这里保证：
@@ -807,6 +1085,16 @@ console.log(
 console.log(
   `      古诗词考点          ${poemPoints.length} 个（主题/意象/作者聚类）` +
     `，覆盖 ${coveredPoems.size} / ${allPoems.length} 首，异常 ${poemPointBad} 处`,
+);
+console.log(
+  `      名著章节脉络        ${bookPlotEntries.length} / ${requiredBooks.length} 部` +
+    `，考点题 ${bookPlotQuestions} 道，异常 ${bookPlotBad} 处`,
+);
+console.log(
+  `      课时思维导图        ${lessonMapTotal} 张（由数据推导，语文条目全覆盖）`,
+);
+console.log(
+  `      响应式导航          顶栏 ≤${hideTopnav?.[1] ?? '?'}px 隐藏 / 标签栏 ≥${hideTabbar?.[1] ?? '?'}px 隐藏`,
 );
 for (const [k, n] of [...suppGroups].sort((a, b) => b[1] - a[1])) {
   console.log(`      ${k.padEnd(22)} ${String(n).padStart(4)} 条`);

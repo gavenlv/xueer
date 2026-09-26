@@ -9,11 +9,18 @@ import { renderToString } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import App from '../src/App';
 import { StudyProvider } from '../src/store/StudyContext';
-import { allEntries } from '../src/data';
+import { allEntries, ensureAll } from '../src/data';
 import { allPoems } from '../src/data/chinese';
 import { SUBJECTS } from '../src/data/subjects';
 import { supplementsOf } from '../src/lib/relations';
 import { makeReciteQuestions } from '../src/lib/quiz';
+
+/**
+ * 内容数据改为按需加载后，页面会先看「本页需要的模块是否已就绪」。
+ * 冒烟测试在校验前一次性加载全部数据，于是 `isScopeReady` 首帧即为真，
+ * 页面直接渲染真实内容——所以下面的「渲染出真实内容」类断言依旧有效。
+ */
+await ensureAll();
 
 /** 取某模块第一条内容的 id，用于详情页与单篇练习 */
 function firstId(moduleId: string): string {
@@ -239,13 +246,18 @@ if (!progressTarget) {
     ['主题类考点', examHtml.includes('主题·')],
     ['意象类考点', examHtml.includes('意象·')],
     ['作者类考点', examHtml.includes('作者·')],
+    // 名著「整本书阅读」的受控考点必须出现在考点页（否则加了题学生也刷不到）
+    ['名著阅读考点', examHtml.includes('人物形象') && examHtml.includes('跨书比较')],
+    // 考点不能只有「练」：先学一遍 / 看相关条目也要有入口
+    ['考点「先学一遍」入口', examHtml.includes('先学一遍')],
+    ['考点「看相关条目」入口', examHtml.includes('看相关')],
   ];
   const examOk = examChecks.every(([, ok]) => ok);
   console.log(
-    `  ${examOk ? '✅' : '❌'} 接线检查：古诗词考点（${examChecks
+    `  ${examOk ? '✅' : '❌'} 接线检查：考点页（${examChecks
       .filter(([, ok]) => !ok)
       .map(([n]) => n)
-      .join('、') || '五类断言全通过'}）`,
+      .join('、') || `${examChecks.length} 类断言全通过`}）`,
   );
   if (!examOk) failed += 1;
 
@@ -275,6 +287,69 @@ if (!progressTarget) {
     `  ${drillOk ? '✅' : '❌'} 接线检查：考点默写专项（期望 ${drillExpected} 道题，标题「默写专项」）`,
   );
   if (!drillOk) failed += 1;
+
+  /* ---------------- 接线检查：名著详情页的「整本书」四块内容 ---------------- */
+
+  /**
+   * 章节脉络/情节主线/记忆口诀/本部考点是挂在 `book` 上的，且数据来自独立文件
+   * （books-plot-*.ts）按 id 合并。任何一环没接上，页面都会照常渲染，
+   * 只是那部名著永远看不到这四块——所以这里逐块断言。
+   */
+  const bookHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/chinese/literature/l-xiyouji']}>
+      <StudyProvider>
+        <App />
+      </StudyProvider>
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+
+  const bookChecks: [string, boolean][] = [
+    ['情节主线区块', bookHtml.includes('情节主线')],
+    ['章节脉络区块', bookHtml.includes('章节脉络')],
+    ['记忆口诀区块', bookHtml.includes('记忆口诀')],
+    ['本部考点区块', bookHtml.includes('本部考点')],
+    ['按考点专项训练链接', /href="\/practice\/literature\/l-xiyouji\?tag=[^"]+"/.test(bookHtml)],
+  ];
+  const bookOk = bookChecks.every(([, ok]) => ok);
+  console.log(
+    `  ${bookOk ? '✅' : '❌'} 接线检查：名著整本书阅读（${bookChecks
+      .filter(([, ok]) => !ok)
+      .map(([n]) => n)
+      .join('、') || '四块内容与考点入口齐备'}）`,
+  );
+  if (!bookOk) failed += 1;
+
+  /* ---------------- 接线检查：每一课都有「本课思维导图」 ---------------- */
+
+  /**
+   * 课时导图是**推导出来**的，不落库：`lessonMindMap(entry)` 从条目数据生成。
+   * 它没接进详情页、或某一课的数据不足，页面都不会报错，只是那张图不出现。
+   * 因此这里拿古诗、文言文各一条断言「本课思维导图」真的渲染出来，
+   * 并断言导图画出了节点（不是只有一个光杆中心）。
+   */
+  const mapTargets = [
+    { id: allPoems[0]?.id ?? '', name: '古诗词' },
+    { id: allEntries.find((e) => e.moduleId === 'classical')?.id ?? '', name: '文言文' },
+  ];
+  const mapChecks: [string, boolean][] = mapTargets.map(({ id, name }) => {
+    const html = renderToString(
+      <MemoryRouter initialEntries={[`/s/chinese/${name === '古诗词' ? 'poems' : 'classical'}/${id}`]}>
+        <StudyProvider>
+          <App />
+        </StudyProvider>
+      </MemoryRouter>,
+    ).replace(/<!--[\s\S]*?-->/g, '');
+    const nodes = html.split('mm-label__text').length - 1;
+    return [`${name}课时导图（${nodes} 节点）`, html.includes('本课思维导图') && nodes >= 5];
+  });
+  const mapOk = mapChecks.every(([, ok]) => ok);
+  console.log(
+    `  ${mapOk ? '✅' : '❌'} 接线检查：课时思维导图（${mapChecks
+      .filter(([, ok]) => !ok)
+      .map(([n]) => n)
+      .join('、') || mapChecks.map(([n]) => n).join(' / ')}）`,
+  );
+  if (!mapOk) failed += 1;
 }
 
 if (failed) {

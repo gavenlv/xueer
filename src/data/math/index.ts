@@ -15,6 +15,7 @@ import type {
   MathTopic,
   MindMap,
 } from '../../types';
+import { matchesKeyword } from '../../lib/searchText';
 
 /** 数学模块 id 列表 */
 export const MATH_MODULE_IDS: MathModuleId[] = [
@@ -57,30 +58,50 @@ function joinSearch(...parts: (string | string[] | undefined)[]): string {
   return buf.join(' ').toLowerCase();
 }
 
-const mathEntries: MathEntry[] = MATH_MODULE_IDS.flatMap((mid) =>
-  (TOPICS_BY_MODULE[mid] ?? []).map((t) => ({
-    id: t.id,
-    moduleId: mid,
-    title: t.title,
-    // 副标题里的 summary 可能含 $...$ 公式，列表页按纯文本渲染，
-    // 因此在装配阶段就把 $ 去掉，只留可读的纯文本。
-    subtitle: [t.chapter, stripMath(t.summary)].filter(Boolean).join(' · ').slice(0, 60),
-    grade: t.grade as GradeOrAll,
-    // 标签只放章节，不放 methods——整句解题方法当标签既冗长又可能含公式标记
-    tags: [chapterTag(t)],
-    searchText: joinSearch(
-      t.title,
-      t.chapter,
-      t.summary,
-      t.concepts.map((c) => `${c.term}${c.explain}`),
-      t.formulas?.map((f) => `${f.name}${f.text ?? ''}${f.tex ?? ''}`),
-      t.pitfalls,
-      t.methods,
-    ),
-    questions: t.questions ?? [],
-    data: t,
-  })),
-);
+/* ----------------------------- 原始数据（按需加载） ----------------------------- */
+
+/**
+ * 知识点数据在 `./topics.ts` 里，由 `load()` **动态 import**：
+ * 数学在界面上是隐藏的（只有直接访问 `/s/math` 用得到），
+ * 语文学生不必为它下载那几百 KB 文本。
+ */
+let loaded = false;
+let pending: Promise<void> | null = null;
+
+/** 数学数据是否已就绪 */
+export function isLoaded(): boolean {
+  return loaded;
+}
+
+/** 加载数学数据（重复调用安全） */
+export function load(): Promise<void> {
+  if (loaded) return Promise.resolve();
+  if (pending) return pending;
+  pending = import('./topics').then((m) => {
+    for (const mid of MATH_MODULE_IDS) {
+      for (const t of m.TOPICS_BY_MODULE[mid] ?? []) {
+        allEntries.push({
+          id: t.id,
+          moduleId: mid,
+          title: t.title,
+          // 副标题里的 summary 可能含 $...$ 公式，列表页按纯文本渲染，
+          // 因此在这里就把 $ 去掉，只留可读的纯文本。
+          subtitle: [t.chapter, stripMath(t.summary)].filter(Boolean).join(' · ').slice(0, 60),
+          grade: t.grade as GradeOrAll,
+          // 标签只放章节，不放 methods——整句解题方法当标签既冗长又可能含公式标记
+          tags: [chapterTag(t)],
+          questions: t.questions ?? [],
+          data: t,
+        });
+      }
+    }
+    loaded = true;
+    pending = null;
+  });
+  return pending;
+}
+
+/* ------------------------------ 装配 Entry ------------------------------ */
 
 /** 用章节号作为主标签，便于按章节筛选 */
 function chapterTag(t: MathTopic): string {
@@ -97,8 +118,8 @@ function stripMath(s: string): string {
   return s.replace(/\$([^$]*)\$/g, '$1');
 }
 
-/** 全部数学条目 */
-export const allEntries: Entry[] = mathEntries;
+/** 全部数学条目（原地填充） */
+export const allEntries: Entry[] = [];
 
 /** 数学的思维导图（内容补上后由 mindmaps.ts 提供） */
 export const mindMaps: MindMap[] = [];
@@ -120,7 +141,7 @@ export function filterEntries(
   return entriesOfModule(moduleId).filter((e) => {
     if (opts.grade && opts.grade !== 'all' && e.grade !== opts.grade && e.grade !== 'all') return false;
     if (opts.tag && !e.tags.includes(opts.tag)) return false;
-    if (kw && !e.searchText.includes(kw)) return false;
+    if (kw && !matchesKeyword(e, kw)) return false;
     return true;
   });
 }

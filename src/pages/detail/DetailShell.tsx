@@ -11,43 +11,64 @@ import { ExtensionList } from '../../components/ExtensionList';
 import { RelatedList } from '../../components/RelatedList';
 import { SupplementList } from '../../components/SupplementList';
 import { extensions, extensionsOfEntry, mindMapsOfEntry, mindMapsOfModule } from '../../data';
+import { lessonMindMap } from '../../lib/lessonMaps';
 
 /**
  * 常规讲解之外的延伸内容：思维导图 + 拓展阅读。
  * 在这里统一接入，六个模块的详情页便都能自动获得。
  *
- * 两级取材：
- * 1. 精确绑定该条目的导图/拓展（entryId 命中）；
- * 2. 若没有，则回退到该模块的「体系性」导图与通用拓展（最多各 2 条），
- *    这样学《陈涉世家》时也能看到「文言语法五大现象」这类图。
+ * 导图三级取材：
+ * 1. **本课思维导图**——由条目自身的数据推导（逐句脉络、语法归类、考点、易错字…），
+ *    因此**每一课都有**：一首古诗、一篇文言文打开就能看到这一课该记什么、怎么串。
+ * 2. 人工绑定该条目的导图（entryId 命中，如 12 部名著的人物·情节图）——比推导的更细，
+ *    有它就优先显示它，避免同一页出现两张讲同一课的图。
+ * 3. 该模块的「体系性」导图（最多 2 张，默认收起），学《陈涉世家》时也能看到
+ *    「文言语法五大现象」这类图。
  */
-function ExtraSections({
-  entryId,
-  entryTitle,
-  moduleId,
-}: {
-  entryId: string;
-  entryTitle: string;
-  moduleId: Entry['moduleId'];
-}) {
+function ExtraSections({ entry }: { entry: Entry }) {
+  const entryId = entry.id;
+  const entryTitle = entry.title;
+  const moduleId = entry.moduleId;
+
   const exactMaps = mindMapsOfEntry(entryId);
   const exactExts = extensionsOfEntry(entryId);
 
-  // 命中就用精确绑定的；没命中则回退到本模块的体系性内容
-  const maps = exactMaps.length
-    ? exactMaps
-    : mindMapsOfModule(moduleId)
-        .filter((m) => !m.entryId)
-        .slice(0, 2);
+  /** 本课思维导图：没有任何人工导图时才作为主图，避免两张图讲同一课 */
+  const lesson = exactMaps.length ? null : lessonMindMap(entry);
+  const systemMaps = mindMapsOfModule(moduleId)
+    .filter((m) => !m.entryId)
+    .slice(0, 2);
+
   const exts = exactExts.length
     ? exactExts
     : extensions.filter((e) => e.moduleId === moduleId && !e.entryId).slice(0, 2);
 
-  if (!maps.length && !exts.length) return null;
+  if (!exactMaps.length && !lesson && !systemMaps.length && !exts.length) return null;
 
   return (
     <>
-      {maps.map((m) => (
+      {/* 本课思维导图：把这一课的骨架、要点与考点串成一张图 */}
+      {lesson ? (
+        <section className="card" key={lesson.id}>
+          <div className="card__head">
+            <span className="card__title">
+              <span>🧠</span>
+              本课思维导图
+              <Tag tone="jade">这一课该记什么</Tag>
+            </span>
+            <span className="spacer" />
+            <span className="small muted">点节点展开／收起</span>
+          </div>
+          <div className="card__body">
+            <div className="small muted" style={{ marginBottom: 8 }}>
+              {lesson.summary}
+            </div>
+            <MindMapView root={lesson.root} defaultMode="default" />
+          </div>
+        </section>
+      ) : null}
+
+      {systemMaps.map((m) => (
         <section className="card" key={m.id}>
           <div className="card__head">
             <span className="card__title">
@@ -55,7 +76,7 @@ function ExtraSections({
               思维导图 · {m.title}
             </span>
             <span className="spacer" />
-            {m.entryId ? null : <Tag tone="purple">本模块体系图</Tag>}
+            <Tag tone="purple">本模块体系图</Tag>
           </div>
           <div className="card__body">
             <div className="small muted" style={{ marginBottom: 8 }}>
@@ -85,7 +106,7 @@ function ExtraSections({
         </section>
       ) : null}
 
-      {maps.length || exts.length ? (
+      {lesson || exactMaps.length || systemMaps.length || exts.length ? (
         <div className="row">
           <Link className="btn btn--sm" to="/extras">
             🧩 查看全部思维导图与拓展 →
@@ -164,7 +185,7 @@ export function DetailShell({
 
       {children}
 
-      <ExtraSections entryId={entry.id} entryTitle={entry.title} moduleId={entry.moduleId} />
+      <ExtraSections entry={entry} />
 
       {/* 知识联动：同作者 / 同主题 / 同意象 */}
       <RelatedList entry={entry} />

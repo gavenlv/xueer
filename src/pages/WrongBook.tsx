@@ -2,19 +2,23 @@
 
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { findQuestion } from '../data';
+import { findQuestion, moduleIdsOfSubject } from '../data';
 import { getModuleMeta } from '../data/subjects';
 import { useStudy } from '../store/StudyContext';
 import type { ModuleId } from '../types';
 import { OPTION_KEYS, cn, timeAgo } from '../lib/utils';
+import { searchTextOf } from '../lib/searchText';
+import { useDataScope, DataLoading } from '../lib/useData';
 import { EmptyState, PageHeader, SearchBox, Tag } from '../components/common';
-import { RichText } from '../components/Tex';
+import { RichText } from '../components/RichText';
 
 export default function WrongBook() {
   const { state, removeWrong, clearWrong } = useStudy();
   const [keyword, setKeyword] = useState('');
   const [moduleFilter, setModuleFilter] = useState<ModuleId | 'all'>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
+  /** 错题可能来自任何模块，要按题目 id 在全库反查，因此这里加载全部数据 */
+  const ready = useDataScope(moduleIdsOfSubject('chinese').concat(moduleIdsOfSubject('math')));
 
   /** 把错题记录与题库中的题目对上（数据更新后可能失配，直接丢弃） */
   const rows = useMemo(() => {
@@ -40,7 +44,7 @@ export default function WrongBook() {
         kw &&
         !r.question.stem.includes(kw) &&
         !r.wrong.sourceTitle.includes(kw) &&
-        !r.entry.searchText.includes(kw.toLowerCase())
+        !searchTextOf(r.entry).includes(kw.toLowerCase())
       ) {
         return false;
       }
@@ -62,6 +66,8 @@ export default function WrongBook() {
     const set = new Set(rows.map((r) => r.wrong.moduleId));
     return [...set];
   }, [rows]);
+
+  if (!ready) return <DataLoading label="正在整理错题…" />;
 
   return (
     <div className="stack stack--lg">

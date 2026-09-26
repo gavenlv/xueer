@@ -9,6 +9,7 @@ import { useStudy } from '../store/StudyContext';
 import type { GradeId, ModuleId, QuizItem, QuizQuestion } from '../types';
 import { buildModuleQuiz, buildQuiz, makeReciteQuestions } from '../lib/quiz';
 import { shuffle } from '../lib/utils';
+import { useDataScope, DataLoading } from '../lib/useData';
 import { QuizRunner } from '../components/QuizRunner';
 import { EmptyState, PageHeader } from '../components/common';
 
@@ -25,6 +26,8 @@ export default function PracticePage() {
   const { moduleId = 'poems', itemId } = useParams();
   const [search] = useSearchParams();
   const { grade: studyGrade } = useStudy();
+  // 只加载本模块数据（组卷只需要这一块）
+  const ready = useDataScope([moduleId as ModuleId]);
 
   const gradeParam = (search.get('grade') as GradeId | 'all' | null) ?? undefined;
   const grade: GradeId | 'all' = gradeParam ?? studyGrade;
@@ -82,6 +85,8 @@ export default function PracticePage() {
       onlyTag: tagParam,
     });
   }, [moduleId, itemId, grade, countParam, idsParam, typeParam, tagParam, poemsParam]);
+
+  if (!ready) return <DataLoading label="正在准备题目…" />;
 
   const backTo = itemId ? `/s/chinese/${moduleId}/${itemId}` : `/s/chinese/${moduleId}`;
   const title = tagParam

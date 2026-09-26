@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "validate": "vite build --config scripts/validate.config.ts && node scripts/.out/validate/validate.mjs",
     "smoke": "vite build --config scripts/smoke.config.ts && node scripts/.out/smoke/smoke.mjs",
+    "gen": "vite build --config scripts/gen-summary.config.ts && node scripts/.out/gen/gen.mjs",
     "check": "pnpm run typecheck && pnpm run validate && pnpm run smoke"
   },
   "dependencies": {

@@ -3,32 +3,99 @@
  *
  * 页面只依赖这个模块，因此新增学科时 UI 一行都不用改 ——
  * 只要新学科的数据装配成 `Entry[]` 并在这里登记即可。
+ *
+ * ## 数据是**按需加载**的
+ *
+ * 内容文本占了整个应用体积的九成以上，全量首屏下载会让学生为了看首页等好几秒。
+ * 因此这里的三组容器（entries / mindMaps / extensions）都是**原地填充**的空数组：
+ * 页面先用 `useDataScope([...])` 声明自己需要哪些模块，加载完成后同步查询照旧可用。
+ * 校验脚本则先 `await ensureAll()`，所以既有断言不受影响。
  */
 
 import type { Entry, Extension, GradeId, MindMap, ModuleId, Poem, QuizQuestion } from '../types';
 import { SUBJECTS } from './subjects';
 import { imageryOf, examThemesOf } from '../lib/relations';
+import { matchesKeyword } from '../lib/searchText';
 import * as chinese from './chinese';
 import * as math from './math';
 
 /* ------------------------------ 聚合 ------------------------------ */
 
-/** 全部内容条目（所有学科） */
-export const allEntries: Entry[] = [...chinese.allEntries, ...math.allEntries];
+/** 全部内容条目（所有学科）——原地填充 */
+export const allEntries: Entry[] = [];
 
-/** 全部思维导图 */
-export const mindMaps: MindMap[] = [...chinese.mindMaps, ...math.mindMaps];
+/** 全部思维导图——原地填充 */
+export const mindMaps: MindMap[] = [];
 
-/** 全部拓展阅读 */
-export const extensions: Extension[] = [...chinese.extensions, ...math.extensions];
+/** 全部拓展阅读——原地填充 */
+export const extensions: Extension[] = [];
 
-/** id -> Entry 快速索引 */
-export const entryIndex: Map<string, Entry> = new Map(allEntries.map((e) => [e.id, e]));
+/** id -> Entry 快速索引（原地重建，引用恒定） */
+export const entryIndex: Map<string, Entry> = new Map<string, Entry>();
 
 /** 模块 id -> 学科 id（由学科注册表推导，无需手工维护） */
 export const MODULE_SUBJECT: Map<string, string> = new Map(
   SUBJECTS.flatMap((s) => s.modules.map((m) => [m.id, s.id] as [string, string])),
 );
+
+/* ------------------------------ 按需加载 ------------------------------ */
+
+/** 把某一学科的容器内容同步进全局容器（去重，按 id） */
+function syncSubjectContainers(): void {
+  for (const e of [...chinese.allEntries, ...math.allEntries]) {
+    if (!entryIndex.has(e.id)) {
+      entryIndex.set(e.id, e);
+      allEntries.push(e);
+    }
+  }
+  for (const m of [...chinese.mindMaps, ...math.mindMaps]) {
+    if (!mindMaps.some((x) => x.id === m.id)) mindMaps.push(m);
+  }
+  for (const x of [...chinese.extensions, ...math.extensions]) {
+    if (!extensions.some((e) => e.id === x.id)) extensions.push(x);
+  }
+}
+
+/** 数学模块 id 前缀 → 学科加载器 */
+const MATH_MODULE_IDS = new Set<string>(math.MATH_MODULE_IDS);
+
+/**
+ * 页面要声明的数据范围：某个学科的模块 id，或语文的 `'extras'`
+ * （思维导图 + 拓展阅读，只有详情页与知识拓展页用得到）。
+ */
+export type DataScope = ModuleId | 'extras';
+
+/** 该范围是否已经就绪 */
+export function isScopeReady(scope: DataScope[]): boolean {
+  const needChinese = scope.filter((m) => m !== 'extras' && !MATH_MODULE_IDS.has(m));
+  const needExtras = scope.some((m) => m === 'extras');
+  const needMath = scope.some((m) => m !== 'extras' && MATH_MODULE_IDS.has(m));
+  return (
+    chinese.isScopeReady([
+      ...(needChinese as chinese.ChineseModuleId[]),
+      ...(needExtras ? (['extras'] as const) : []),
+    ]) && (needMath ? math.isLoaded() : true)
+  );
+}
+
+/** 加载这些范围的数据 */
+export async function ensureModules(scope: DataScope[]): Promise<void> {
+  const needChinese = scope.filter((m) => m !== 'extras' && !MATH_MODULE_IDS.has(m));
+  const needExtras = scope.some((m) => m === 'extras');
+  await chinese.loadModules([
+    ...(needChinese as chinese.ChineseModuleId[]),
+    ...(needExtras ? (['extras'] as const) : []),
+  ]);
+  if (scope.some((m) => m !== 'extras' && MATH_MODULE_IDS.has(m))) await math.load();
+  syncSubjectContainers();
+}
+
+/** 加载全部学科的全部模块（校验脚本与跨模块聚合页面用） */
+export async function ensureAll(): Promise<void> {
+  await chinese.loadAll();
+  await math.load();
+  syncSubjectContainers();
+}
 
 /* ------------------------------ 学科相关 ------------------------------ */
 
@@ -76,7 +143,7 @@ export function filterEntries(
       return false;
     }
     if (opts.tag && !e.tags.includes(opts.tag)) return false;
-    if (kw && !e.searchText.includes(kw)) return false;
+    if (kw && !matchesKeyword(e, kw)) return false;
     return true;
   });
 }
@@ -117,7 +184,7 @@ export function questionsOfModule(moduleId: ModuleId): { q: QuizQuestion; source
 export function searchAll(keyword: string): Entry[] {
   const kw = keyword.trim().toLowerCase();
   if (!kw) return [];
-  return allEntries.filter((e) => e.searchText.includes(kw) || e.title.toLowerCase().includes(kw));
+  return allEntries.filter((e) => matchesKeyword(e, kw));
 }
 
 /* --------------------------- 思维导图 / 拓展阅读 --------------------------- */

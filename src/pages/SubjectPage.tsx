@@ -3,11 +3,28 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { SUBJECTS, getSubject } from '../data/subjects';
-import { entriesOfModule, moduleIdsOfSubject, statsOfModule } from '../data';
+import { moduleIdsOfSubject } from '../data';
+import { totalsOfModule } from '../data/totals';
+import { ENTRY_META } from '../data/summary';
 import { useStudy } from '../store/StudyContext';
 import type { GradeId, ModuleId } from '../types';
 import { GRADES, cn, pct } from '../lib/utils';
 import { EmptyState, PageHeader, ProgressBar, SectionTitle, Stat } from '../components/common';
+
+/**
+ * 学科页也是**总览页**：只按模块统计「共几条 / 我学了几条 / 共几题」，
+ * 不需要任何正文。因此它读 `data/summary.ts` 那份轻量骨架，
+ * 不加载模块内容——点进具体模块时才按需下载。
+ *
+ * @data-summary-only 声明本页只用轻量清单（校验脚本据此跳过「必须调用 useDataScope」的检查）
+ */
+const META_BY_MODULE = new Map<string, { id: string; grade: string; questions: number }[]>();
+for (const m of ENTRY_META) {
+  META_BY_MODULE.set(m.moduleId, [
+    ...(META_BY_MODULE.get(m.moduleId) ?? []),
+    { id: m.id, grade: m.grade, questions: m.questions },
+  ]);
+}
 
 export default function SubjectPage() {
   const { subjectId = 'chinese' } = useParams();
@@ -23,7 +40,7 @@ export default function SubjectPage() {
       { total: number; studied: number; questions: number; gradeCount: number }
     > = {};
     for (const id of moduleIds) {
-      const entries = entriesOfModule(id);
+      const entries = META_BY_MODULE.get(id) ?? [];
       const inGrade = entries.filter(
         (e) => gradeFilter === 'all' || e.grade === gradeFilter || e.grade === 'all',
       );
@@ -31,7 +48,7 @@ export default function SubjectPage() {
       out[id] = {
         total: entries.length,
         studied,
-        questions: inGrade.reduce((n, e) => n + e.questions.length, 0),
+        questions: inGrade.reduce((n, e) => n + e.questions, 0),
         gradeCount: inGrade.length,
       };
     }
@@ -148,7 +165,7 @@ export default function SubjectPage() {
         <div className="grid grid--auto">
           {subject.modules.map((m) => {
             const st = moduleStats[m.id] ?? { total: 0, studied: 0, questions: 0, gradeCount: 0 };
-            const ms = statsOfModule(m.id as ModuleId);
+            const ms = totalsOfModule(m.id as ModuleId);
             const allCount = ms.entries;
             return (
               <Link key={m.id} className="module-card" to={`/s/${subject.id}/${m.id}`}>

@@ -17,6 +17,7 @@
  */
 
 import type { Entry } from '../types';
+import { searchTextOf } from './searchText';
 
 /** 初中古诗文常见意象词表（用于从诗句中识别意象） */
 const IMAGERY: { name: string; words: string[] }[] = [
@@ -266,10 +267,10 @@ const MIN_POINT_SCORE = 0.28;
 
 /**
  * 取条目里可用于匹配的正文文本（小写）。
- * `searchText` 含标题、作者、正文与标签，用于「正文里出现的字词」这类匹配。
+ * `searchTextOf` 含标题、作者、正文与标签，用于「正文里出现的字词」这类匹配。
  */
 function bodyText(entry: Entry): string {
-  return entry.searchText ?? '';
+  return searchTextOf(entry);
 }
 
 /**

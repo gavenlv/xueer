@@ -11,6 +11,7 @@ import { useStudy } from '../store/StudyContext';
 import type { Poem } from '../types';
 import { GRADES, cn, gradeShort } from '../lib/utils';
 import { daysUntilDue, isDue, levelLabel } from '../lib/recite';
+import { useDataScope, DataLoading } from '../lib/useData';
 import { EmptyState, PageHeader, ProgressBar, SectionTitle, Stat, Tag } from '../components/common';
 import { ReciteTrainer } from '../components/ReciteTrainer';
 
@@ -18,6 +19,8 @@ export default function RecitePage() {
   const { state, grade } = useStudy();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [gradeFilter, setGradeFilter] = useState<string>(grade);
+  // 背诵页只需要古诗词这一块数据
+  const ready = useDataScope(['poems']);
 
   const recite = state.recite ?? {};
 
@@ -44,6 +47,8 @@ export default function RecitePage() {
 
   const totalPracticed = buckets.due.length + buckets.scheduled.length;
   const activePoem = activeId ? allPoems.find((p) => p.id === activeId) : undefined;
+
+  if (!ready) return <DataLoading label="正在准备背诵清单…" />;
 
   return (
     <div className="stack stack--lg">

@@ -2,7 +2,8 @@
 
 import type { MathEntry } from '../../types';
 import { Accordion, Tag } from '../../components/common';
-import { RichText, Tex } from '../../components/Tex';
+import { RichText } from '../../components/RichText';
+import { Tex } from '../../components/Tex';
 import { DetailShell, Section } from './DetailShell';
 
 export function MathDetail({ entry, moduleName }: { entry: MathEntry; moduleName: string }) {
