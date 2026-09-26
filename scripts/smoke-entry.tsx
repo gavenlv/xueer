@@ -72,18 +72,28 @@ const routes: string[] = [
   // 广州中考「整本书阅读」专项：只出简答题，覆盖简答题渲染路径
   '/practice/literature?type=short&grade=all',
   '/practice/literature?type=choice&grade=all',
-  '/wrong',
+  // 科目子页面：背诵 / 错题本 / 考点 / 知识拓展，内容都按本科过滤
+  '/s/chinese/recite',
+  // 未开发背诵的科目也要进得去，且渲染出「正在准备中」而不是空白
+  '/s/math/recite',
+  '/s/chinese/wrong',
+  '/s/math/wrong',
+  '/s/english/wrong',
+  '/s/history/wrong',
+  // 待开发科目的错题本：没有本科错题可查，但页面必须能渲染
+  '/s/physics/wrong',
+  '/s/chinese/exam',
+  '/s/math/exam',
+  '/s/english/exam',
+  // 历史的「考点」是考点与考情总复习页（/s/:subjectId/exam 按科目分流）
+  '/s/history/exam',
+  // 知识拓展页：思维导图与拓展阅读两条渲染路径
+  '/s/chinese/extras',
+  '/s/math/extras',
+  '/s/english/extras',
   '/stats',
   // 账户页（云端未配置时渲染降级提示）
   '/account',
-  // 知识拓展页：思维导图与拓展阅读两条渲染路径
-  '/extras',
-  // 今日背诵（间隔重复清单）
-  '/recite',
-  // 中考考点
-  '/exam',
-  // 历史：考点与考情总复习页 + 整卷模拟考试（开考前页）
-  '/history-review',
   '/exam-run/paper-01',
   // 英语：整卷模拟考试（同一套考试页，卷子来自英语数据）
   '/exam-run/eng-paper-01',
@@ -261,7 +271,7 @@ if (!progressTarget) {
    * 古诗词分区与「默写这 N 首」的按篇目组卷链接。
    */
   const examHtml = renderToString(
-    <MemoryRouter initialEntries={['/exam']}>
+    <MemoryRouter initialEntries={['/s/chinese/exam']}>
       <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
@@ -477,7 +487,7 @@ if (!progressTarget) {
       ).replace(/<!--[\s\S]*?-->/g, '')
     : '';
   const reviewHtml = renderToString(
-    <MemoryRouter initialEntries={['/history-review']}>
+    <MemoryRouter initialEntries={['/s/history/exam']}>
       <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
@@ -505,13 +515,16 @@ if (!progressTarget) {
   );
   if (!histOk) failed += 1;
 
-  /* ------------- 接线检查：多科目快速进入（导航 + 首页） ------------- */
+  /* ------------- 接线检查：一级菜单 = 科目，本科工具与用户入口各归其位 ------------- */
 
   /**
-   * 科目从 2 个扩到 8 个之后，最容易出的问题是「导航里看不全学科」：
-   * 有的科目在顶栏、有的只在首页某处——学生从任意页面都回不到某个科目。
-   * 这里逐项断言：顶栏有学科下拉且按分值排序、底部栏有「学科」、
-   * 首页按中考分值列出全部计分科目、待开发科目的轮廓页能正常渲染出「待开发」。
+   * 这一版把一级菜单直接给科目、把「背诵/错题/考点/拓展」下沉到各科、把
+   * 「学习报告/账户」收进右上角用户菜单。这类信息架构问题**渲染永远不报错**：
+   * 某个科目从顶栏漏掉、本科工具入口没接进学科页、底部栏还留着空的「更多」——
+   * 页面都照常显示，只是学生找不到入口。所以逐项断言。
+   *
+   * 注意：科目面板与用户下拉都是**点开才渲染**的，SSR 首屏里没有面板内容，
+   * 因此这里断言的是「入口数量与顺序」和「学科页上的本科工具链接」。
    */
   const homeHtml = renderToString(
     <MemoryRouter initialEntries={['/']}>
@@ -523,7 +536,13 @@ if (!progressTarget) {
       <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
-  /** 待开发科目：学科页与占位模块页都必须渲染出「待开发」而不是空白 */
+  /** 学科页（语文）：本科工具入口都挂在这里 */
+  const chineseSubjectHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/chinese']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+  /** 待开发科目的学科页：只应给「待开发」轮廓，不得出现本科工具入口 */
   const pendingSubjectHtml = renderToString(
     <MemoryRouter initialEntries={['/s/physics']}>
       <AppWithProviders />
@@ -534,28 +553,94 @@ if (!progressTarget) {
       <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
+  /** 本科错题本（待开发科目）：没有错题，但必须渲染出空态而不是空白 */
+  const pendingWrongHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/physics/wrong']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+  /** 未开发背诵的科目：给出「正在准备中」并指回本科 */
+  const mathReciteHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/math/recite']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+  /** 数学考点页：同一套考点页按科目取数（不再只服务语文） */
+  const mathExamHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/math/exam']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
 
   const menuOrder = SUBJECTS.map((s) => s.name);
 
   const navChecks: [string, boolean][] = [
-    ['顶栏学科下拉入口', histModuleHtml.includes('subjmenu__trigger')],
+    // 一级菜单 = 全部计分科目平铺，一个不多一个不少
+    ['顶栏列全部科目（8 个入口）', (histModuleHtml.match(/subjmenu__trigger/g) ?? []).length === SUBJECTS.length],
+    // 顺序必须与首页/SUBJECTS 一致：只比顶栏那一段的位置，避免被正文里的科目名带偏
+    [
+      '顶栏科目顺序与首页一致（数学在最前）',
+      (() => {
+        const nav = histModuleHtml.slice(
+          histModuleHtml.indexOf('class="topnav"'),
+          histModuleHtml.indexOf('usermenu__trigger'),
+        );
+        return menuOrder.every((n, i) => {
+          const at = nav.indexOf(n);
+          if (at < 0) return false;
+          if (i === 0) return true;
+          return nav.indexOf(menuOrder[i - 1]) < at;
+        });
+      })(),
+    ],
     [
       '顶栏副标题标注 2027 中考口径',
       histModuleHtml.includes('2027 广州中考') && histModuleHtml.includes('810 分'),
     ],
+    // 顶部栏与底栏成对：底栏三个入口 首页 / 学科 / 我的
     ['底部栏「学科」入口', histModuleHtml.includes('📚</span><span>学科')],
-    ['底部栏「更多」入口', histModuleHtml.includes('更多')],
-    // 首页：学科切换 pills 里各科目都在，且默认选中项可点
+    ['底部栏「我的」入口', histModuleHtml.includes('👤</span><span>我的')],
+    ['底部栏不含旧「更多」按钮', !histModuleHtml.includes('tabbar__more')],
+    // 右上角用户入口（学习报告/账户收在此下拉里，收起时不渲染子项）
+    ['右上角用户入口', histModuleHtml.includes('usermenu__trigger')],
+    // 本科工具：语文有背诵/错题本/考点/知识拓展四个入口
+    [
+      '学科页本科工具（背诵/错题本/考点/知识拓展）',
+      chineseSubjectHtml.includes('本科工具') &&
+        ['/s/chinese/recite', '/s/chinese/wrong', '/s/chinese/exam', '/s/chinese/extras'].every((t) =>
+          chineseSubjectHtml.includes(`href="${t}"`),
+        ),
+    ],
+    // 待开发科目不该给出还没有内容的工具入口
+    [
+      '待开发学科页不给本科工具入口',
+      pendingSubjectHtml.includes('待开发') && !pendingSubjectHtml.includes('本科工具'),
+    ],
+    // 待开发科目的错题本：空态 + 指回本科
+    [
+      '待开发科目错题本渲染空态',
+      pendingWrongHtml.includes('物理') && pendingWrongHtml.includes('href="/s/physics"'),
+    ],
+    // 未开发背诵的科目：说清楚「正在准备中」，不是空白页
+    [
+      '未开发背诵的科目给出说明',
+      mathReciteHtml.includes('背诵') && mathReciteHtml.includes('href="/s/math"'),
+    ],
+    // 学科页（语文）：本科工具 + 模块网格
+    ['学科页列出本科模块', chineseSubjectHtml.split('module-card').length - 1 >= 3],
+    // 考点页按科目取数：数学考点页必须是数学的，不是语文的
+    ['考点页按科目取数（数学）', mathExamHtml.includes('数学') && !mathExamHtml.includes('古诗词背诵与默写')],
+    // 首页：模块网格 + 快捷入口直达科目子页面
+    ['首页模块网格（默认学科）', homeHtml.split('module-card').length - 1 >= 3],
+    ['首页快捷入口：今日背诵', homeHtml.includes('今日背诵') && homeHtml.includes('/s/chinese/recite')],
+    ['首页快捷入口：整卷模拟考试', homeHtml.includes('整卷模拟考试') && homeHtml.includes('/s/history/hist-exam')],
+    ['首页快捷入口：历史考点与考情', homeHtml.includes('历史考点与考情') && homeHtml.includes('/s/history/exam')],
+    ['首页快捷入口：语文考点', homeHtml.includes('语文考点') && homeHtml.includes('/s/chinese/exam')],
+    ['首页快捷入口：知识拓展', homeHtml.includes('知识拓展') && homeHtml.includes('/s/chinese/extras')],
     [
       '首页学科切换（语文/历史）',
       homeHtml.includes('subj-tab') && homeHtml.includes('语文') && homeHtml.includes('历史'),
     ],
-    ['首页模块网格（默认学科）', homeHtml.split('module-card').length - 1 >= 3],
-    ['首页快捷入口：整卷模拟考试', homeHtml.includes('整卷模拟考试') && homeHtml.includes('/s/history/hist-exam')],
-    ['首页快捷入口：历史考点与考情', homeHtml.includes('历史考点与考情') && homeHtml.includes('/history-review')],
-    // 学科下拉展开后才是模块清单（收起时不渲染），所以这里断言「下拉入口跟随当前学科」：
-    // 在历史模块页上，入口必须显示「🏺 历史」而不是写死的「语文」。
-    ['学科下拉跟随当前学科', histModuleHtml.includes('subjmenu__trigger') && histModuleHtml.includes('🏺 历史')],
     ['首页学科可切换（各科都是按钮）', (homeHtml.match(/subj-tab/g) ?? []).length >= 4 && homeHtml.includes('aria-pressed')],
     // 一级菜单 = 按 2027 中考满分降序的全部计分科目（含待开发科目）
     [
@@ -591,10 +676,10 @@ if (!progressTarget) {
   ];
   const navOk = navChecks.every(([, ok]) => ok);
   console.log(
-    `  ${navOk ? '✅' : '❌'} 接线检查：多科目快速进入（${navChecks
+    `  ${navOk ? '✅' : '❌'} 接线检查：科目一级菜单与本科工具（${navChecks
       .filter(([, ok]) => !ok)
       .map(([n]) => n)
-      .join('、') || '九类断言全通过'}）`,
+      .join('、') || `${navChecks.length} 项断言全通过`}）`,
   );
   if (!navOk) failed += 1;
 

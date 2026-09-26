@@ -7,10 +7,50 @@ import { moduleIdsOfSubject } from '../data';
 import { totalsOfModule } from '../data/totals';
 import { ENTRY_META } from '../data/summary';
 import { useStudy } from '../store/StudyContext';
-import type { GradeId, ModuleId } from '../types';
+import type { GradeId, ModuleId, Subject } from '../types';
 import { GRADES, cn, pct } from '../lib/utils';
 import { EmptyState, PageHeader, ProgressBar, SectionTitle, Stat, Tag } from '../components/common';
 import { WeightBoard } from '../components/SubjectBoard';
+
+/**
+ * 本科工具：背诵 / 错题本 / 考点 / 知识拓展。
+ *
+ * 这几块以前是**全站一级入口**，但它们本质上都只作用于某一科（背的是语文古诗词、
+ * 错题有科属、考点是某一科的知识点），所以改为挂在各科自己的学科页上。
+ * 只列这一科真的有内容的入口——点进去看不到东西的按钮不如不给。
+ */
+function toolsOf(subject: Subject): { to: string; icon: string; label: string; desc: string }[] {
+  const tools: { to: string; icon: string; label: string; desc: string }[] = [];
+  if (subject.id === 'chinese') {
+    tools.push({
+      to: `/s/${subject.id}/recite`,
+      icon: '📅',
+      label: '背诵',
+      desc: '间隔重复排期',
+    });
+  }
+  tools.push({
+    to: `/s/${subject.id}/wrong`,
+    icon: '🗂️',
+    label: '错题本',
+    desc: '只看本科错题',
+  });
+  tools.push({
+    to: `/s/${subject.id}/exam`,
+    icon: '🎯',
+    label: subject.id === 'history' ? '考点与考情' : '中考考点',
+    desc: '按知识点聚合',
+  });
+  if (subject.id === 'chinese' || subject.id === 'math') {
+    tools.push({
+      to: `/s/${subject.id}/extras`,
+      icon: '🧩',
+      label: '知识拓展',
+      desc: '导图与拓展阅读',
+    });
+  }
+  return tools;
+}
 
 /**
  * 学科页也是**总览页**：只按模块统计「共几条 / 我学了几条 / 共几题」，
@@ -147,28 +187,28 @@ export default function SubjectPage() {
         }
         desc={`中考 ${subject.score} 分 · 占 ${weightOf(subject)}%${subject.examNote ? ` · ${subject.examNote}` : ''} · ${subject.desc} · ${subject.modules.length} 个模块 · ${totals.questions} 道练习题`}
         extra={
-          <>
-            <Link
-              className="btn btn--primary btn--sm"
-              to={`/practice/${firstModule}?grade=${gradeFilter}`}
-            >
-              🎲 随机练习
-            </Link>
-            <Link className="btn btn--sm" to="/extras">
-              🧩 思维导图与拓展
-            </Link>
-            <Link className="btn btn--sm" to="/wrong">
-              🗂️ 错题本
-            </Link>
-            {/* 历史是备考型学科：把「考点与考情总复习」放在学科页入口，别让它埋在模块里 */}
-            {subject.id === 'history' ? (
-              <Link className="btn btn--sm btn--primary" to="/history-review">
-                📊 考点与考情总复习
-              </Link>
-            ) : null}
-          </>
+          <Link
+            className="btn btn--primary btn--sm"
+            to={`/practice/${firstModule}?grade=${gradeFilter}`}
+          >
+            🎲 随机练习
+          </Link>
         }
       />
+
+      {/* 本科工具：背诵 / 错题本 / 考点 / 知识拓展，都只作用于这一科 */}
+      <section className="stack stack--sm">
+        <SectionTitle sub="这些入口都只看本科内容，不与其他科目混在一起">本科工具</SectionTitle>
+        <div className="scroll-x quick-row">
+          {toolsOf(subject).map((t) => (
+            <Link className="quick" key={t.to} to={t.to}>
+              <span className="quick__icon">{t.icon}</span>
+              <span className="quick__label">{t.label}</span>
+              <span className="quick__desc">{t.desc}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {/* 学段切换 */}
       <section className="stack stack--sm">

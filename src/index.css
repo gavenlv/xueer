@@ -214,14 +214,18 @@ img {
   border-bottom: 1px solid var(--c-line);
 }
 
+/**
+ * 顶栏容器比正文更宽：一级菜单是 8 个科目平铺，按正文的 1080px 根本放不下，
+ * 会被挤出横向滚动条。正文仍用 --page-max，只有顶栏放宽。
+ */
 .topbar__inner {
   height: 100%;
-  max-width: var(--page-max);
+  max-width: min(1400px, 100%);
   margin: 0 auto;
   padding: 0 16px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 .brand {
@@ -264,12 +268,14 @@ img {
   align-items: center;
   gap: 2px;
   margin-left: 8px;
+  /* 科目一级菜单的下拉面板挂在这里：面板贴在导航左缘，最后几个科目也不会把它挤出屏幕 */
+  position: relative;
 }
 
 .topnav__link {
-  padding: 7px 13px;
+  padding: 7px 9px;
   border-radius: var(--r-full);
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--c-ink-2);
   transition: background 0.16s, color 0.16s;
@@ -287,20 +293,6 @@ img {
   box-shadow: var(--sh-1);
 }
 
-.topbar__streak {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 11px 5px 8px;
-  border-radius: var(--r-full);
-  background: var(--c-gold-soft);
-  color: #8d6410;
-  font-size: 12.5px;
-  font-weight: 700;
-  border: 1px solid #f0e2bd;
-  white-space: nowrap;
-}
-
 /* 顶栏右上角的账户状态：已登录是用户名 pill，未登录是「登录 / 注册」小按钮 */
 .topbar__account {
   max-width: 120px;
@@ -310,9 +302,66 @@ img {
   text-decoration: none;
 }
 
-@media (max-width: 720px) {
-  /* 窄屏顶栏空间有限：隐藏连续打卡，保留账户状态 */
-  .topbar__streak {
+/* 用户下拉：把「学习报告 / 账户与同步」这类跨科目入口收在一处 */
+.usermenu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.usermenu__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: inherit;
+}
+
+/* 连续打卡 / 今日答题数：原本挂在顶栏，现在收进用户菜单，把顶栏宽度让给科目 */
+.usermenu__stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding: 9px 11px;
+  border-radius: var(--r-md);
+  background: var(--c-gold-soft);
+  border: 1px solid #f0e2bd;
+  color: #8d6410;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.usermenu__panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 61;
+  width: min(280px, calc(100vw - 32px));
+  padding: 12px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--c-line);
+  background: var(--c-surface);
+  box-shadow: var(--sh-3);
+  animation: fadeIn 0.14s ease-out;
+}
+
+/**
+ * 中等宽度（1025–1150px）的桌面窗口：8 个科目平铺后顶栏偏挤，再收紧一档。
+ */
+@media (max-width: 1150px) {
+  .topnav__link {
+    padding: 6px 7px;
+    font-size: 13px;
+  }
+}
+
+/**
+ * 窄桌面 / 平板横屏（900–1024px）：桌面科目按钮已收到最紧，再把品牌文字让掉
+ * （只留「学」标记），保证 8 个科目仍然一行平铺、不出现横向滚动条。
+ * 断点下限必须是 900px——再窄就没有科目菜单了（换成底部标签栏），品牌文字放得下。
+ */
+@media (min-width: 900px) and (max-width: 1024px) {
+  .brand__text {
     display: none;
   }
 }
@@ -354,16 +403,7 @@ img {
   line-height: 1;
 }
 
-/* 「更多」按钮（收纳移动端放不下的入口） */
-.tabbar__more {
-  background: none;
-  border: none;
-  font-family: inherit;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* 「更多」底部面板 */
+/* 展开面板（学科 / 我的） */
 .moresheet {
   position: fixed;
   inset: 0;
@@ -2347,12 +2387,8 @@ button.mm-label:hover {
   }
 }
 
-/* ---------------------- 学科切换（顶栏下拉 / 手机面板） ---------------------- */
-/* 两个学科共 14 个模块，导航栏塞不下，所以收进一个入口；桌面下拉、手机弹层共用内容 */
-
-.subjmenu {
-  position: relative;
-}
+/* ---------------------- 学科切换（顶栏一级菜单 / 手机面板） ---------------------- */
+/* 一级菜单就是科目本身：顶栏平铺 8 科、共用一个下拉面板；手机端收进「学科」面板 */
 
 .subjmenu__trigger {
   display: inline-flex;
@@ -2369,9 +2405,16 @@ button.mm-label:hover {
   color: var(--c-ink-3);
 }
 
+/* 「点空白处收起」遮罩：必须盖住整屏，否则面板打开后点页面别处关不掉。
+   注意 `.topbar` 上的 backdrop-filter 会让 fixed 子元素的包含块变成顶栏自身，
+   所以这里不用 inset: 0，而是显式写明四边与高度——无论包含块是顶栏还是视口，
+   结果都是「从视口顶部向下铺满一屏」。 */
 .subjmenu__mask {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100vh;
   z-index: 60;
 }
 
@@ -2391,33 +2434,29 @@ button.mm-label:hover {
   animation: fadeIn 0.14s ease-out;
 }
 
-.subjmenu__group + .subjmenu__group {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--c-line);
+/* 面板标题：当前展开的是哪一科、多少分、几个模块 */
+.subjmenu__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 8px 10px;
+  font-weight: 700;
+  font-size: 15px;
 }
 
 .subjmenu__subject {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-top: 10px;
   padding: 8px;
   border-radius: var(--r-md);
+  border-top: 1px dashed var(--c-line);
   color: inherit;
 }
 
 .subjmenu__subject:hover {
   background: var(--c-surface-2);
-}
-
-.subjmenu__icon {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--r-md);
-  display: grid;
-  place-items: center;
-  font-size: 17px;
-  flex-shrink: 0;
 }
 
 .subjmenu__name {
@@ -3258,10 +3297,6 @@ button.mm-label:hover {
  * 分屏后的窄窗口）两个导航同时消失，页面上没有任何入口——改断点时务必同步这一对。
  */
 @media (min-width: 900px) {
-  .brand__sub {
-    display: block;
-  }
-
   /* 与顶栏导航同一个断点 */
   .tabbar {
     display: none;
@@ -3269,6 +3304,16 @@ button.mm-label:hover {
 
   .app__main {
     padding-bottom: 40px;
+  }
+}
+
+/**
+ * 副标题（「2027 广州中考 · 8 科 810 分」）是锦上添花，只有在顶栏真放得下时才出现：
+ * 1440px 以下一律不给，省下的宽度让给 8 个科目的平铺。
+ */
+@media (min-width: 1440px) {
+  .brand__sub {
+    display: block;
   }
 }
 

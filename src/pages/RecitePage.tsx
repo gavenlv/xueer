@@ -1,12 +1,16 @@
 /**
- * 今日背诵：按间隔重复安排，列出今天该复习的篇目，并可直接就地训练。
+ * 今日背诵（科目子页面）：按间隔重复安排，列出今天该复习的篇目，并可直接就地训练。
  * 「背完不是终点，到点复习才是」——这个页面就是解决「背完就忘」的。
+ *
+ * 目前只有语文有必背篇目（古诗词），因此它是 `/s/chinese/recite` 的实现；
+ * 其他科目进来会看到「本科背诵清单还在准备中」的说明，而不是空白页。
  */
 
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { contentStats } from '../data';
 import { allPoems } from '../data/chinese';
+import { getSubject } from '../data/subjects';
 import { useStudy } from '../store/StudyContext';
 import type { Poem } from '../types';
 import { GRADES, cn, gradeShort } from '../lib/utils';
@@ -16,6 +20,8 @@ import { EmptyState, PageHeader, ProgressBar, SectionTitle, Stat, Tag } from '..
 import { ReciteTrainer } from '../components/ReciteTrainer';
 
 export default function RecitePage() {
+  const { subjectId = 'chinese' } = useParams();
+  const subject = getSubject(subjectId);
   const { state, grade } = useStudy();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [gradeFilter, setGradeFilter] = useState<string>(grade);
@@ -48,6 +54,46 @@ export default function RecitePage() {
   const totalPracticed = buckets.due.length + buckets.scheduled.length;
   const activePoem = activeId ? allPoems.find((p) => p.id === activeId) : undefined;
 
+  /** 其他科目：必背清单还没做，给出说明与同学科的其余入口，别让学生撞空白页 */
+  if (!subject || subject.id !== 'chinese') {
+    return (
+      <div className="stack stack--lg">
+        <PageHeader
+          crumbs={[
+            { label: '首页', to: '/' },
+            ...(subject ? [{ label: subject.name, to: `/s/${subject.id}` }] : []),
+            { label: '背诵' },
+          ]}
+          title="📅 今日背诵"
+          desc={
+            subject
+              ? `${subject.name}的背诵清单还在准备中。`
+              : '没有这个学科。'
+          }
+          extra={
+            subject ? (
+              <Link className="btn btn--sm" to={`/s/${subject.id}`}>
+                ← 返回{subject.name}模块总览
+              </Link>
+            ) : null
+          }
+        />
+        <EmptyState
+          icon="🚧"
+          title="本科目的背诵清单正在准备中"
+          desc="「今日背诵」按遗忘规律（1→2→4→7→15→30 天）安排复习。目前已上线的是语文必背古诗词；英语词汇、历史时间线等清单会随各科内容一起上线。"
+          action={
+            subject ? (
+              <Link className="btn btn--primary" to={`/s/${subject.id}`}>
+                去看{subject.name}的模块
+              </Link>
+            ) : undefined
+          }
+        />
+      </div>
+    );
+  }
+
   if (!ready) return <DataLoading label="正在准备背诵清单…" />;
 
   return (
@@ -55,7 +101,7 @@ export default function RecitePage() {
       <PageHeader
         crumbs={[
           { label: '首页', to: '/' },
-          { label: '语文', to: '/s/chinese' },
+          { label: subject.name, to: `/s/${subject.id}` },
           { label: '今日背诵' },
         ]}
         title="📅 今日背诵"

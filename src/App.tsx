@@ -9,7 +9,7 @@
  * `components/RichText.tsx` 的动态 import）。
  */
 
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import AppShell from './components/AppShell';
 import Home from './pages/Home';
 import SubjectPage from './pages/SubjectPage';
@@ -26,26 +26,42 @@ import HistoryReviewPage from './pages/HistoryReviewPage';
 import AccountPage from './pages/AccountPage';
 import NotFound from './pages/NotFound';
 
+/**
+ * 「考点」在不同科目是不同形态的页面：
+ * 历史有自己的「考点与考情总复习」（分层考点 + 命题角度 + 材料大题），语文/数学/英语
+ * 走按知识点标签聚合的考点页（见 `ExamPage`，它按 `subjectId` 取数据）。
+ */
+function SubjectExamRoute() {
+  const { subjectId = 'chinese' } = useParams();
+  if (subjectId === 'history') return <HistoryReviewPage />;
+  return <ExamPage />;
+}
+
 export default function App() {
   return (
     <Routes>
       <Route element={<AppShell />}>
         <Route index element={<Home />} />
         <Route path="s/:subjectId" element={<SubjectPage />} />
+        {/* 科目子页面：背诵 / 错题本 / 考点 / 知识拓展，内容都按本科过滤 */}
+        <Route path="s/:subjectId/recite" element={<RecitePage />} />
+        <Route path="s/:subjectId/wrong" element={<WrongBook />} />
+        <Route path="s/:subjectId/exam" element={<SubjectExamRoute />} />
+        <Route path="s/:subjectId/extras" element={<ExtrasPage />} />
         <Route path="s/:subjectId/:moduleId" element={<ModulePage />} />
         <Route path="s/:subjectId/:moduleId/:itemId" element={<DetailPage />} />
         <Route path="practice/:moduleId" element={<PracticePage />} />
         <Route path="practice/:moduleId/:itemId" element={<PracticePage />} />
-        <Route path="wrong" element={<WrongBook />} />
         <Route path="stats" element={<StatsPage />} />
-        <Route path="extras" element={<ExtrasPage />} />
-        <Route path="recite" element={<RecitePage />} />
-        <Route path="exam" element={<ExamPage />} />
-        {/* 整卷模拟考试（历史）：60 分钟、交卷才批改 */}
+        {/* 整卷模拟考试（历史 / 英语）：60 分钟、交卷才批改 */}
         <Route path="exam-run/:paperId" element={<ExamRunPage />} />
-        {/* 历史考点与考情总复习：分层考点 / 命题角度 / 材料大题索引 */}
-        <Route path="history-review" element={<HistoryReviewPage />} />
         <Route path="account" element={<AccountPage />} />
+        {/* 旧的全站入口改为跳到对应科目的子页面，站内老链接与浏览器书签都不失效 */}
+        <Route path="wrong" element={<Navigate to="/s/chinese/wrong" replace />} />
+        <Route path="recite" element={<Navigate to="/s/chinese/recite" replace />} />
+        <Route path="exam" element={<Navigate to="/s/chinese/exam" replace />} />
+        <Route path="extras" element={<Navigate to="/s/chinese/extras" replace />} />
+        <Route path="history-review" element={<Navigate to="/s/history/exam" replace />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

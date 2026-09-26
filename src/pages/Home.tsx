@@ -368,7 +368,7 @@ export default function Home() {
       <section className="stack stack--sm">
         <SectionTitle sub="不用记路径，一步直达">快捷入口</SectionTitle>
         <div className="scroll-x quick-row">
-          <Link className="quick" to="/recite">
+          <Link className="quick" to="/s/chinese/recite">
             <span className="quick__icon">📅</span>
             <span className="quick__label">今日背诵</span>
             <span className="quick__desc">间隔重复排期</span>
@@ -378,12 +378,12 @@ export default function Home() {
             <span className="quick__label">整卷模拟考试</span>
             <span className="quick__desc">历史 70 分 · 60 分钟</span>
           </Link>
-          <Link className="quick" to="/history-review">
+          <Link className="quick" to="/s/history/exam">
             <span className="quick__icon">📊</span>
             <span className="quick__label">历史考点与考情</span>
             <span className="quick__desc">重点 / 次重点 / 材料大题</span>
           </Link>
-          <Link className="quick" to="/exam">
+          <Link className="quick" to="/s/chinese/exam">
             <span className="quick__icon">🎯</span>
             <span className="quick__label">语文考点</span>
             <span className="quick__desc">按知识点聚合</span>
@@ -393,12 +393,12 @@ export default function Home() {
             <span className="quick__label">历史中考专题</span>
             <span className="quick__desc">跨册关联与中外对比</span>
           </Link>
-          <Link className="quick" to="/extras">
+          <Link className="quick" to="/s/chinese/extras">
             <span className="quick__icon">🧩</span>
             <span className="quick__label">知识拓展</span>
             <span className="quick__desc">导图与拓展阅读</span>
           </Link>
-          <Link className="quick" to="/wrong">
+          <Link className="quick" to={`/s/${subject?.id ?? 'chinese'}/wrong`}>
             <span className="quick__icon">🗂️</span>
             <span className="quick__label">错题本</span>
             <span className="quick__desc">
@@ -419,13 +419,13 @@ export default function Home() {
         </div>
         <ProgressBar value={overall.studied} max={Math.max(1, overall.total)} />
         <div className="row row--wrap" style={{ marginTop: 6 }}>
-          <Link className="btn btn--sm" to="/extras">
+          <Link className="btn btn--sm" to="/s/chinese/extras">
             🧩 思维导图与拓展
           </Link>
           <Link className="btn btn--sm" to="/stats">
             📊 学习报告
           </Link>
-          <Link className="btn btn--sm" to="/wrong">
+          <Link className="btn btn--sm" to={`/s/${subject?.id ?? 'chinese'}/wrong`}>
             🗂️ 错题本 {overall.wrongCount > 0 ? `(${overall.wrongCount})` : ''}
           </Link>
           {starred.length > 0 ? (

@@ -82,7 +82,7 @@ function CollapseCard({
  *
  * 三块都**默认收起**（见 `CollapseCard`）。
  */
-function ExtraSections({ entry }: { entry: Entry }) {
+function ExtraSections({ entry, subjectId }: { entry: Entry; subjectId: string }) {
   const entryId = entry.id;
   const entryTitle = entry.title;
   const moduleId = entry.moduleId;
@@ -145,7 +145,7 @@ function ExtraSections({ entry }: { entry: Entry }) {
 
       {lesson || exactMaps.length || systemMaps.length || exts.length ? (
         <div className="row">
-          <Link className="btn btn--sm" to="/extras">
+          <Link className="btn btn--sm" to={`/s/${subjectId}/extras`}>
             🧩 查看全部思维导图与拓展 →
           </Link>
         </div>
@@ -235,7 +235,7 @@ export function DetailShell({
 
       {children}
 
-      <ExtraSections entry={entry} />
+      <ExtraSections entry={entry} subjectId={subjectId} />
 
       {/* 知识联动：同作者 / 同主题 / 同意象 */}
       <RelatedList entry={entry} />

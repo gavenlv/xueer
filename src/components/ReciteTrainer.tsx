@@ -270,7 +270,7 @@ export function ReciteTrainer({ poem, entryId }: { poem: Poem; entryId: string }
           <Link className="btn btn--sm" to={`/practice/poems/${entryId}`}>
             ✍️ 用默写检验一遍
           </Link>
-          <Link className="btn btn--sm btn--ghost" to="/recite">
+          <Link className="btn btn--sm btn--ghost" to="/s/chinese/recite">
             📅 今日背诵清单
           </Link>
         </div>

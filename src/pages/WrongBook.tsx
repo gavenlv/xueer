@@ -1,9 +1,9 @@
-/** 错题本：按模块归类，支持重做、逐条移除与清空 */
+/** 错题本（科目子页面）：只看这一科错的题，按模块归类，支持重做、逐条移除与清空 */
 
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { findQuestion, moduleIdsOfSubject } from '../data';
-import { getModuleMeta } from '../data/subjects';
+import { Link, useParams } from 'react-router-dom';
+import { findQuestion, moduleIdsOfSubject, MODULE_SUBJECT } from '../data';
+import { getModuleMeta, getSubject } from '../data/subjects';
 import { useStudy } from '../store/StudyContext';
 import type { ModuleId } from '../types';
 import { OPTION_KEYS, cn, timeAgo } from '../lib/utils';
@@ -13,16 +13,22 @@ import { EmptyState, PageHeader, SearchBox, Tag } from '../components/common';
 import { RichText } from '../components/RichText';
 
 export default function WrongBook() {
+  const { subjectId = 'chinese' } = useParams();
+  const subject = getSubject(subjectId);
   const { state, removeWrong, clearWrong } = useStudy();
   const [keyword, setKeyword] = useState('');
   const [moduleFilter, setModuleFilter] = useState<ModuleId | 'all'>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
-  /** 错题可能来自任何模块，要按题目 id 在全库反查，因此这里加载全部数据 */
-  const ready = useDataScope(moduleIdsOfSubject('chinese').concat(moduleIdsOfSubject('math')));
+  /**
+   * 错题只按题目 id 存，要显示题干就得在题库里反查，
+   * 因此这里加载**本科**全部模块的数据（不再顺带把别的科目也拉下来）。
+   */
+  const ready = useDataScope(moduleIdsOfSubject(subjectId));
 
-  /** 把错题记录与题库中的题目对上（数据更新后可能失配，直接丢弃） */
+  /** 把本科错题记录与题库中的题目对上（数据更新后可能失配，直接丢弃） */
   const rows = useMemo(() => {
     const list = Object.values(state.wrong)
+      .filter((w) => MODULE_SUBJECT.get(w.moduleId) === subjectId)
       .map((w) => {
         const found = findQuestion(w.questionId);
         if (!found) return null;
@@ -34,12 +40,19 @@ export default function WrongBook() {
       question: NonNullable<ReturnType<typeof findQuestion>>['question'];
     }[];
     return list.sort((a, b) => b.wrong.lastAt - a.wrong.lastAt);
-  }, [state.wrong, ready]);
+  }, [state.wrong, ready, subjectId]);
+
+  const moduleOptions = useMemo(() => {
+    const set = new Set(rows.map((r) => r.wrong.moduleId));
+    return [...set];
+  }, [rows]);
 
   const filtered = useMemo(() => {
     const kw = keyword.trim();
+    // 换了科目后，上一科留下的模块筛选项在本科可能不存在，会整页筛空——不匹配就当作「全部」
+    const mid = moduleFilter !== 'all' && moduleOptions.includes(moduleFilter) ? moduleFilter : 'all';
     return rows.filter((r) => {
-      if (moduleFilter !== 'all' && r.wrong.moduleId !== moduleFilter) return false;
+      if (mid !== 'all' && r.wrong.moduleId !== mid) return false;
       if (
         kw &&
         !r.question.stem.includes(kw) &&
@@ -50,7 +63,7 @@ export default function WrongBook() {
       }
       return true;
     });
-  }, [rows, keyword, moduleFilter]);
+  }, [rows, keyword, moduleFilter, moduleOptions]);
 
   const byModule = useMemo(() => {
     const map = new Map<string, typeof filtered>();
@@ -62,22 +75,25 @@ export default function WrongBook() {
     return [...map.entries()];
   }, [filtered]);
 
-  const moduleOptions = useMemo(() => {
-    const set = new Set(rows.map((r) => r.wrong.moduleId));
-    return [...set];
-  }, [rows]);
+  if (!subject) {
+    return <EmptyState icon="🧭" title="没有这个学科" desc="请从首页重新选择。" />;
+  }
 
   if (!ready) return <DataLoading label="正在整理错题…" />;
 
   return (
     <div className="stack stack--lg">
       <PageHeader
-        crumbs={[{ label: '首页', to: '/' }, { label: '错题本' }]}
-        title="🗂️ 错题本"
+        crumbs={[
+          { label: '首页', to: '/' },
+          { label: subject.name, to: `/s/${subject.id}` },
+          { label: '错题本' },
+        ]}
+        title={`🗂️ ${subject.name}错题本`}
         desc={
           rows.length
-            ? `共 ${rows.length} 道错题。答对后会自动移出，答错则会累积提醒。`
-            : '这里会记录你做错的每一道题。'
+            ? `本科共 ${rows.length} 道错题。答对后会自动移出，答错则会累积提醒。`
+            : `这里会记录你在${subject.name}做错的每一道题。`
         }
         extra={
           rows.length ? (
@@ -96,11 +112,11 @@ export default function WrongBook() {
       {rows.length === 0 ? (
         <EmptyState
           icon="🎉"
-          title="错题本是空的"
-          desc="说明你到现在为止没有留下错题，非常棒。去做几组练习检验一下自己吧。"
+          title="本科还没有错题"
+          desc={`说明你到现在为止没有在${subject.name}留下错题，非常棒。去做几组练习检验一下自己吧。`}
           action={
-            <Link className="btn btn--primary" to="/s/chinese">
-              开始练习
+            <Link className="btn btn--primary" to={`/s/${subject.id}`}>
+              去{subject.name}练习
             </Link>
           }
         />
@@ -224,7 +240,7 @@ export default function WrongBook() {
                             >
                               {isOpen ? '收起解析' : '查看解析'}
                             </button>
-                            <Link className="btn btn--sm" to={`/s/chinese/${mid}/${entry.id}`}>
+                            <Link className="btn btn--sm" to={`/s/${subjectId}/${mid}/${entry.id}`}>
                               回到原文
                             </Link>
                             <button

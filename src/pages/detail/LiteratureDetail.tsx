@@ -177,7 +177,7 @@ export function LiteratureDetail({
             <Link className="btn btn--primary btn--sm" to={`/practice/literature/${entry.id}`}>
               ✍️ 练《{book?.name}》全部 {entry.questions.length} 题
             </Link>
-            <Link className="btn btn--sm" to="/exam">
+            <Link className="btn btn--sm" to="/s/chinese/exam">
               🎯 看全部名著考点
             </Link>
           </div>

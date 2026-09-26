@@ -1,14 +1,16 @@
 /**
- * 中考考点：把题库按知识点标签聚合成考点清单，支持「按考点专项刷题」。
+ * 中考考点（科目子页面）：把题库按知识点标签聚合成考点清单，支持「按考点专项刷题」。
  *
  * 与「按课文学习」互补——这里回答的是「中考要考哪些点、我哪个点最弱」。
+ * 页面本身是学科无关的：数据按 `subjectId` 取，只有古诗词那一套考点是语文专属
+ * （它不预置题目，靠主题/意象/作者聚类，见 `poemExamPoints`）。
  */
 
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { examPointsByModule, findQuestion, moduleIdsOfSubject, poemExamPoints } from '../data';
 import { allPoems } from '../data/chinese';
-import { getModuleMeta } from '../data/subjects';
+import { getModuleMeta, getSubject } from '../data/subjects';
 import { useStudy } from '../store/StudyContext';
 import type { ModuleId } from '../types';
 import { makeReciteQuestions } from '../lib/quiz';
@@ -25,13 +27,15 @@ import {
 } from '../components/common';
 
 export default function ExamPage() {
+  const { subjectId = 'chinese' } = useParams();
+  const subject = getSubject(subjectId);
+  /** 古诗词那一套考点只属于语文 */
+  const isChinese = subjectId === 'chinese';
   const { state } = useStudy();
   const [keyword, setKeyword] = useState('');
   const [moduleFilter, setModuleFilter] = useState<ModuleId | 'all'>('all');
-  /** 考点要从**全部**题目的知识点标签聚合出来，因此这一页需要加载全部数据 */
-  const ready = useDataScope(
-    moduleIdsOfSubject('chinese').concat(moduleIdsOfSubject('math')),
-  );
+  /** 考点要从**本科全部**题目的知识点标签聚合出来，因此这一页需要加载本科全部数据 */
+  const ready = useDataScope(moduleIdsOfSubject(subjectId));
   /**
    * 考点总数已经 600+，一次全铺出来会把页面撑到近 400 KB HTML、手机上必卡。
    * 因此每个模块先只显示前若干个，点「展开全部」再看剩下的；
@@ -41,16 +45,26 @@ export default function ExamPage() {
   const PREVIEW_PER_MODULE = 12;
   const PREVIEW_PER_KIND = 8;
 
-  const groups = useMemo(() => examPointsByModule('chinese'), [ready]);
+  // 换科目时清掉上一科的模块筛选（同一个组件实例被复用，否则会整页筛空）
+  useEffect(() => {
+    setModuleFilter('all');
+    setExpanded(new Set());
+  }, [subjectId]);
+
+  const groups = useMemo(() => examPointsByModule(subjectId), [ready, subjectId]);
 
   /**
    * 古诗词单独一套考点：它不预置题目，所以按题目标签聚合的那套里会整体缺席。
    * 这里用「主题 / 意象 / 作者」聚类，每个考点指向这几十首的逐句默写。
+   * 只有语文有这一套，其他科目为空。
    */
-  const poemPoints = useMemo(() => poemExamPoints(), [ready]);
+  const poemPoints = useMemo(() => (isChinese ? poemExamPoints() : []), [ready, isChinese]);
   const poemReciteCount = useMemo(
-    () => allPoems.reduce((n, p) => n + makeReciteQuestions(p.lines, p.id, p.title).length, 0),
-    [ready],
+    () =>
+      isChinese
+        ? allPoems.reduce((n, p) => n + makeReciteQuestions(p.lines, p.id, p.title).length, 0)
+        : 0,
+    [ready, isChinese],
   );
   /** 搜索词对古诗词考点同样生效 */
   const keywordTrimmed = keyword.trim();
@@ -58,7 +72,7 @@ export default function ExamPage() {
     () => (keywordTrimmed ? poemPoints.filter((p) => p.tag.includes(keywordTrimmed)) : poemPoints),
     [poemPoints, keywordTrimmed],
   );
-  const showPoems = moduleFilter === 'all' || moduleFilter === 'poems';
+  const showPoems = isChinese && (moduleFilter === 'all' || moduleFilter === 'poems');
 
   /** 古诗词考点按「主题/意象/作者」三类各显示前若干个，保证三类都能露头 */
   const poemsVisible = useMemo(() => {
@@ -100,6 +114,44 @@ export default function ExamPage() {
     0,
   );
 
+  if (!subject || !subject.available) {
+    return (
+      <div className="stack stack--lg">
+        <PageHeader
+          crumbs={[
+            { label: '首页', to: '/' },
+            ...(subject ? [{ label: subject.name, to: `/s/${subject.id}` }] : []),
+            { label: '中考考点' },
+          ]}
+          title="🎯 中考考点"
+          extra={
+            subject ? (
+              <Link className="btn btn--sm" to={`/s/${subject.id}`}>
+                ← 返回{subject.name}模块总览
+              </Link>
+            ) : null
+          }
+        />
+        <EmptyState
+          icon="🚧"
+          title={subject ? `${subject.name}的考点正在整理中` : '没有这个学科'}
+          desc={
+            subject
+              ? '考点由题库的知识点标签聚合而来，随该科内容一起上线。先去看看它的模块结构，上线后即可按考点专项刷题。'
+              : '请从首页重新选择科目。'
+          }
+          action={
+            subject ? (
+              <Link className="btn btn--primary" to={`/s/${subject.id}`}>
+                去看{subject.name}的模块
+              </Link>
+            ) : undefined
+          }
+        />
+      </div>
+    );
+  }
+
   if (!ready) return <DataLoading label="正在汇总考点…" />;
 
   return (
@@ -107,14 +159,14 @@ export default function ExamPage() {
       <PageHeader
         crumbs={[
           { label: '首页', to: '/' },
-          { label: '语文', to: '/s/chinese' },
+          { label: subject.name, to: `/s/${subject.id}` },
           { label: '中考考点' },
         ]}
-        title="🎯 中考考点"
+        title={`🎯 ${subject.name}中考考点`}
         desc="把题库按知识点聚合成考点，哪个点有错题一眼看得出来；点「专项训练」就只刷这个考点。"
         extra={
-          <Link className="btn btn--sm" to="/wrong">
-            🗂️ 错题本
+          <Link className="btn btn--sm" to={`/s/${subject.id}/wrong`}>
+            🗂️ {subject.name}错题本
           </Link>
         }
       />
@@ -135,13 +187,16 @@ export default function ExamPage() {
           >
             全部模块（{total}）
           </button>
-          <button
-            className={cn('chip chip--sm', moduleFilter === 'poems' && 'is-active')}
-            onClick={() => setModuleFilter('poems')}
-          >
-            {getModuleMeta('poems')?.module.icon} {getModuleMeta('poems')?.module.name}（
-            {poemPoints.length}）
-          </button>
+          {/* 古诗词那一套考点只有语文有：其他科目不给这个筛选项，免得点出一页空 */}
+          {isChinese ? (
+            <button
+              className={cn('chip chip--sm', moduleFilter === 'poems' && 'is-active')}
+              onClick={() => setModuleFilter('poems')}
+            >
+              {getModuleMeta('poems')?.module.icon} {getModuleMeta('poems')?.module.name}（
+              {poemPoints.length}）
+            </button>
+          ) : null}
           {groups.map((g) => {
             const meta = getModuleMeta(g.moduleId);
             return (
@@ -291,14 +346,14 @@ export default function ExamPage() {
                         {p.entryIds[0] ? (
                           <Link
                             className="btn btn--sm"
-                            to={`/s/chinese/${p.moduleId}/${p.entryIds[0]}`}
+                            to={`/s/${subjectId}/${p.moduleId}/${p.entryIds[0]}`}
                           >
                             📖 先学一遍
                           </Link>
                         ) : null}
                         <Link
                           className="btn btn--sm"
-                          to={`/s/chinese/${p.moduleId}?tag=${encodeURIComponent(p.tag)}`}
+                          to={`/s/${subjectId}/${p.moduleId}?tag=${encodeURIComponent(p.tag)}`}
                         >
                           📚 看相关 {p.entryIds.length} 条
                         </Link>
