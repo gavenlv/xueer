@@ -1171,6 +1171,46 @@ console.log(
   `      材料大题           ${histMaterialGroups} 组 / ${histAsks} 问（参考答案与踩分点齐全）`,
 );
 
+/**
+ * 材料设问必须标注分值，且一组的合计要说得通。
+ *
+ * 广州中考的非选择题设问都带分值（如「……（4 分）」），学生据此分配答题篇幅——
+ * 少了分值，学生只能凭感觉写。这条检查很便宜，但能挡住「抄漏括号」这种低级错。
+ * 中考专题与模拟卷的一组材料固定 10 分（3+3+4 或 4+3+3 这类组合），因此顺便核对合计。
+ */
+let askNoScore = 0;
+const scoreSumOf = (stems: string[]): number => {
+  let sum = 0;
+  for (const stem of stems) {
+    const m = /[（(]\s*(\d+)\s*分\s*[)）]/.exec(stem);
+    if (!m) {
+      askNoScore += 1;
+      err(`[历史] 设问「${stem.slice(0, 26)}…」没有标注分值`);
+    } else sum += Number(m[1]);
+  }
+  return sum;
+};
+for (const t of historyTopics) {
+  for (const g of t.materials ?? []) {
+    const sum = scoreSumOf(g.questions.map((q) => q.stem));
+    if (t.id.startsWith('ht-') && sum !== 10) {
+      warn(`[历史·专题] ${g.id} 各设问分值合计 ${sum} 分（专题材料题应为 10 分）`);
+    }
+  }
+}
+for (const p of papers) {
+  for (const g of p.materials) {
+    const sum = scoreSumOf(g.questions.map((q) => q.stem));
+    if (sum !== HISTORY_STRUCTURE.material.score / HISTORY_STRUCTURE.material.count) {
+      warn(`[历史·模拟卷] ${g.id} 各设问分值合计 ${sum} 分（整套应为每题 10 分）`);
+    }
+  }
+}
+console.log(
+  `      材料设问分值       ${histMaterialGroups} 组 / ${histAsks} 问全部标注分值` +
+    `（专题与模拟卷每组合计 10 分，缺分值 ${askNoScore} 处）`,
+);
+
 /* ----------------- 历史：中考专题与考点索引是否覆盖各册 ----------------- */
 
 /**
