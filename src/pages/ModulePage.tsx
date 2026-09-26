@@ -36,7 +36,13 @@ export default function ModulePage() {
   );
   const [tagFilter, setTagFilter] = useState<string>(search.get('tag') ?? 'all');
 
-  const allEntries = useMemo(() => entriesOfModule(moduleId as ModuleId), [moduleId]);
+  // ready 必须作为依赖：数据是异步加载后 push 进全库的，若只依赖 moduleId，
+  // 直接访问/刷新本页时会把「加载前的空数组」缓存住，线上会一直显示空状态
+  // （dev 下被 StrictMode 双渲染与 HMR 掩盖）。
+  const allEntries = useMemo(
+    () => (ready ? entriesOfModule(moduleId as ModuleId) : []),
+    [moduleId, ready],
+  );
 
   const tags = useMemo(
     () => filterTagsOfModule(moduleId as ModuleId, gradeFilter),
