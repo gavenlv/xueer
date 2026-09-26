@@ -1,10 +1,11 @@
-/** 首页：今日概览、学科入口、语文六大模块、继续学习 */
+/** 首页：今日概览、学科与模块（可切换）、快捷入口、继续学习 */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getModuleMeta, SUBJECTS } from '../data/subjects';
 import { totalsOfModule, totalsOfSubject } from '../data/totals';
-import { DAILY_LINES, ENTRY_META } from '../data/summary';
+import { DAILY_LINES, ENTRY_META, MODULE_TOTALS } from '../data/summary';
+import { subjectOfModule } from '../data';
 import type { ModuleId } from '../types';
 import { useStreak, useStudy } from '../store/StudyContext';
 import { dateKey, pct, timeAgo } from '../lib/utils';
@@ -12,6 +13,19 @@ import type { ItemProgress } from '../types';
 import { ProgressBar, SectionTitle, Stat, Tag } from '../components/common';
 
 const DAILY_GOAL = 20;
+
+/** 已上线学科（隐藏学科不展示，与导航、学习报告保持一致） */
+const LIVE_SUBJECTS = SUBJECTS.filter((s) => s.available && !s.hidden);
+
+/**
+ * 每个学科「最常用的一步」：首页快捷入口点一下就到。
+ * 语文最常做的是默写，历史最常做的是整卷模拟——这是两科学习方式的差别，
+ * 硬套同一个按钮反而两边都不好用。
+ */
+const SUBJECT_QUICK: Record<string, { to: string; label: string; icon: string }> = {
+  chinese: { to: '/practice/poems', label: '古诗文默写', icon: '✍️' },
+  history: { to: '/s/history/hist-exam', label: '整卷模拟考试', icon: '📝' },
+};
 
 /**
  * 首页是**总览页**，刻意不加载任何模块的正文数据：
@@ -32,12 +46,57 @@ function greeting(): string {
 }
 
 export default function Home() {
-  const { state, grade } = useStudy();
+  const { state } = useStudy();
   const streak = useStreak();
 
   const today = state.daily[dateKey()] ?? { answered: 0, correct: 0, minutes: 0 };
   const checkedToday = state.checkins.includes(dateKey());
 
+  /**
+   * 当前选中的学科。
+   *
+   * 默认选「最近学过的那一科」——学生上次在学历史，今天打开首页就该看见历史，
+   * 而不是每次都从语文开始翻。没有任何学习记录时取第一个已上线学科（语文）。
+   * 学科很多时这里也只占一行 chips，不会把首页撑长。
+   */
+  const [subjectId, setSubjectId] = useState<string>(() => {
+    let best: { id: string; at: number } | null = null;
+    for (const [id, p] of Object.entries(state.progress)) {
+      if (!p.lastAt) continue;
+      const meta = META_BY_ID.get(id);
+      const sid = meta ? subjectOfModule(meta.moduleId) : undefined;
+      if (!sid) continue;
+      if (!best || p.lastAt > best.at) best = { id: sid, at: p.lastAt };
+    }
+    return best?.id ?? LIVE_SUBJECTS[0]?.id ?? 'chinese';
+  });
+  const subject = LIVE_SUBJECTS.find((s) => s.id === subjectId) ?? LIVE_SUBJECTS[0];
+  const subjectTotals = subject ? totalsOfSubject(subject.id) : null;
+  const quick = subject ? SUBJECT_QUICK[subject.id] : undefined;
+
+  /* 该学科已学多少条（学科 chips 上的进度小字） */
+  const studiedBySubject = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const id of Object.keys(state.progress)) {
+      if (!(state.progress[id]?.studied ?? 0)) continue;
+      const meta = META_BY_ID.get(id);
+      const sid = meta ? subjectOfModule(meta.moduleId) : undefined;
+      if (sid) out[sid] = (out[sid] ?? 0) + 1;
+    }
+    return out;
+  }, [state.progress]);
+
+  /** 学科条目数（chips 上用；来自轻量清单，不加载正文） */
+  const entriesBySubject = useMemo(() => {
+    const moduleToSubject = new Map<string, string>();
+    for (const s of LIVE_SUBJECTS) for (const m of s.modules) moduleToSubject.set(m.id, s.id);
+    const out: Record<string, number> = {};
+    for (const t of MODULE_TOTALS) {
+      const sid = moduleToSubject.get(t.id);
+      if (sid) out[sid] = (out[sid] ?? 0) + t.entries;
+    }
+    return out;
+  }, []);
   /* 全库学习进度 */
   const overall = useMemo(() => {
     const ids = Object.keys(state.progress);
@@ -131,12 +190,25 @@ export default function Home() {
           </div>
 
           <div className="hero__actions">
-            <Link className="btn btn--white" to={`/practice/poems?grade=${grade}`}>
-              ✍️ 古诗文默写
-            </Link>
-            <Link className="btn" to="/s/chinese">
-              进入语文 →
-            </Link>
+            {recent.length ? (
+              <Link
+                className="btn btn--white"
+                to={`/s/${getModuleMeta(recent[0].entry.moduleId)?.subject.id ?? 'chinese'}/${recent[0].entry.moduleId}/${recent[0].entry.id}`}
+              >
+                ▶ 继续：{recent[0].entry.title.length > 10 ? `${recent[0].entry.title.slice(0, 10)}…` : recent[0].entry.title}
+              </Link>
+            ) : null}
+            {subject && quick ? (
+              <Link className="btn btn--white" to={quick.to}>
+                {quick.icon} {subject.name}
+                {quick.label}
+              </Link>
+            ) : null}
+            {subject ? (
+              <Link className="btn" to={`/s/${subject.id}`}>
+                进入{subject.name} →
+              </Link>
+            ) : null}
           </div>
         </div>
       </section>
@@ -184,58 +256,54 @@ export default function Home() {
         </section>
       ) : null}
 
-      {/* 学科 */}
+      {/* 学科与模块：一次只展示一科，切换学科不用重新进页面 */}
       <section className="stack stack--sm">
-        <SectionTitle sub="语文已上线，其余学科正在建设中">选择学科</SectionTitle>
-        <div className="grid grid--auto">
-          {SUBJECTS.filter((s) => !s.hidden).map((s) => (
-            <Link
-              key={s.id}
-              to={s.available ? `/s/${s.id}` : '#'}
-              className={`subject-card${s.available ? '' : ' is-locked'}`}
-              onClick={(e) => {
-                if (!s.available) e.preventDefault();
-              }}
-              aria-disabled={!s.available}
-            >
-              <span
-                className="subject-card__icon"
-                style={{
-                  background: s.available ? `${s.color}18` : 'var(--c-surface-3)',
-                  color: s.color,
-                }}
-              >
-                {s.icon}
-              </span>
-              <span className="subject-card__name">
-                {s.name}
-                {!s.available ? (
-                  <span className="tag" style={{ marginLeft: 8 }}>
-                    敬请期待
-                  </span>
-                ) : null}
-              </span>
-              <span className="subject-card__desc">{s.desc}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
+        <SectionTitle
+          sub="点学科切换，模块直接进；手机端在底部栏点「📚 学科」"
+          extra={
+            subject ? (
+              <Link className="btn btn--sm" to={`/s/${subject.id}`}>
+                {subject.name}首页 →
+              </Link>
+            ) : null
+          }
+        >
+          学科与模块
+        </SectionTitle>
 
-      {/* 各学科模块（学科无关：新增学科会自动出现；hidden 的学科不展示） */}
-      {SUBJECTS.filter((s) => s.available && !s.hidden).map((subject) => {
-        const st = totalsOfSubject(subject.id);
-        return (
-          <section className="stack stack--sm" key={subject.id}>
-            <SectionTitle
-              sub={`共 ${st.entries} 条内容 · ${st.questions} 道题`}
-              extra={
-                <Link className="btn btn--sm" to={`/s/${subject.id}`}>
-                  全部 →
-                </Link>
-              }
-            >
-              {subject.icon} {subject.name} · {subject.modules.length} 个模块
-            </SectionTitle>
+        {/* 学科切换：横向可滑，手机上也不会挤成两行 */}
+        <div className="scroll-x subj-tabs">
+          {LIVE_SUBJECTS.map((s) => {
+            const st = totalsOfSubject(s.id);
+            return (
+              <button
+                key={s.id}
+                className={`subj-tab${s.id === subject?.id ? ' is-active' : ''}`}
+                style={s.id === subject?.id ? { borderColor: s.color, color: s.color } : undefined}
+                onClick={() => setSubjectId(s.id)}
+                aria-pressed={s.id === subject?.id}
+              >
+                <span className="subj-tab__icon" style={{ background: `${s.color}18` }}>
+                  {s.icon}
+                </span>
+                <span className="subj-tab__body">
+                  <span className="subj-tab__name">{s.name}</span>
+                  <span className="subj-tab__meta">
+                    {entriesBySubject[s.id] ?? st.entries} 条内容 · {s.modules.length} 模块
+                    {studiedBySubject[s.id] ? ` · 已学 ${studiedBySubject[s.id]}` : ''}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {subject ? (
+          <>
+            <div className="small muted">
+              {subject.icon} {subject.name}：{subject.desc}
+              {subjectTotals ? ` · 共 ${subjectTotals.questions} 道题` : ''}
+            </div>
             <div className="grid grid--auto">
               {subject.modules.map((m) => {
                 const ms = totalsOfModule(m.id as ModuleId);
@@ -257,16 +325,59 @@ export default function Home() {
                       </span>
                       <span className="module-card__foot">
                         {ms.entries} 条内容 · {ms.questions} 题
-                        {ms.mindMaps ? ` · ${ms.mindMaps} 张导图` : ''}
                       </span>
                     </span>
                   </Link>
                 );
               })}
             </div>
-          </section>
-        );
-      })}
+          </>
+        ) : null}
+      </section>
+
+      {/* 快捷入口：跨学科共用的一步直达 */}
+      <section className="stack stack--sm">
+        <SectionTitle sub="不用记路径，一步直达">快捷入口</SectionTitle>
+        <div className="scroll-x quick-row">
+          <Link className="quick" to="/recite">
+            <span className="quick__icon">📅</span>
+            <span className="quick__label">今日背诵</span>
+            <span className="quick__desc">间隔重复排期</span>
+          </Link>
+          <Link className="quick" to="/s/history/hist-exam">
+            <span className="quick__icon">📝</span>
+            <span className="quick__label">整卷模拟考试</span>
+            <span className="quick__desc">历史 70 分 · 60 分钟</span>
+          </Link>
+          <Link className="quick" to="/history-review">
+            <span className="quick__icon">📊</span>
+            <span className="quick__label">历史考点与考情</span>
+            <span className="quick__desc">重点 / 次重点 / 材料大题</span>
+          </Link>
+          <Link className="quick" to="/exam">
+            <span className="quick__icon">🎯</span>
+            <span className="quick__label">语文考点</span>
+            <span className="quick__desc">按知识点聚合</span>
+          </Link>
+          <Link className="quick" to="/s/history/hist-topics">
+            <span className="quick__icon">🔀</span>
+            <span className="quick__label">历史中考专题</span>
+            <span className="quick__desc">跨册关联与中外对比</span>
+          </Link>
+          <Link className="quick" to="/extras">
+            <span className="quick__icon">🧩</span>
+            <span className="quick__label">知识拓展</span>
+            <span className="quick__desc">导图与拓展阅读</span>
+          </Link>
+          <Link className="quick" to="/wrong">
+            <span className="quick__icon">🗂️</span>
+            <span className="quick__label">错题本</span>
+            <span className="quick__desc">
+              {overall.wrongCount > 0 ? `${overall.wrongCount} 道待清` : '暂无错题'}
+            </span>
+          </Link>
+        </div>
+      </section>
 
       {/* 学习总览 */}
       <section className="card card--pad stack stack--sm">

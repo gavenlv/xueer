@@ -495,6 +495,48 @@ if (!progressTarget) {
       .join('、') || '七类断言全通过'}）`,
   );
   if (!histOk) failed += 1;
+
+  /* ------------- 接线检查：多科目快速进入（导航 + 首页） ------------- */
+
+  /**
+   * 科目从 1 个变 2 个之后，最容易出的问题是「导航里只有一个学科入口」：
+   * 语文写死在顶栏与底部栏、历史只存在于首页某处——学生从任意页面都回不到历史。
+   * 这里逐项断言：顶栏有学科下拉、底部栏有「学科」、首页能切学科、快捷入口直达两科的核心功能。
+   */
+  const homeHtml = renderToString(
+    <MemoryRouter initialEntries={['/']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+  const histModuleHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/history/hist-8a']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+
+  const navChecks: [string, boolean][] = [
+    ['顶栏学科下拉入口', histModuleHtml.includes('subjmenu__trigger')],
+    ['顶栏品牌副标题跟随学科', histModuleHtml.includes('初中 · 语文 / 历史')],
+    ['底部栏「学科」入口', histModuleHtml.includes('📚</span><span>学科')],
+    ['底部栏「更多」入口', histModuleHtml.includes('更多')],
+    // 首页：学科切换 pills 里两个学科都在，且默认选中项可点
+    ['首页学科切换（语文/历史）', homeHtml.includes('subj-tab') && homeHtml.includes('语文') && homeHtml.includes('历史')],
+    ['首页模块网格（默认学科）', homeHtml.split('module-card').length - 1 >= 3],
+    ['首页快捷入口：整卷模拟考试', homeHtml.includes('整卷模拟考试') && homeHtml.includes('/s/history/hist-exam')],
+    ['首页快捷入口：历史考点与考情', homeHtml.includes('历史考点与考情') && homeHtml.includes('/history-review')],
+    // 学科下拉展开后才是模块清单（收起时不渲染），所以这里断言「下拉入口跟随当前学科」：
+    // 在历史模块页上，入口必须显示「🏺 历史」而不是写死的「语文」。
+    ['学科下拉跟随当前学科', histModuleHtml.includes('subjmenu__trigger') && histModuleHtml.includes('🏺 历史')],
+    ['首页学科可切换（两科都是按钮）', (homeHtml.match(/subj-tab/g) ?? []).length >= 4 && homeHtml.includes('aria-pressed')],
+  ];
+  const navOk = navChecks.every(([, ok]) => ok);
+  console.log(
+    `  ${navOk ? '✅' : '❌'} 接线检查：多科目快速进入（${navChecks
+      .filter(([, ok]) => !ok)
+      .map(([n]) => n)
+      .join('、') || '九类断言全通过'}）`,
+  );
+  if (!navOk) failed += 1;
 }
 
 if (failed) {
