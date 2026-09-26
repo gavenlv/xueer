@@ -70,7 +70,7 @@ export default function StatsPage() {
         return { id: m.id, meta: m, total: entries.length, studied };
       }),
     }));
-  }, [state.progress]);
+  }, [state.progress, ready]);
 
   /* 薄弱知识点：错题标签聚合 */
   const weakTags = useMemo(() => {
@@ -83,7 +83,7 @@ export default function StatsPage() {
       }
     }
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
-  }, [state.wrong]);
+  }, [state.wrong, ready]);
 
   /* 收藏 */
   const starred = useMemo(
@@ -92,7 +92,7 @@ export default function StatsPage() {
         .filter(([, p]) => p.starred)
         .map(([id]) => entryIndex.get(id))
         .filter(Boolean),
-    [state.progress],
+    [state.progress, ready],
   );
 
   const hasData = totals.answered > 0 || totals.studied > 0;

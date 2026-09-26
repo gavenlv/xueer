@@ -84,7 +84,7 @@ export default function PracticePage() {
       onlyType: typeParam,
       onlyTag: tagParam,
     });
-  }, [moduleId, itemId, grade, countParam, idsParam, typeParam, tagParam, poemsParam]);
+  }, [moduleId, itemId, grade, countParam, idsParam, typeParam, tagParam, poemsParam, ready]);
 
   if (!ready) return <DataLoading label="正在准备题目…" />;
 

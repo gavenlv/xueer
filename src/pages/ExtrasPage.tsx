@@ -8,11 +8,11 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { extensions, mindMaps } from '../data';
 import { getModuleMeta } from '../data/subjects';
-import type { Extension, ModuleId, MindNode } from '../types';
+import type { Extension, ModuleId } from '../types';
 import { cn, gradeShort } from '../lib/utils';
 import { useDataScope, DataLoading } from '../lib/useData';
 import { Crumbs, EmptyState, PageHeader, Tag, type Tone } from '../components/common';
-import { MindMapView } from '../components/MindMapView';
+import { MindMapView, countNodes } from '../components/MindMapView';
 import { ExtensionList } from '../components/ExtensionList';
 
 type Tab = 'maps' | 'exts';
@@ -27,13 +27,6 @@ const KIND_TONE: Record<Extension['kind'], Tone> = {
 };
 
 const MODULE_ORDER: ModuleId[] = ['literature', 'classical', 'poems', 'vocab', 'reading', 'writing'];
-
-/** 统计导图节点总数 */
-function countNodes(node: MindNode): number {
-  let n = 1;
-  for (const c of node.children ?? []) n += countNodes(c);
-  return n;
-}
 
 export default function ExtrasPage() {
   const [tab, setTab] = useState<Tab>('maps');
@@ -77,7 +70,7 @@ function MapsTab() {
 
   const filtered = useMemo(
     () => (moduleFilter === 'all' ? mindMaps : mindMaps.filter((m) => m.moduleId === moduleFilter)),
-    [moduleFilter],
+    [moduleFilter, mindMaps.length],
   );
 
   const groups = useMemo(
@@ -88,7 +81,7 @@ function MapsTab() {
     [filtered],
   );
 
-  const modulesWithMaps = useMemo(() => [...new Set(mindMaps.map((m) => m.moduleId))], []);
+  const modulesWithMaps = useMemo(() => [...new Set(mindMaps.map((m) => m.moduleId))], [mindMaps.length]);
 
   return (
     <div className="stack stack--lg">
@@ -190,11 +183,11 @@ function MapsTab() {
 function ExtsTab() {
   const [kindFilter, setKindFilter] = useState<Extension['kind'] | 'all'>('all');
 
-  const kinds = useMemo(() => [...new Set(extensions.map((e) => e.kind))], []);
+  const kinds = useMemo(() => [...new Set(extensions.map((e) => e.kind))], [extensions.length]);
 
   const filtered = useMemo(
     () => (kindFilter === 'all' ? extensions : extensions.filter((e) => e.kind === kindFilter)),
-    [kindFilter],
+    [kindFilter, extensions.length],
   );
 
   /** 按所属模块分组，便于定位 */

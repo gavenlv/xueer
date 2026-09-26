@@ -34,7 +34,7 @@ export default function WrongBook() {
       question: NonNullable<ReturnType<typeof findQuestion>>['question'];
     }[];
     return list.sort((a, b) => b.wrong.lastAt - a.wrong.lastAt);
-  }, [state.wrong]);
+  }, [state.wrong, ready]);
 
   const filtered = useMemo(() => {
     const kw = keyword.trim();

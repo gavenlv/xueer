@@ -43,7 +43,7 @@ export default function RecitePage() {
     due.sort((a, b) => (recite[a.id]?.dueAt ?? 0) - (recite[b.id]?.dueAt ?? 0));
     scheduled.sort((a, b) => (recite[a.id]?.dueAt ?? 0) - (recite[b.id]?.dueAt ?? 0));
     return { due, fresh, scheduled, total: inGrade.length };
-  }, [recite, gradeFilter]);
+  }, [recite, gradeFilter, ready]);
 
   const totalPracticed = buckets.due.length + buckets.scheduled.length;
   const activePoem = activeId ? allPoems.find((p) => p.id === activeId) : undefined;

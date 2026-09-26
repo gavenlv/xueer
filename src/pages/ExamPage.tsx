@@ -41,16 +41,16 @@ export default function ExamPage() {
   const PREVIEW_PER_MODULE = 12;
   const PREVIEW_PER_KIND = 8;
 
-  const groups = useMemo(() => examPointsByModule('chinese'), []);
+  const groups = useMemo(() => examPointsByModule('chinese'), [ready]);
 
   /**
    * 古诗词单独一套考点：它不预置题目，所以按题目标签聚合的那套里会整体缺席。
    * 这里用「主题 / 意象 / 作者」聚类，每个考点指向这几十首的逐句默写。
    */
-  const poemPoints = useMemo(() => poemExamPoints(), []);
+  const poemPoints = useMemo(() => poemExamPoints(), [ready]);
   const poemReciteCount = useMemo(
     () => allPoems.reduce((n, p) => n + makeReciteQuestions(p.lines, p.id, p.title).length, 0),
-    [],
+    [ready],
   );
   /** 搜索词对古诗词考点同样生效 */
   const keywordTrimmed = keyword.trim();
@@ -79,7 +79,7 @@ export default function ExamPage() {
       }
     }
     return counts;
-  }, [state.wrong]);
+  }, [state.wrong, ready]);
 
   const filtered = useMemo(() => {
     const kw = keyword.trim();
