@@ -15,9 +15,15 @@
 import type { Entry } from '../types';
 import type { SpeechSegment } from './speech';
 
-/** 段落文本是否值得朗读（有汉字才算） */
+/**
+ * 段落文本是否值得朗读。
+ *
+ * 判据是「含汉字**或拉丁字母**」——一开始只认汉字（当时只有语文内容），
+ * 结果英语的听说脚本、阅读语篇、英文例句**全部被判为不可朗读**，英语页面的朗读条
+ * 只剩一句中文小结。纯符号与公式（如 `$x^2$`）仍然排除：朗读它们只会念出乱码。
+ */
 function readable(text: string | undefined): text is string {
-  return Boolean(text && /[\u4e00-\u9fa5]/.test(text) && !text.includes('$'));
+  return Boolean(text && /[\u4e00-\u9fa5A-Za-z]/.test(text) && !text.includes('$'));
 }
 
 function push(
