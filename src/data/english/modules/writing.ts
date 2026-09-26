@@ -274,7 +274,7 @@ export const topics: EnglishKnowledge[] = [
       ],
       samples: [
         {
-          level: '一类文（17—20 分）',
+          level: '一类文（18—20 分）',
           text:
             'Last Friday afternoon, the members of our English Club gathered at the school gate and set off for a community park. As volunteers, we picked up rubbish along the paths, planted some flowers near the lake and told English stories to the children there. The children listened carefully and repeated every word after us. Although we were tired, everyone said the afternoon was meaningful. Our club holds such an activity every month, and each time we learn something new. If you enjoy English and want to make a difference, the English Club is the right place for you.',
           cn:
@@ -302,7 +302,7 @@ export const topics: EnglishKnowledge[] = [
           ],
         },
         {
-          level: '二类文（12—15 分）',
+          level: '二类文（13—16 分）',
           text:
             'Last Friday, we go to a park. Our English Club has a activity every month. As volunteer, we pick up rubbish and plant flower. We also tell story to the child there. We sing English songs together too. The child was very happy. We are very tired but we think it is meaningful. The park is more clean than before. I like English Club very much. I want to join it again. English Club is a good place. Welcome to our club.',
           cn:
@@ -851,7 +851,7 @@ export const topics: EnglishKnowledge[] = [
       ],
       samples: [
         {
-          level: '一类文（17—20 分）',
+          level: '一类文（18—20 分）',
           text:
             'Last week we asked 200 students in our school about their free-time activities, and the results are worth thinking about. About 40 percent of them spend their spare time on mobile phones, which is the highest among the four choices. Sports come second at 30 percent, while reading takes up 20 percent, and housework only 10 percent. I think the reason is simple: phones are easy to reach and they give us quick fun. However, too much screen time is bad for our eyes. Therefore, I suggest we put down our phones and play ball games for an hour every day.',
           cn:
