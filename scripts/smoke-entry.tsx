@@ -46,14 +46,21 @@ function AppWithProviders() {
 
 const routes: string[] = [
   '/',
-  // 学科页与各学科的全部模块页、详情页、练习页
+  // 已上线学科的学科页、模块页、详情页、练习页
   ...SUBJECTS.filter((s) => s.available).flatMap((s) => [
     `/s/${s.id}`,
-    ...s.modules.flatMap((m) => [
-      `/s/${s.id}/${m.id}`,
-      `/s/${s.id}/${m.id}/${firstId(m.id)}`,
-      `/practice/${m.id}`,
-    ]),
+    ...s.modules
+      .filter((m) => m.available)
+      .flatMap((m) => [
+        `/s/${s.id}/${m.id}`,
+        `/s/${s.id}/${m.id}/${firstId(m.id)}`,
+        `/practice/${m.id}`,
+      ]),
+  ]),
+  // 待开发科目的轮廓页：学科页与每个占位模块页都必须能渲染出「待开发」而不是空白
+  ...SUBJECTS.filter((s) => !s.available).flatMap((s) => [
+    `/s/${s.id}`,
+    ...s.modules.map((m) => `/s/${s.id}/${m.id}`),
   ]),
   '/s/chinese/nonexistent',
   '/s/math/nonexistent',
@@ -501,9 +508,10 @@ if (!progressTarget) {
   /* ------------- 接线检查：多科目快速进入（导航 + 首页） ------------- */
 
   /**
-   * 科目从 1 个变 2 个之后，最容易出的问题是「导航里只有一个学科入口」：
-   * 语文写死在顶栏与底部栏、历史只存在于首页某处——学生从任意页面都回不到历史。
-   * 这里逐项断言：顶栏有学科下拉、底部栏有「学科」、首页能切学科、快捷入口直达两科的核心功能。
+   * 科目从 2 个扩到 8 个之后，最容易出的问题是「导航里看不全学科」：
+   * 有的科目在顶栏、有的只在首页某处——学生从任意页面都回不到某个科目。
+   * 这里逐项断言：顶栏有学科下拉且按分值排序、底部栏有「学科」、
+   * 首页按中考分值列出全部计分科目、待开发科目的轮廓页能正常渲染出「待开发」。
    */
   const homeHtml = renderToString(
     <MemoryRouter initialEntries={['/']}>
@@ -515,21 +523,71 @@ if (!progressTarget) {
       <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
+  /** 待开发科目：学科页与占位模块页都必须渲染出「待开发」而不是空白 */
+  const pendingSubjectHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/physics']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+  const pendingModuleHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/physics/phy-electric']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+
+  const menuOrder = SUBJECTS.map((s) => s.name);
 
   const navChecks: [string, boolean][] = [
     ['顶栏学科下拉入口', histModuleHtml.includes('subjmenu__trigger')],
-    ['顶栏品牌副标题跟随学科', histModuleHtml.includes('初中 · ') && histModuleHtml.includes('语文') && histModuleHtml.includes('历史') && histModuleHtml.includes('英语')],
+    [
+      '顶栏副标题标注 2027 中考口径',
+      histModuleHtml.includes('2027 广州中考') && histModuleHtml.includes('810 分'),
+    ],
     ['底部栏「学科」入口', histModuleHtml.includes('📚</span><span>学科')],
     ['底部栏「更多」入口', histModuleHtml.includes('更多')],
-    // 首页：学科切换 pills 里两个学科都在，且默认选中项可点
-    ['首页学科切换（语文/历史）', homeHtml.includes('subj-tab') && homeHtml.includes('语文') && homeHtml.includes('历史')],
+    // 首页：学科切换 pills 里各科目都在，且默认选中项可点
+    [
+      '首页学科切换（语文/历史）',
+      homeHtml.includes('subj-tab') && homeHtml.includes('语文') && homeHtml.includes('历史'),
+    ],
     ['首页模块网格（默认学科）', homeHtml.split('module-card').length - 1 >= 3],
     ['首页快捷入口：整卷模拟考试', homeHtml.includes('整卷模拟考试') && homeHtml.includes('/s/history/hist-exam')],
     ['首页快捷入口：历史考点与考情', homeHtml.includes('历史考点与考情') && homeHtml.includes('/history-review')],
     // 学科下拉展开后才是模块清单（收起时不渲染），所以这里断言「下拉入口跟随当前学科」：
     // 在历史模块页上，入口必须显示「🏺 历史」而不是写死的「语文」。
     ['学科下拉跟随当前学科', histModuleHtml.includes('subjmenu__trigger') && histModuleHtml.includes('🏺 历史')],
-    ['首页学科可切换（两科都是按钮）', (homeHtml.match(/subj-tab/g) ?? []).length >= 4 && homeHtml.includes('aria-pressed')],
+    ['首页学科可切换（各科都是按钮）', (homeHtml.match(/subj-tab/g) ?? []).length >= 4 && homeHtml.includes('aria-pressed')],
+    // 一级菜单 = 按 2027 中考满分降序的全部计分科目（含待开发科目）
+    [
+      '首页按分值列出全部计分科目',
+      homeHtml.includes('计分科目与分值') &&
+        homeHtml.includes('810 分') &&
+        menuOrder.every((n) => homeHtml.includes(n)),
+    ],
+    // 「计分科目与分值」一览必须按满分降序：数学 150 排在语文 140 之前。
+    // 只在这段切片里比位置——页头会先出现当前学科名，全页 indexOf 会被带偏。
+    [
+      '分值顺序：数学 150 分在最前',
+      (() => {
+        const board = homeHtml.slice(homeHtml.indexOf('计分科目与分值'));
+        return board.indexOf('数学') >= 0 && board.indexOf('数学') < board.indexOf('语文');
+      })(),
+    ],
+    ['待开发科目出现在首页（物理/化学/体育）', homeHtml.includes('待开发') && homeHtml.includes('物理') && homeHtml.includes('体育与健康')],
+    // 待开发页面：轮廓与说明必须渲染出来
+    [
+      '待开发科目页渲染模块轮廓',
+      pendingSubjectHtml.includes('待开发') &&
+        pendingSubjectHtml.includes('内容正在准备中') &&
+        pendingSubjectHtml.includes('电学') &&
+        pendingSubjectHtml.includes('力学基础'),
+    ],
+    [
+      '待开发模块页渲染规划与返回入口',
+      pendingModuleHtml.includes('待开发') &&
+        pendingModuleHtml.includes('内容正在准备中') &&
+        pendingModuleHtml.includes('/s/physics"'),
+    ],
   ];
   const navOk = navChecks.every(([, ok]) => ok);
   console.log(

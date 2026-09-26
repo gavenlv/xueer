@@ -14,6 +14,7 @@ import {
   PageHeader,
   ProgressBar,
   SearchBox,
+  SectionTitle,
   Tag,
 } from '../components/common';
 
@@ -78,9 +79,84 @@ export default function ModulePage() {
     return <EmptyState icon="🧭" title="没有这个模块" desc="请回到学科页重新选择。" />;
   }
 
-  if (!ready) return <DataLoading />;
-
   const { module: m } = meta;
+
+  /**
+   * 待开发模块：内容还没写，但**不能让学生撞到空白页**。
+   * 这里把该模块的规划说明、同学科其余模块的轮廓一并列出，
+   * 学生能看清这门课的整体结构，也知道内容还在准备中。
+   */
+  if (!m.available) {
+    const siblings = subject.modules;
+    return (
+      <div className="stack stack--lg">
+        <PageHeader
+          crumbs={[
+            { label: '首页', to: '/' },
+            { label: subject.name, to: `/s/${subject.id}` },
+            { label: m.name },
+          ]}
+          title={
+            <span>
+              {m.icon} {m.name}
+            </span>
+          }
+          desc={m.desc}
+          extra={
+            <Link className="btn btn--sm" to={`/s/${subject.id}`}>
+              ← 返回{subject.name}模块总览
+            </Link>
+          }
+        />
+
+        <section className="card card--pad stack stack--sm">
+          <div className="row row--between">
+            <span className="bold">🚧 内容正在准备中</span>
+            <Tag tone="gold">待开发</Tag>
+          </div>
+          <div className="page-desc">
+            「{m.name}」尚未上线。上线后会按广州中考要求覆盖：{m.desc}。
+            先看看这门课的整体结构，其余的模块也可以提前了解。
+          </div>
+        </section>
+
+        <section className="stack stack--sm">
+          <SectionTitle sub="这门课将按下面的结构组织，点进去可以先看规划">模块轮廓</SectionTitle>
+          <div className="grid grid--auto">
+            {siblings.map((x) => (
+              <Link
+                key={x.id}
+                className="module-card"
+                to={`/s/${subject.id}/${x.id}`}
+                style={x.id === m.id ? { outline: `2px solid ${x.color}` } : undefined}
+              >
+                <span className="module-card__accent" style={{ background: x.color }} />
+                <span
+                  className="module-card__icon"
+                  style={{ background: `${x.color}16`, color: x.color }}
+                >
+                  {x.icon}
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="module-card__name" style={{ display: 'block' }}>
+                    {x.name}
+                  </span>
+                  <span className="module-card__desc" style={{ display: 'block' }}>
+                    {x.desc}
+                  </span>
+                  <span className="module-card__foot">
+                    {x.available ? '已上线' : '待开发'}
+                  </span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (!ready) return <DataLoading />;
 
   return (
     <div className="stack stack--lg">

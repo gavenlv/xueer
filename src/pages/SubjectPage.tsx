@@ -2,14 +2,15 @@
 
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { SUBJECTS, getSubject } from '../data/subjects';
+import { TOTAL_SCORE, getSubject, weightOf } from '../data/subjects';
 import { moduleIdsOfSubject } from '../data';
 import { totalsOfModule } from '../data/totals';
 import { ENTRY_META } from '../data/summary';
 import { useStudy } from '../store/StudyContext';
 import type { GradeId, ModuleId } from '../types';
 import { GRADES, cn, pct } from '../lib/utils';
-import { EmptyState, PageHeader, ProgressBar, SectionTitle, Stat } from '../components/common';
+import { EmptyState, PageHeader, ProgressBar, SectionTitle, Stat, Tag } from '../components/common';
+import { WeightBoard } from '../components/SubjectBoard';
 
 /**
  * 学科页也是**总览页**：只按模块统计「共几条 / 我学了几条 / 共几题」，
@@ -61,16 +62,64 @@ export default function SubjectPage() {
 
   if (!subject.available) {
     return (
-      <EmptyState
-        icon={subject.icon}
-        title={`${subject.name} 正在建设中`}
-        desc="这个学科的内容还在准备中，先看看已上线的学科吧。"
-        action={
-          <Link className="btn btn--primary" to="/">
-            返回首页
-          </Link>
-        }
-      />
+      <div className="stack stack--lg">
+        <PageHeader
+          crumbs={[{ label: '首页', to: '/' }, { label: subject.name }]}
+          title={
+            <span>
+              {subject.icon} {subject.name}
+            </span>
+          }
+          desc={`中考 ${subject.score} 分 · 占 ${weightOf(subject)}%${subject.examNote ? ` · ${subject.examNote}` : ''}`}
+          extra={
+            <Link className="btn btn--sm" to="/">
+              ← 返回首页
+            </Link>
+          }
+        />
+
+        <section className="card card--pad stack stack--sm">
+          <div className="row row--between">
+            <span className="bold">🚧 本科目内容正在准备中</span>
+            <Tag tone="gold">待开发</Tag>
+          </div>
+          <div className="page-desc">
+            {subject.name}是 2027 广州中考录取计分科目之一，满分 {subject.score} 分，
+            占中考总分 {TOTAL_SCORE} 分的 {weightOf(subject)}%。内容正在按下面的模块结构准备，
+            先看看整体轮廓，上线后即可逐块学习与练习。
+          </div>
+        </section>
+
+        <section className="stack stack--sm">
+          <SectionTitle sub="按广州中考的考查模块划分，点进去可先看该模块的规划">
+            模块轮廓（{subject.modules.length} 个模块）
+          </SectionTitle>
+          <div className="grid grid--auto">
+            {subject.modules.map((m) => (
+              <Link key={m.id} className="module-card" to={`/s/${subject.id}/${m.id}`}>
+                <span className="module-card__accent" style={{ background: m.color }} />
+                <span
+                  className="module-card__icon"
+                  style={{ background: `${m.color}16`, color: m.color }}
+                >
+                  {m.icon}
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="module-card__name" style={{ display: 'block' }}>
+                    {m.name}
+                  </span>
+                  <span className="module-card__desc" style={{ display: 'block' }}>
+                    {m.desc}
+                  </span>
+                  <span className="module-card__foot">待开发 · 点进去看规划</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <WeightBoard currentId={subject.id} />
+      </div>
     );
   }
 
@@ -96,7 +145,7 @@ export default function SubjectPage() {
             {subject.icon} {subject.name}
           </span>
         }
-        desc={`${subject.desc} · ${subject.modules.length} 个模块 · ${totals.questions} 道练习题`}
+        desc={`中考 ${subject.score} 分 · 占 ${weightOf(subject)}%${subject.examNote ? ` · ${subject.examNote}` : ''} · ${subject.desc} · ${subject.modules.length} 个模块 · ${totals.questions} 道练习题`}
         extra={
           <>
             <Link
@@ -217,16 +266,7 @@ export default function SubjectPage() {
         </div>
       </section>
 
-      <section className="card card--pad">
-        <SectionTitle sub="后续追加学科时无需改代码，只需接入对应模块内容">其他学科</SectionTitle>
-        <div className="row row--wrap" style={{ marginTop: 10 }}>
-          {SUBJECTS.filter((s) => !s.available).map((s) => (
-            <span key={s.id} className="chip" style={{ opacity: 0.6, cursor: 'default' }}>
-              {s.icon} {s.name}
-            </span>
-          ))}
-        </div>
-      </section>
+      <WeightBoard currentId={subject.id} />
     </div>
   );
 }

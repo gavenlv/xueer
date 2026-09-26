@@ -1,80 +1,48 @@
 /**
- * 学科注册表。
- * 目前「语文」已上线；其余学科占位，后续接入时只需填充模块数据，
- * 上层路由与 UI 无需改动。
+ * 学科注册表 —— **按 2027—2029 广州中考录取计分科目满分降序排列**。
+ *
+ * 依据：《2027—2029 年广州市初中学业水平考试录取计分科目考试实施方案》
+ * （穗教发〔2025〕32 号）。8 个录取计分科目，总分 810：
+ *
+ *   数学 150 · 语文 140 · 英语 140 · 物理 100 ·
+ *   化学 70 · 道德与法治 70 · 历史 70 · 体育与健康 70
+ *
+ * 两处刻意的取舍：
+ *
+ *  1. **一级菜单的顺序 = 分值顺序**，学生打开应用第一眼看到的排布就是分数权重，
+ *     不用自己判断「哪科更该花时间」。所以数组顺序本身就是产品逻辑，
+ *     分值相同的科目按官方文件的表述顺序（化学 → 道德与法治 → 历史 → 体育与健康）。
+ *  2. **生物、地理不入册**：它们属于学业水平考试，不计入中考总分，
+ *     放进权重菜单只会误导学生分配时间。
+ *
+ * `available: false` 的学科表示内容尚未开发：仍然出现在菜单里、仍然可以点进去，
+ * 但进去看到的是**模块轮廓 + 待开发提示**（`SubjectPage` / `ModulePage` 处理），
+ * 学生能提前知道这门课将按什么结构组织。占位模块必须有 id，否则无法建路由。
  */
 
-import type { Subject } from '../types';
+import type { Subject, SubjectModule } from '../types';
+
+/** 快速造一个「待开发」模块，省得把 available:false 抄十遍 */
+function pending(
+  id: string,
+  name: string,
+  icon: string,
+  desc: string,
+  color: string,
+): SubjectModule {
+  return { id, name, icon, desc, color, available: false };
+}
 
 export const SUBJECTS: Subject[] = [
-  {
-    id: 'chinese',
-    name: '语文',
-    icon: '📕',
-    color: '#2f66d6',
-    desc: '古诗词·字词·文言文·现代文阅读·作文·名著',
-    available: true,
-    modules: [
-      {
-        id: 'poems',
-        name: '古诗词背诵与默写',
-        icon: '📜',
-        desc: '部编版必背篇目，逐句默写、译文注释与考点赏析',
-        color: '#2f66d6',
-        available: true,
-      },
-      {
-        id: 'vocab',
-        name: '字词基础',
-        icon: '🔤',
-        desc: '字音字形、成语词语、近义词辨析，专治易错点',
-        color: '#1a9a6c',
-        available: true,
-      },
-      {
-        id: 'classical',
-        name: '文言文阅读',
-        icon: '🏛️',
-        desc: '实词虚词、通假活用、一词多义与句子翻译',
-        color: '#bd8a25',
-        available: true,
-      },
-      {
-        id: 'reading',
-        name: '现代文阅读',
-        icon: '📖',
-        desc: '记叙文·说明文·议论文，按题型拆解答题思路',
-        color: '#7355cf',
-        available: true,
-      },
-      {
-        id: 'writing',
-        name: '作文训练',
-        icon: '✍️',
-        desc: '审题立意、结构布局、语言表达与范文点评',
-        color: '#d24f3d',
-        available: true,
-      },
-      {
-        id: 'literature',
-        name: '文学常识与名著',
-        icon: '📚',
-        desc: '作家作品、名著导读、文体与文化常识速记',
-        color: '#0f7b8a',
-        available: true,
-      },
-    ],
-  },
   {
     id: 'math',
     name: '数学',
     icon: '📐',
     color: '#1a9a6c',
+    score: 150,
     desc: '数与代数·图形与几何·统计与概率·公式定理·应用题·中考专题',
     available: true,
-    // 按用户要求暂不上线：内容与代码完整保留，只是不出现在导航与首页。
-    // 想恢复展示，删掉下面这一行即可（路由 /s/math 现在也仍然可访问）。
-    hidden: true,
+    examNote: '闭卷笔试 · 不得使用计算器',
     modules: [
       {
         id: 'math-number',
@@ -127,12 +95,74 @@ export const SUBJECTS: Subject[] = [
     ],
   },
   {
+    id: 'chinese',
+    name: '语文',
+    icon: '📕',
+    color: '#2f66d6',
+    score: 140,
+    desc: '古诗词·字词·文言文·现代文阅读·作文·名著',
+    available: true,
+    examNote: '闭卷笔试',
+    modules: [
+      {
+        id: 'poems',
+        name: '古诗词背诵与默写',
+        icon: '📜',
+        desc: '部编版必背篇目，逐句默写、译文注释与考点赏析',
+        color: '#2f66d6',
+        available: true,
+      },
+      {
+        id: 'vocab',
+        name: '字词基础',
+        icon: '🔤',
+        desc: '字音字形、成语词语、近义词辨析，专治易错点',
+        color: '#1a9a6c',
+        available: true,
+      },
+      {
+        id: 'classical',
+        name: '文言文阅读',
+        icon: '🏛️',
+        desc: '实词虚词、通假活用、一词多义与句子翻译',
+        color: '#bd8a25',
+        available: true,
+      },
+      {
+        id: 'reading',
+        name: '现代文阅读',
+        icon: '📖',
+        desc: '记叙文·说明文·议论文，按题型拆解答题思路',
+        color: '#7355cf',
+        available: true,
+      },
+      {
+        id: 'writing',
+        name: '作文训练',
+        icon: '✍️',
+        desc: '审题立意、结构布局、语言表达与范文点评',
+        color: '#d24f3d',
+        available: true,
+      },
+      {
+        id: 'literature',
+        name: '文学常识与名著',
+        icon: '📚',
+        desc: '作家作品、名著导读、文体与文化常识速记',
+        color: '#0f7b8a',
+        available: true,
+      },
+    ],
+  },
+  {
     id: 'english',
     name: '英语',
     icon: '🅰️',
     color: '#7355cf',
+    score: 140,
     desc: '词汇·语法·阅读·听说·写作 + 中考专题与整卷模拟（按中考知识模块组织）',
     available: true,
+    examNote: '闭卷笔试 110 分 + 听说 30 分（5 月）',
     modules: [
       {
         id: 'eng-vocab',
@@ -186,7 +216,7 @@ export const SUBJECTS: Subject[] = [
         id: 'eng-exam',
         name: '中考模拟考试（整卷）',
         icon: '📝',
-        desc: '按广州结构：笔试 61 小题 110 分 + 听说 30 分，计时交卷',
+        desc: '按广州结构：笔试 110 分 + 听说 30 分，计时交卷',
         color: '#8a6a3b',
         available: true,
       },
@@ -197,35 +227,66 @@ export const SUBJECTS: Subject[] = [
     name: '物理',
     icon: '⚛️',
     color: '#0f7b8a',
-    desc: '力学·声光热·电与磁',
+    score: 100,
+    desc: '声光热·力学·电与磁 + 实验操作考试与中考专题',
     available: false,
-    modules: [],
+    examNote: '闭卷笔试 + 实验操作考试（5 月）',
+    modules: [
+      pending('phy-light', '声与光', '🔊', '声音的产生与传播、光的反射折射、凸透镜成像规律', '#2b7fbf'),
+      pending('phy-heat', '热学', '🌡️', '物态变化、分子热运动、内能与热机、比热容计算', '#d24f3d'),
+      pending('phy-mech', '力学基础', '⚖️', '机械运动、质量与密度、力与运动、压强与浮力', '#1a9a6c'),
+      pending('phy-work', '功与机械能', '🔧', '功、功率、机械效率、动能与势能、简单机械', '#bd8a25'),
+      pending('phy-electric', '电学', '⚡', '电流与电路、电压电阻、欧姆定律、电功与电功率', '#7355cf'),
+      pending('phy-magnet', '电与磁·信息能源', '🧲', '磁场与电磁感应、电磁波、能源与可持续发展', '#0f7b8a'),
+      pending('phy-experiment', '实验操作考试', '🧪', '广州中考实验操作 10 分：必做实验与评分要点', '#8a6a3b'),
+      pending('phy-exam', '中考专题与整卷模拟', '🎯', '按广州题型横向串讲，整卷计时模拟', '#8a6a3b'),
+    ],
   },
   {
     id: 'chemistry',
     name: '化学',
     icon: '🧪',
     color: '#bd8a25',
-    desc: '物质构成·化学方程式·实验探究',
+    score: 70,
+    desc: '物质构成·身边的化学物质·化学方程式·实验探究',
     available: false,
-    modules: [],
+    examNote: '闭卷笔试 + 实验操作考试（5 月）',
+    modules: [
+      pending('chem-matter', '物质构成与化学用语', '⚛️', '分子原子离子、元素与化学式、化合价与化学用语', '#bd8a25'),
+      pending('chem-substance', '身边的化学物质', '💧', '空气与氧气、水与溶液、碳和碳的氧化物、金属', '#2b7fbf'),
+      pending('chem-acid', '酸碱盐', '🧫', '常见酸碱盐的性质与用途、中和反应、复分解反应条件', '#d24f3d'),
+      pending('chem-equation', '化学方程式与守恒计算', '🔬', '方程式书写与配平、质量守恒定律、化学计算', '#1a9a6c'),
+      pending('chem-experiment', '实验操作与气体制备', '🧪', '基本操作、氧气与二氧化碳的制备、实验探究与评价', '#7355cf'),
+      pending('chem-exam', '中考专题与整卷模拟', '🎯', '按广州题型横向串讲，整卷计时模拟', '#8a6a3b'),
+    ],
   },
   {
-    id: 'biology',
-    name: '生物',
-    icon: '🧬',
-    color: '#d24f3d',
-    desc: '细胞·遗传·生态系统',
+    id: 'politics',
+    name: '道德与法治',
+    icon: '⚖️',
+    color: '#6b7a8f',
+    score: 70,
+    desc: '成长·道德·法治·国情 + 时政热点与中考专题',
     available: false,
-    modules: [],
+    examNote: '闭卷笔试',
+    modules: [
+      pending('pol-growth', '七年级·成长与自我', '🌱', '认识自我、情绪管理、生命价值、学习与成长', '#1a9a6c'),
+      pending('pol-moral', '八年级·道德与交往', '🤝', '尊重与责任、诚信友善、社会秩序与公共生活', '#2b7fbf'),
+      pending('pol-law', '八年级·法治与规则', '⚖️', '法律基础、违法犯罪、宪法与公民权利义务', '#7355cf'),
+      pending('pol-nation', '九年级·国情与发展', '🇨🇳', '基本国情、经济建设、政治制度、文化生态与国家发展', '#d24f3d'),
+      pending('pol-current', '时政热点专题', '📰', '本年重大时政与常考热点材料的答题角度', '#bd8a25'),
+      pending('pol-exam', '中考专题与整卷模拟', '🎯', '按广州题型横向串讲，整卷计时模拟', '#8a6a3b'),
+    ],
   },
   {
     id: 'history',
     name: '历史',
     icon: '🏺',
     color: '#8a6a3b',
+    score: 70,
     desc: '中国古代史·近代史·现代史·世界史 + 中考专题与整卷模拟',
     available: true,
+    examNote: '闭卷笔试',
     modules: [
       {
         id: 'hist-7a',
@@ -294,24 +355,40 @@ export const SUBJECTS: Subject[] = [
     ],
   },
   {
-    id: 'geography',
-    name: '地理',
-    icon: '🌏',
-    color: '#2b7fbf',
-    desc: '地球·气候·区域地理',
+    id: 'pe',
+    name: '体育与健康',
+    icon: '🏃',
+    color: '#c1483a',
+    score: 70,
+    desc: '耐力·素质·球类 + 体育素质综合评价与训练计划',
     available: false,
-    modules: [],
-  },
-  {
-    id: 'politics',
-    name: '道德与法治',
-    icon: '⚖️',
-    color: '#6b7a8f',
-    desc: '成长·法治·国情',
-    available: false,
-    modules: [],
+    examNote: '统一考试 + 体育素质综合评价（5 月前）',
+    modules: [
+      pending('pe-endurance', '耐力与心肺', '🏃', '中长跑（男 1000 米 / 女 800 米）与游泳选项的训练与配速', '#c1483a'),
+      pending('pe-strength', '力量与素质', '💪', '立定跳远、跳绳、实心球等项目动作要点与提分训练', '#bd8a25'),
+      pending('pe-ball', '球类项目', '⚽', '足球、篮球、排球的考试规则、技术动作与评分标准', '#1a9a6c'),
+      pending('pe-prep', '评分标准与训练计划', '📋', '各项目分档评分对照，考前 8 周训练计划与饮食恢复', '#2b7fbf'),
+    ],
   },
 ];
+
+/** 中考总分（权重分母）——由各科分值求和，改分值不用同步改这里 */
+export const TOTAL_SCORE = SUBJECTS.reduce((n, s) => n + s.score, 0);
+
+/** 该科在中考总分中的权重（百分比，保留一位小数） */
+export function weightOf(subject: Subject): number {
+  return Math.round((subject.score / TOTAL_SCORE) * 1000) / 10;
+}
+
+/** 一级菜单用：全部计分科目，已按分值降序（数组顺序即权重顺序） */
+export function menuSubjects(): Subject[] {
+  return SUBJECTS;
+}
+
+/** 已有内容的学科（首页进度、学习报告等统计只用这些） */
+export function liveSubjects(): Subject[] {
+  return SUBJECTS.filter((s) => s.available && !s.hidden);
+}
 
 export function getSubject(id: string): Subject | undefined {
   return SUBJECTS.find((s) => s.id === id);

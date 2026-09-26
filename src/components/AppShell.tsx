@@ -5,7 +5,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useStreak, useStudy } from '../store/StudyContext';
 import { useAuth } from '../auth/AuthContext';
 import { isCloudConfigured } from '../lib/supabase';
-import { SUBJECTS } from '../data/subjects';
+import { SUBJECTS, TOTAL_SCORE } from '../data/subjects';
 import { cn, dateKey } from '../lib/utils';
 import { SubjectMenu, SubjectSheet } from './SubjectMenu';
 
@@ -34,8 +34,11 @@ const NAV = [
 /** 移动端 tab 放不下的入口，收进「更多」面板 */
 const MORE_NAV = NAV.filter((n) => !n.mobile);
 
-/** 顶栏品牌下的副标题：跟着已上线学科走，不再写死「语文」 */
-const LIVE_SUBJECTS = SUBJECTS.filter((s) => s.available && !s.hidden);
+/**
+ * 顶栏品牌副标题：计分科目有 8 个，逐科列名字会撑爆顶栏，
+ * 因此改为标明中考口径——学生一眼知道这个应用是照着哪一年的中考做的。
+ */
+const SUBJECT_COUNT = SUBJECTS.length;
 
 export default function AppShell() {
   const streak = useStreak();
@@ -70,7 +73,7 @@ export default function AppShell() {
             <span>
               <span className="brand__text">学而</span>
               <span className="brand__sub" style={{ marginLeft: 6 }}>
-                初中 · {LIVE_SUBJECTS.map((s) => s.name).join(' / ')}
+                2027 广州中考 · {SUBJECT_COUNT} 科 {TOTAL_SCORE} 分
               </span>
             </span>
           </NavLink>

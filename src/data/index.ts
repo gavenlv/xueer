@@ -75,6 +75,8 @@ const MATH_MODULE_IDS = new Set<string>(math.MATH_MODULE_IDS);
 const HISTORY_MODULE_IDS = new Set<string>(history.MODULE_IDS);
 /** 英语模块 id（七块：词汇/语法/阅读/听说/写作 + 中考专题 + 整卷模拟） */
 const ENGLISH_MODULE_IDS = new Set<string>(english.MODULE_IDS);
+/** 语文模块 id —— 也是 splitScope 的兜底分支，必须显式判断，见下 */
+const CHINESE_MODULE_IDS = new Set<string>(chinese.MODULE_IDS);
 
 /**
  * 页面要声明的数据范围：某个学科的模块 id，或语文的 `'extras'`
@@ -123,7 +125,9 @@ function splitScope(scope: DataScope[]): {
     else if (MATH_MODULE_IDS.has(s)) out.math.push(s);
     else if (HISTORY_MODULE_IDS.has(s)) out.history.push(s as HistoryModuleId);
     else if (ENGLISH_MODULE_IDS.has(s)) out.english.push(s as EnglishModuleId);
-    else out.chinese.push(s as chinese.ChineseModuleId);
+    else if (CHINESE_MODULE_IDS.has(s)) out.chinese.push(s as chinese.ChineseModuleId);
+    // 其余模块 id 属于「待开发」科目的占位模块：没有内容可加载，直接忽略，
+    // 由页面渲染「内容正在准备中」。兜底到语文会拿未知 id 去查加载器，反而出错。
   }
   return out;
 }

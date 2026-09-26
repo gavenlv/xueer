@@ -51,8 +51,13 @@ import type { Entry, MindNode, ModuleId, QuizQuestion, WritingLesson } from '../
  */
 await ensureAll();
 
-/** 全部学科的模块 id（校验器必须覆盖所有学科，不能只看语文） */
-const ALL_MODULE_IDS = SUBJECTS.flatMap((s) => s.modules.map((m) => m.id)) as ModuleId[];
+/**
+ * 全部**已上线模块**的 id（校验器必须覆盖所有学科，不能只看语文）。
+ * 待开发科目的占位模块没有内容，若纳入清单比对会全部误报「缺少汇总」。
+ */
+const ALL_MODULE_IDS = SUBJECTS.flatMap((s) =>
+  s.modules.filter((m) => m.available).map((m) => m.id),
+) as ModuleId[];
 
 const errors: string[] = [];
 const warnings: string[] = [];
@@ -577,6 +582,8 @@ if (authorsWithoutEntry.size) {
   const totalsById = new Map(MODULE_TOTALS.map((m) => [m.id, m]));
   for (const s of SUBJECTS) {
     for (const mod of s.modules) {
+      // 待开发模块（物理/化学/道法/体育的占位轮廓）本来就没有内容，不该有汇总
+      if (!mod.available) continue;
       const t = totalsById.get(mod.id as ModuleId);
       if (!t) {
         err(`[轻量清单] 缺少模块 ${mod.id} 的汇总 → 请运行 pnpm gen 重新生成`);

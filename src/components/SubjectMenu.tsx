@@ -1,15 +1,15 @@
 /**
  * 学科切换：一个入口管住所有学科与模块。
  *
- * 为什么需要它：科目从 1 个变成 2 个（语文 6 模块 + 历史 8 模块，共 14 个模块）之后，
- * 导航栏塞不下「语文 / 历史 / 历史模拟考试 / 历史中考专题」这么多项，而学生最常用的动作
- * 恰恰是「换一科」「直接进某个模块」。所以把学科与模块收进一个下拉（桌面）/ 面板（手机）：
+ * 为什么需要它：科目多达 8 个（语文 6 模块 + 历史 8 模块 + 数学 6 + 英语 7 + 物理 8 …），
+ * 导航栏塞不下，而学生最常用的动作恰恰是「换一科」「直接进某个模块」。
+ * 所以把学科与模块收进一个下拉（桌面）/ 面板（手机）：
  *
- *   - 桌面顶栏：点「学科」展开，列出全部已上线学科，每个学科下面直接列它的模块；
+ *   - 桌面顶栏：点「学科」展开，列出全部计分科目（**按中考满分降序**），每个科目下面直接列它的模块；
  *   - 手机底部栏：点「学科」弹起底部面板，同样的内容做成可点区域足够大的列表。
  *
  * 两处共用同一份数据与同一套排序，因此不会出现「手机里少了某个模块」这种不一致。
- * 隐藏的学科（数学）不出现——与首页、学习报告保持一致。
+ * 内容未开发的科目/模块照常列出并标注「待开发」——分值与模块结构本身就是有效信息。
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -18,9 +18,9 @@ import { SUBJECTS } from '../data/subjects';
 import { cn } from '../lib/utils';
 import { Tag } from './common';
 
-/** 已上线的学科（隐藏学科不算） */
-function liveSubjects() {
-  return SUBJECTS.filter((s) => s.available && !s.hidden);
+/** 一级菜单：全部计分科目，数组顺序即 2027 广州中考满分降序 */
+function menuSubjects() {
+  return SUBJECTS;
 }
 
 /** 从当前路由推断所在学科，如 /s/history/hist-8a → history */
@@ -40,7 +40,7 @@ function moduleIdOfPath(pathname: string): string | undefined {
 export function SubjectMenu() {
   const location = useLocation();
   const [open, setOpen] = useState(false);
-  const subjects = useMemo(liveSubjects, []);
+  const subjects = useMemo(menuSubjects, []);
   const currentId = subjectIdOfPath(location.pathname);
   const currentModule = moduleIdOfPath(location.pathname);
   const current = subjects.find((s) => s.id === currentId);
@@ -80,7 +80,10 @@ export function SubjectMenu() {
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span className="subjmenu__name">
                       {s.name}
-                      <Tag>{s.modules.length} 个模块</Tag>
+                      <Tag>
+                        {s.score} 分 · {s.modules.length} 模块
+                      </Tag>
+                      {s.available ? null : <Tag tone="gold">待开发</Tag>}
                     </span>
                     <span className="subjmenu__desc">{s.desc}</span>
                   </span>
@@ -95,10 +98,11 @@ export function SubjectMenu() {
                         s.id === currentId && m.id === currentModule && 'is-active',
                       )}
                       to={`/s/${s.id}/${m.id}`}
-                      style={{ borderColor: `${m.color}33` }}
+                      style={{ borderColor: `${m.color}33`, opacity: m.available ? undefined : 0.6 }}
                     >
                       <span style={{ color: m.color }}>{m.icon}</span>
                       <span>{m.name}</span>
+                      {m.available ? null : <span className="small muted">待开发</span>}
                     </Link>
                   ))}
                 </div>
@@ -119,7 +123,7 @@ export function SubjectMenu() {
  * 每一项都是整行大热区，符合手机上的点击习惯。
  */
 export function SubjectSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const subjects = useMemo(liveSubjects, []);
+  const subjects = useMemo(menuSubjects, []);
   if (!open) return null;
 
   return (
@@ -134,7 +138,8 @@ export function SubjectSheet({ open, onClose }: { open: boolean; onClose: () => 
               <span style={{ flex: 1 }}>
                 {s.name}
                 <span className="small muted" style={{ marginLeft: 8 }}>
-                  {s.modules.length} 个模块
+                  {s.score} 分 · {s.modules.length} 模块
+                  {s.available ? '' : ' · 待开发'}
                 </span>
               </span>
               <span className="subjmenu__arrow">→</span>
@@ -146,9 +151,11 @@ export function SubjectSheet({ open, onClose }: { open: boolean; onClose: () => 
                   className="sheet-module"
                   to={`/s/${s.id}/${m.id}`}
                   onClick={onClose}
+                  style={{ opacity: m.available ? undefined : 0.6 }}
                 >
                   <span>{m.icon}</span>
                   <span>{m.name}</span>
+                  {m.available ? null : <span className="small muted">待开发</span>}
                 </Link>
               ))}
             </div>

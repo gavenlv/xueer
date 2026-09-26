@@ -2496,6 +2496,81 @@ button.mm-label:hover {
   background: var(--c-surface-2);
 }
 
+/* 「计分科目与分值」一览：一级菜单的信息骨架（首页与学科页共用） */
+.weight-row {
+  padding: 7px 9px;
+  border-radius: 10px;
+}
+
+.weight-row__name {
+  flex: 0 0 auto;
+  min-width: 96px;
+  white-space: nowrap;
+}
+
+.weight-row__bar {
+  flex: 1 1 auto;
+  min-width: 48px;
+}
+
+.weight-row__score {
+  flex: 0 0 auto;
+  width: 52px;
+  text-align: right;
+  font-weight: 700;
+}
+
+.weight-row__pct {
+  flex: 0 0 auto;
+  width: 44px;
+  text-align: right;
+}
+
+.weight-row__state {
+  flex: 0 0 auto;
+  width: 46px;
+  text-align: right;
+}
+
+/* 窄屏：分值条换到第二行独占整宽，科目名不再被挤到截断 */
+@media (max-width: 560px) {
+  .weight-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'name score state'
+      'bar bar bar';
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 5px;
+  }
+
+  .weight-row__name {
+    grid-area: name;
+    min-width: 0;
+    font-size: 13.5px;
+  }
+
+  .weight-row__bar {
+    grid-area: bar;
+    min-width: 0;
+  }
+
+  .weight-row__score {
+    grid-area: score;
+    width: auto;
+  }
+
+  .weight-row__state {
+    grid-area: state;
+    width: auto;
+  }
+
+  .weight-row__pct {
+    display: none;
+  }
+}
+
 /* 首页学科切换：横向可滑的胶囊 */
 .subj-tabs {
   display: flex;

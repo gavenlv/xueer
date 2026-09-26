@@ -1,8 +1,8 @@
-/** 首页：今日概览、学科与模块（可切换）、快捷入口、继续学习 */
+/** 首页：今日概览、中考分值一览、学科与模块（按分值排序）、快捷入口、继续学习 */
 
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getModuleMeta, SUBJECTS } from '../data/subjects';
+import { getModuleMeta, liveSubjects, menuSubjects, weightOf } from '../data/subjects';
 import { totalsOfModule, totalsOfSubject } from '../data/totals';
 import { DAILY_LINES, ENTRY_META, MODULE_TOTALS } from '../data/summary';
 import { subjectOfModule } from '../data';
@@ -11,11 +11,18 @@ import { useStreak, useStudy } from '../store/StudyContext';
 import { dateKey, pct, timeAgo } from '../lib/utils';
 import type { ItemProgress } from '../types';
 import { ProgressBar, SectionTitle, Stat, Tag } from '../components/common';
+import { WeightBoard } from '../components/SubjectBoard';
 
 const DAILY_GOAL = 20;
 
-/** 已上线学科（隐藏学科不展示，与导航、学习报告保持一致） */
-const LIVE_SUBJECTS = SUBJECTS.filter((s) => s.available && !s.hidden);
+/**
+ * 一级菜单 = 全部计分科目，按 2027—2029 广州中考满分降序（数学 150 → 体育 70）。
+ * 待开发科目也列出来：分值不会因为没开发就消失，学生早看到早规划。
+ */
+const MENU_SUBJECTS = menuSubjects();
+
+/** 已有内容的科目（统计、默认选中只用这些，避免默认落在一个空科目上） */
+const LIVE_SUBJECTS = liveSubjects();
 
 /**
  * 每个学科「最常用的一步」：首页快捷入口点一下就到。
@@ -70,7 +77,7 @@ export default function Home() {
     }
     return best?.id ?? LIVE_SUBJECTS[0]?.id ?? 'chinese';
   });
-  const subject = LIVE_SUBJECTS.find((s) => s.id === subjectId) ?? LIVE_SUBJECTS[0];
+  const subject = MENU_SUBJECTS.find((s) => s.id === subjectId) ?? LIVE_SUBJECTS[0] ?? MENU_SUBJECTS[0];
   const subjectTotals = subject ? totalsOfSubject(subject.id) : null;
   const quick = subject ? SUBJECT_QUICK[subject.id] : undefined;
 
@@ -89,7 +96,7 @@ export default function Home() {
   /** 学科条目数（chips 上用；来自轻量清单，不加载正文） */
   const entriesBySubject = useMemo(() => {
     const moduleToSubject = new Map<string, string>();
-    for (const s of LIVE_SUBJECTS) for (const m of s.modules) moduleToSubject.set(m.id, s.id);
+    for (const s of MENU_SUBJECTS) for (const m of s.modules) moduleToSubject.set(m.id, s.id);
     const out: Record<string, number> = {};
     for (const t of MODULE_TOTALS) {
       const sid = moduleToSubject.get(t.id);
@@ -256,10 +263,13 @@ export default function Home() {
         </section>
       ) : null}
 
-      {/* 学科与模块：一次只展示一科，切换学科不用重新进页面 */}
+      {/* 中考分值一览：一级菜单的信息骨架，按满分降序 */}
+      <WeightBoard currentId={subject?.id} />
+
+      {/* 学科与模块：二级结构，一次只展示一科，切换学科不用重新进页面 */}
       <section className="stack stack--sm">
         <SectionTitle
-          sub="点学科切换，模块直接进；手机端在底部栏点「📚 学科」"
+          sub="科目按中考满分排序 · 点科目切换，模块直接进；手机端在底部栏点「📚 学科」"
           extra={
             subject ? (
               <Link className="btn btn--sm" to={`/s/${subject.id}`}>
@@ -273,7 +283,7 @@ export default function Home() {
 
         {/* 学科切换：横向可滑，手机上也不会挤成两行 */}
         <div className="scroll-x subj-tabs">
-          {LIVE_SUBJECTS.map((s) => {
+          {MENU_SUBJECTS.map((s) => {
             const st = totalsOfSubject(s.id);
             return (
               <button
@@ -287,10 +297,21 @@ export default function Home() {
                   {s.icon}
                 </span>
                 <span className="subj-tab__body">
-                  <span className="subj-tab__name">{s.name}</span>
+                  <span className="subj-tab__name">
+                    {s.name}
+                    <span className="subj-tab__score" style={{ color: s.color, marginLeft: 6 }}>
+                      {s.score}分
+                    </span>
+                  </span>
                   <span className="subj-tab__meta">
-                    {entriesBySubject[s.id] ?? st.entries} 条内容 · {s.modules.length} 模块
-                    {studiedBySubject[s.id] ? ` · 已学 ${studiedBySubject[s.id]}` : ''}
+                    {s.available ? (
+                      <>
+                        {entriesBySubject[s.id] ?? st.entries} 条内容 · {s.modules.length} 模块
+                        {studiedBySubject[s.id] ? ` · 已学 ${studiedBySubject[s.id]}` : ''}
+                      </>
+                    ) : (
+                      <>待开发 · {s.modules.length} 个模块待上线</>
+                    )}
                   </span>
                 </span>
               </button>
@@ -302,8 +323,14 @@ export default function Home() {
           <>
             <div className="small muted">
               {subject.icon} {subject.name}：{subject.desc}
-              {subjectTotals ? ` · 共 ${subjectTotals.questions} 道题` : ''}
+              {` · 中考 ${subject.score} 分（占 ${weightOf(subject)}%）`}
+              {subject.available && subjectTotals ? ` · 共 ${subjectTotals.questions} 道题` : ''}
             </div>
+            {subject.available ? null : (
+              <div className="small" style={{ color: '#8d6410' }}>
+                🚧 本科目内容正在准备中，下面是可以先了解的模块轮廓，点进去可查看规划。
+              </div>
+            )}
             <div className="grid grid--auto">
               {subject.modules.map((m) => {
                 const ms = totalsOfModule(m.id as ModuleId);
@@ -324,7 +351,9 @@ export default function Home() {
                         {m.desc}
                       </span>
                       <span className="module-card__foot">
-                        {ms.entries} 条内容 · {ms.questions} 题
+                        {m.available
+                          ? `${ms.entries} 条内容 · ${ms.questions} 题`
+                          : '待开发 · 点进去看规划'}
                       </span>
                     </span>
                   </Link>
