@@ -9,6 +9,13 @@ import { cn } from '../lib/utils';
 
 type Mode = 'default' | 'all' | 'none';
 
+/** 导图节点总数（收起状态下也要在标题上显示「N 节点」，学生才知道值不值得展开） */
+export function countNodes(node: MindNode): number {
+  let n = 1;
+  for (const c of node.children ?? []) n += countNodes(c);
+  return n;
+}
+
 /** 默认展开深度：根的直接子分支展开一层，更深的层级收起，避免一屏塞满 */
 const DEFAULT_OPEN_DEPTH = 1;
 

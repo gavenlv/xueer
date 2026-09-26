@@ -15,7 +15,13 @@ const KIND_TONE: Record<Extension['kind'], Tone> = {
 };
 
 export function ExtensionList({ items }: { items: Extension[] }) {
-  const [openId, setOpenId] = useState<string | null>(items[0]?.id ?? null);
+  /**
+   * 默认全部收起。
+   *
+   * 收起不是「藏起来」：标题、类别标签与摘要都在标题行上，一眼能扫完这一组讲什么，
+   * 想看哪条再点开——详情页末尾一次铺开好几篇长文，学生根本划不到底。
+   */
+  const [openId, setOpenId] = useState<string | null>(null);
 
   if (!items.length) return null;
 
@@ -32,15 +38,21 @@ export function ExtensionList({ items }: { items: Extension[] }) {
               aria-expanded={open}
             >
               <Tag tone={KIND_TONE[ext.kind]}>{ext.kind}</Tag>
-              <span className="ext__title">{ext.title}</span>
+              <span className="ext__title">
+                <span style={{ fontWeight: 700 }}>{ext.title}</span>
+                {/* 摘要留在标题行：收起时也能判断这条值不值得展开 */}
+                <span
+                  className="small muted"
+                  style={{ display: 'block', fontWeight: 400, marginTop: 2 }}
+                >
+                  {ext.summary}
+                </span>
+              </span>
               <span className="ext__caret">▼</span>
             </button>
 
             {open ? (
               <div className="ext__body fade-in">
-                <div className="small muted" style={{ margin: '8px 0 10px' }}>
-                  {ext.summary}
-                </div>
                 <div className="prose">
                   {ext.content.map((p, i) => {
                     const text = p.trim();

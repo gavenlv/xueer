@@ -96,11 +96,15 @@ for (const route of routes) {
       continue;
     }
 
-    // 回归保护：名著详情页必须真的渲染出思维导图节点（而不是只有标题）
+    // 回归保护：名著详情页必须真的接上思维导图（而不是只有标题）
+    // 导图卡片现在默认收起，正文节点不在首屏 HTML 里，因此改为断言：
+    // 标题行上写着节点数（说明导图数据传进来了），且整页确实没有铺开节点。
     if (route.startsWith('/s/chinese/literature/') && route !== '/s/chinese/literature') {
-      const nodes = html.split('mm-label__text').length - 1;
-      if (nodes < 5) throw new Error(`思维导图未渲染（仅 ${nodes} 个节点）`);
-      results.push({ route, ok: true, info: `${html.length} 字符 · 导图 ${nodes} 节点` });
+      const m = /(\d+)\s*节点/.exec(html);
+      const nodes = m ? Number(m[1]) : 0;
+      if (nodes < 5) throw new Error(`思维导图未接上（标题行没有节点数，读到 ${nodes}）`);
+      if (html.includes('mm-label__text')) throw new Error('思维导图卡片应默认收起，但节点已铺在首屏');
+      results.push({ route, ok: true, info: `${html.length} 字符 · 导图 ${nodes} 节点（收起）` });
       continue;
     }
 
@@ -326,23 +330,29 @@ if (!progressTarget) {
   /**
    * 课时导图是**推导出来**的，不落库：`lessonMindMap(entry)` 从条目数据生成。
    * 它没接进详情页、或某一课的数据不足，页面都不会报错，只是那张图不出现。
-   * 因此这里拿古诗、文言文各一条断言「本课思维导图」真的渲染出来，
-   * 并断言导图画出了节点（不是只有一个光杆中心）。
+   *
+   * 注意导图卡片现在**默认收起**（正文里的节点不会出现在首屏 HTML 里），
+   * 所以这里断言标题行：既有「本课思维导图」，也有它算出来的节点数
+   * ——节点数出现在标题上，正说明导图数据真的传进来了。
    */
   const mapTargets = [
-    { id: allPoems[0]?.id ?? '', name: '古诗词' },
-    { id: allEntries.find((e) => e.moduleId === 'classical')?.id ?? '', name: '文言文' },
+    { id: allPoems[0]?.id ?? '', name: '古诗词', moduleId: 'poems' },
+    { id: allEntries.find((e) => e.moduleId === 'classical')?.id ?? '', name: '文言文', moduleId: 'classical' },
   ];
-  const mapChecks: [string, boolean][] = mapTargets.map(({ id, name }) => {
+  const mapChecks: [string, boolean][] = mapTargets.map(({ id, name, moduleId }) => {
     const html = renderToString(
-      <MemoryRouter initialEntries={[`/s/chinese/${name === '古诗词' ? 'poems' : 'classical'}/${id}`]}>
+      <MemoryRouter initialEntries={[`/s/chinese/${moduleId}/${id}`]}>
         <StudyProvider>
           <App />
         </StudyProvider>
       </MemoryRouter>,
     ).replace(/<!--[\s\S]*?-->/g, '');
-    const nodes = html.split('mm-label__text').length - 1;
-    return [`${name}课时导图（${nodes} 节点）`, html.includes('本课思维导图') && nodes >= 5];
+    const m = /(\d+)\s*节点/.exec(html);
+    const nodes = m ? Number(m[1]) : 0;
+    return [
+      `${name}课时导图（${nodes} 节点，默认收起）`,
+      html.includes('本课思维导图') && nodes >= 5 && !html.includes('mm-label__text'),
+    ];
   });
   const mapOk = mapChecks.every(([, ok]) => ok);
   console.log(

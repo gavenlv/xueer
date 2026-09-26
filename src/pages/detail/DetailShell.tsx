@@ -1,14 +1,14 @@
 /** 内容详情页的公共外壳：面包屑、标题、收藏、练习题入口 */
 
 import type { ReactNode } from 'react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Entry } from '../../types';
 import { useStudy } from '../../store/StudyContext';
-import { GRADES } from '../../lib/utils';
+import { GRADES, cn } from '../../lib/utils';
 import type { SpeechSegment } from '../../lib/speech';
 import { Crumbs, Tag } from '../../components/common';
-import { MindMapView } from '../../components/MindMapView';
+import { MindMapView, countNodes } from '../../components/MindMapView';
 import { ExtensionList } from '../../components/ExtensionList';
 import { RelatedList } from '../../components/RelatedList';
 import { SupplementList } from '../../components/SupplementList';
@@ -16,6 +16,56 @@ import { SpeechBar } from '../../components/SpeechBar';
 import { extensions, extensionsOfEntry, mindMapsOfEntry, mindMapsOfModule } from '../../data';
 import { lessonMindMap } from '../../lib/lessonMaps';
 import { speechSegmentsOf } from '../../lib/entrySpeech';
+
+/**
+ * 可折叠的卡片：标题行始终显示（图标 + 名称 + 数量 + 一句话说明），点开才渲染正文。
+ *
+ * **默认收起**是刻意的：思维导图与拓展阅读都在详情页末尾，正文一次性铺开会把页面拉得
+ * 很长，学生还没看到「学一补多」就已经划不动了。收起时标题行上的数量（「N 节点」/
+ * 「N 篇」）与摘要足以判断值不值得展开，展开是明确的一次点击。
+ */
+function CollapseCard({
+  icon,
+  title,
+  badge,
+  hint,
+  summary,
+  children,
+}: {
+  icon: string;
+  title: string;
+  badge?: ReactNode;
+  hint?: string;
+  summary?: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="card">
+      <button className="ext__head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <span className="ext__title">
+          <span style={{ fontWeight: 700 }}>
+            <span style={{ marginRight: 6 }}>{icon}</span>
+            {title}
+          </span>
+          {summary ? (
+            <span className="small muted" style={{ display: 'block', fontWeight: 400, marginTop: 2 }}>
+              {summary}
+            </span>
+          ) : null}
+        </span>
+        {badge}
+        {hint ? <span className="small muted">{hint}</span> : null}
+        <span className={cn('ext__caret', open && 'is-open')}>▼</span>
+      </button>
+      {open ? (
+        <div className="card__body fade-in" style={{ borderTop: '1px solid var(--c-line)' }}>
+          {children}
+        </div>
+      ) : null}
+    </section>
+  );
+}
 
 /**
  * 常规讲解之外的延伸内容：思维导图 + 拓展阅读。
@@ -26,8 +76,10 @@ import { speechSegmentsOf } from '../../lib/entrySpeech';
  *    因此**每一课都有**：一首古诗、一篇文言文打开就能看到这一课该记什么、怎么串。
  * 2. 人工绑定该条目的导图（entryId 命中，如 12 部名著的人物·情节图）——比推导的更细，
  *    有它就优先显示它，避免同一页出现两张讲同一课的图。
- * 3. 该模块的「体系性」导图（最多 2 张，默认收起），学《陈涉世家》时也能看到
+ * 3. 该模块的「体系性」导图（最多 2 张），学《陈涉世家》时也能看到
  *    「文言语法五大现象」这类图。
+ *
+ * 三块都**默认收起**（见 `CollapseCard`）。
  */
 function ExtraSections({ entry }: { entry: Entry }) {
   const entryId = entry.id;
@@ -51,63 +103,43 @@ function ExtraSections({ entry }: { entry: Entry }) {
 
   return (
     <>
-      {/* 本课思维导图：把这一课的骨架、要点与考点串成一张图 */}
+      {/* 本课思维导图：把这一课的骨架、要点与考点串成一张图（默认收起） */}
       {lesson ? (
-        <section className="card" key={lesson.id}>
-          <div className="card__head">
-            <span className="card__title">
-              <span>🧠</span>
-              本课思维导图
-              <Tag tone="jade">这一课该记什么</Tag>
-            </span>
-            <span className="spacer" />
-            <span className="small muted">点节点展开／收起</span>
-          </div>
-          <div className="card__body">
-            <div className="small muted" style={{ marginBottom: 8 }}>
-              {lesson.summary}
-            </div>
-            <MindMapView root={lesson.root} defaultMode="default" />
-          </div>
-        </section>
+        <CollapseCard
+          key={lesson.id}
+          icon="🧠"
+          title="本课思维导图"
+          summary={lesson.summary}
+          badge={<Tag tone="jade">{countNodes(lesson.root)} 节点</Tag>}
+          hint="这一课该记什么"
+        >
+          <MindMapView root={lesson.root} defaultMode="default" />
+        </CollapseCard>
       ) : null}
 
       {systemMaps.map((m) => (
-        <section className="card" key={m.id}>
-          <div className="card__head">
-            <span className="card__title">
-              <span>🧠</span>
-              思维导图 · {m.title}
-            </span>
-            <span className="spacer" />
-            <Tag tone="purple">本模块体系图</Tag>
-          </div>
-          <div className="card__body">
-            <div className="small muted" style={{ marginBottom: 8 }}>
-              {m.summary}
-            </div>
-            {/* 精确绑定的导图直接展开两层；兜底的体系图默认只显示主干，避免整页过长 */}
-            <MindMapView root={m.root} defaultMode={m.entryId ? 'default' : 'none'} />
-          </div>
-        </section>
+        <CollapseCard
+          key={m.id}
+          icon="🧠"
+          title={`思维导图 · ${m.title}`}
+          summary={m.summary}
+          badge={<Tag tone="purple">本模块体系图</Tag>}
+          hint={`${countNodes(m.root)} 节点`}
+        >
+          {/* 精确绑定的导图直接展开两层；兜底的体系图默认只显示主干，避免展开后仍然过长 */}
+          <MindMapView root={m.root} defaultMode={m.entryId ? 'default' : 'none'} />
+        </CollapseCard>
       ))}
 
       {exts.length ? (
-        <section className="card">
-          <div className="card__head">
-            <span className="card__title">
-              <span>📚</span>
-              拓展阅读
-              <Tag tone="purple">{exts.length} 篇</Tag>
-            </span>
-          </div>
-          <div className="card__body">
-            <div className="small muted" style={{ marginBottom: 10 }}>
-              围绕《{entryTitle}》的延伸内容，用于加深理解、建立联想。
-            </div>
-            <ExtensionList items={exts} />
-          </div>
-        </section>
+        <CollapseCard
+          icon="📚"
+          title="拓展阅读"
+          badge={<Tag tone="purple">{exts.length} 篇</Tag>}
+          summary={`围绕《${entryTitle}》的延伸内容，用于加深理解、建立联想`}
+        >
+          <ExtensionList items={exts} />
+        </CollapseCard>
       ) : null}
 
       {lesson || exactMaps.length || systemMaps.length || exts.length ? (
