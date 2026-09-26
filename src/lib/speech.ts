@@ -100,6 +100,14 @@ function write(key: string, value: string): void {
 
 /* ------------------------------ 浏览器内置引擎 ------------------------------ */
 
+/**
+ * 朗读轮次令牌：每轮 speak / stop 都会递增。
+ * Chrome 里 `synth.cancel()` 会给正在播的 utterance 触发 onend/onerror，
+ * 如果不把这些「来自上一轮的回调」作废，回调会继续朗读下一块——
+ * 表现就是「点了停止，它又跑到别的地方接着读」。
+ */
+let speakToken = 0;
+
 const browserEngine: SpeechEngine = {
   supported: () => typeof window !== 'undefined' && 'speechSynthesis' in window,
   voices: () => {
@@ -112,11 +120,13 @@ const browserEngine: SpeechEngine = {
   speak(segments, { rate, voiceURI, onTick, onEnd }) {
     const synth = window.speechSynthesis;
     synth.cancel();
+    const token = ++speakToken;
 
     const voice = synth.getVoices().find((v) => v.voiceURI === voiceURI);
     let i = 0;
 
     const speakNext = () => {
+      if (token !== speakToken) return;
       if (i >= segments.length) {
         onEnd();
         return;
@@ -126,6 +136,7 @@ const browserEngine: SpeechEngine = {
       const chunks = chunkText(seg.text);
       let c = 0;
       const speakChunk = () => {
+        if (token !== speakToken) return;
         if (c >= chunks.length) {
           i += 1;
           speakNext();
@@ -137,10 +148,12 @@ const browserEngine: SpeechEngine = {
         u.rate = rate;
         u.pitch = 1;
         u.onend = () => {
+          if (token !== speakToken) return; // cancel 引起的 onend：不再推进
           c += 1;
           speakChunk();
         };
         u.onerror = () => {
+          if (token !== speakToken) return; // cancel 引起的 onerror：不再推进
           c += 1;
           speakChunk();
         };
@@ -153,7 +166,10 @@ const browserEngine: SpeechEngine = {
   },
   pause: () => window.speechSynthesis.pause(),
   resume: () => window.speechSynthesis.resume(),
-  stop: () => window.speechSynthesis.cancel(),
+  stop: () => {
+    speakToken += 1; // 先作废所有旧回调，再清队列
+    window.speechSynthesis.cancel();
+  },
 };
 
 /** 当前引擎（想换在线 TTS 就替换这一个常量） */
@@ -200,6 +216,9 @@ export function initSpeech(): () => void {
   return () => window.speechSynthesis.removeEventListener?.('voiceschanged', onVoices);
 }
 
+/** 挂起的「稍后开始朗读」定时器：停止时要一并作废，否则停了 60ms 后又会开读 */
+let startTimer: number | undefined;
+
 /** 开始朗读一组段落 */
 export function speak(segments: SpeechSegment[]): void {
   if (!engine.supported() || !segments.length) return;
@@ -214,7 +233,8 @@ export function speak(segments: SpeechSegment[]): void {
   };
   // 清掉上一轮再开始，避免两条语音叠在一起
   engine.stop();
-  window.setTimeout(start, 60);
+  window.clearTimeout(startTimer);
+  startTimer = window.setTimeout(start, 60);
 }
 
 /** 朗读单段（不影响「整页朗读」的队列） */
@@ -235,12 +255,14 @@ export function resumeSpeech(): void {
 }
 
 export function stopSpeech(): void {
+  window.clearTimeout(startTimer);
   engine.stop();
-  setState({ speaking: false, paused: false, index: -1 });
+  setState({ speaking: false, paused: false, index: -1, segments: [] });
 }
 
 export function setRate(rate: number): void {
   write(RATE_KEY, String(rate));
+  window.clearTimeout(startTimer); // 若正处于「60ms 后开读」的窗口，取消旧启动
   const wasSpeaking = state.speaking;
   const segments = state.segments;
   const index = state.index;
