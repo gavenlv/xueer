@@ -14,6 +14,7 @@ import { RelatedList } from '../../components/RelatedList';
 import { SupplementList } from '../../components/SupplementList';
 import { SpeechBar } from '../../components/SpeechBar';
 import { extensions, extensionsOfEntry, mindMapsOfEntry, mindMapsOfModule } from '../../data';
+import { getSubject } from '../../data/subjects';
 import { lessonMindMap } from '../../lib/lessonMaps';
 import { speechSegmentsOf } from '../../lib/entrySpeech';
 
@@ -194,7 +195,7 @@ export function DetailShell({
             <Crumbs
               items={[
                 { label: '首页', to: '/' },
-                { label: '语文', to: `/s/${subjectId}` },
+                { label: getSubject(subjectId)?.name ?? '语文', to: `/s/${subjectId}` },
                 { label: moduleName, to: backTo },
                 { label: entry.title },
               ]}

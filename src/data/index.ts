@@ -13,6 +13,7 @@
  */
 
 import type {
+  EnglishModuleId,
   Entry,
   Extension,
   GradeId,
@@ -28,6 +29,7 @@ import { relOfEntry } from '../lib/relNode';
 import { matchesKeyword } from '../lib/searchText';
 import * as chinese from './chinese';
 import * as history from './history';
+import * as english from './english';
 import * as math from './math';
 
 /* ------------------------------ 聚合 ------------------------------ */
@@ -53,7 +55,7 @@ export const MODULE_SUBJECT: Map<string, string> = new Map(
 
 /** 把某一学科的容器内容同步进全局容器（去重，按 id） */
 function syncSubjectContainers(): void {
-  for (const e of [...chinese.allEntries, ...history.allEntries, ...math.allEntries]) {
+  for (const e of [...chinese.allEntries, ...history.allEntries, ...english.allEntries, ...math.allEntries]) {
     if (!entryIndex.has(e.id)) {
       entryIndex.set(e.id, e);
       allEntries.push(e);
@@ -71,6 +73,8 @@ function syncSubjectContainers(): void {
 const MATH_MODULE_IDS = new Set<string>(math.MATH_MODULE_IDS);
 /** 历史模块 id（八块：六册教材 + 中考专题 + 模拟考试） */
 const HISTORY_MODULE_IDS = new Set<string>(history.MODULE_IDS);
+/** 英语模块 id（七块：词汇/语法/阅读/听说/写作 + 中考专题 + 整卷模拟） */
+const ENGLISH_MODULE_IDS = new Set<string>(english.MODULE_IDS);
 
 /**
  * 页面要声明的数据范围：某个学科的模块 id，或语文的 `'extras'`
@@ -84,6 +88,7 @@ export function isScopeReady(scope: DataScope[]): boolean {
   return (
     chinese.isScopeReady(request.chinese) &&
     history.isScopeReady(request.history) &&
+    english.isScopeReady(request.english) &&
     (request.math.length ? math.isLoaded() : true)
   );
 }
@@ -91,26 +96,33 @@ export function isScopeReady(scope: DataScope[]): boolean {
 /** 加载这些范围的数据 */
 export async function ensureModules(scope: DataScope[]): Promise<void> {
   const request = splitScope(scope);
-  await Promise.all([chinese.loadModules(request.chinese), history.loadModules(request.history)]);
+  await Promise.all([
+    chinese.loadModules(request.chinese),
+    history.loadModules(request.history),
+    english.loadModules(request.english),
+  ]);
   if (request.math.length) await math.load();
   syncSubjectContainers();
 }
 
-/** 把「页面声明的范围」分派给三个学科的加载器 */
+/** 把「页面声明的范围」分派给各学科的加载器 */
 function splitScope(scope: DataScope[]): {
   chinese: (chinese.ChineseModuleId | 'extras')[];
   history: HistoryModuleId[];
+  english: EnglishModuleId[];
   math: ModuleId[];
 } {
   const out = {
     chinese: [] as (chinese.ChineseModuleId | 'extras')[],
     history: [] as HistoryModuleId[],
+    english: [] as EnglishModuleId[],
     math: [] as ModuleId[],
   };
   for (const s of scope) {
     if (s === 'extras') out.chinese.push('extras');
     else if (MATH_MODULE_IDS.has(s)) out.math.push(s);
     else if (HISTORY_MODULE_IDS.has(s)) out.history.push(s as HistoryModuleId);
+    else if (ENGLISH_MODULE_IDS.has(s)) out.english.push(s as EnglishModuleId);
     else out.chinese.push(s as chinese.ChineseModuleId);
   }
   return out;
@@ -118,9 +130,81 @@ function splitScope(scope: DataScope[]): {
 
 /** 加载全部学科的全部模块（校验脚本与跨模块聚合页面用） */
 export async function ensureAll(): Promise<void> {
-  await Promise.all([chinese.loadAll(), history.loadAll()]);
+  await Promise.all([chinese.loadAll(), history.loadAll(), english.loadAll()]);
   await math.load();
   syncSubjectContainers();
+}
+
+/* ------------------------------ 整卷考试 ------------------------------ */
+
+/**
+ * 交给「整卷模拟考试」页的**学科无关**卷面。
+ *
+ * 历史与英语的试卷各有自己的字段（历史有材料题 `materials`，英语有听说 `listening`
+ * 与书面表达 `writing`），但考试页只关心「有几道题、每题几分、怎么判」。
+ * 因此在这里归一成一种形状，考试页不必知道卷子属于哪一科。
+ */
+export interface ExamPaper {
+  id: string;
+  subjectId: string;
+  moduleId: ModuleId;
+  title: string;
+  basis: string;
+  duration: number;
+  totalScore: number;
+  sections: { name: string; kind: string; count: number; score: number }[];
+  /** 材料题分组（历史用；英语为空） */
+  materials: {
+    id: string;
+    material: string;
+    questions: { id: string; stem: string; answer: string; rubric?: string[]; tags?: string[] }[];
+  }[];
+  questions: QuizQuestion[];
+  /** 书面表达（英语用）：作为一道自评大题进入卷面 */
+  writing?: {
+    topic: string;
+    requirements: string[];
+    samples?: { level: string; text: string; comment: string }[];
+  };
+}
+
+/** 按 id 取卷子（跨学科查找），供 `/exam-run/:paperId` 使用 */
+export function examPaperOf(id: string): ExamPaper | undefined {
+  const h = history.allPapers.find((p) => p.id === id);
+  if (h) {
+    return {
+      id: h.id,
+      subjectId: 'history',
+      moduleId: 'hist-exam',
+      title: h.title,
+      basis: h.basis,
+      duration: h.duration,
+      totalScore: h.totalScore,
+      sections: h.sections,
+      materials: h.materials,
+      questions: h.questions,
+    };
+  }
+
+  const e = english.allPapers.find((p) => p.id === id);
+  if (e) {
+    return {
+      id: e.id,
+      subjectId: 'english',
+      moduleId: 'eng-exam',
+      title: e.title,
+      basis: e.basis,
+      duration: e.duration,
+      totalScore: e.totalScore,
+      sections: e.sections,
+      // 英语卷没有「阅读材料 + 设问」那种材料题，全部体现为 questions
+      materials: [],
+      questions: e.questions,
+      writing: e.writing,
+    };
+  }
+
+  return undefined;
 }
 
 /* ------------------------------ 学科相关 ------------------------------ */

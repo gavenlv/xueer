@@ -123,6 +123,48 @@ export function searchTextOf(entry: Entry): string {
       ]);
       break;
     }
+    /**
+     * 英语：把「学生可能拿来搜的东西」全放进索引——中英标题、词根词缀与例词、
+     * 近义词两边、搭配短语、语法规则与例句、语篇正文、听说脚本、范文与句型。
+     * 学生往往只记得一个英文单词或一句句型，得能直接搜到对应知识点。
+     */
+    case 'eng-vocab':
+    case 'eng-grammar':
+    case 'eng-reading':
+    case 'eng-listening':
+    case 'eng-writing':
+    case 'eng-topics': {
+      const e = entry.data;
+      text = join([
+        e.title,
+        e.enTitle,
+        e.unit,
+        e.summary,
+        e.points.map((p) => `${p.text}${p.explain ?? ''}`),
+        e.affixes?.map((a) => `${a.affix}${a.meaning}${a.examples.map((x) => `${x.word}${x.cn}`).join('')}`),
+        e.confusables?.map((c) => `${c.a}${c.b}${c.diff}${c.exampleA ?? ''}${c.exampleB ?? ''}`),
+        e.collocations?.map((c) => `${c.phrase}${c.cn}`),
+        e.rules?.map((r) => `${r.rule}${r.form ?? ''}${r.example}${r.cn ?? ''}`),
+        e.mistakes?.map((m) => `${m.wrong}${m.right}${m.why}`),
+        e.passages?.map((p) => `${p.title}${p.text}${p.cn ?? ''}`),
+        e.scripts?.map((s) => `${s.title}${s.text}${s.cn ?? ''}`),
+        e.writing ? [e.writing.topic, ...e.writing.requirements, ...(e.writing.usefulExpressions ?? [])] : undefined,
+        e.writing?.samples?.map((s) => `${s.level}${s.text}${s.comment}`),
+        e.examTips,
+      ]);
+      break;
+    }
+    case 'eng-exam': {
+      const p = entry.data;
+      text = join([
+        p.title,
+        p.basis,
+        p.questions.map((q) => `${q.stem}${(q.options ?? []).join('')}`),
+        p.writing ? `${p.writing.topic}${p.writing.requirements.join('')}` : undefined,
+        p.listening?.map((s) => `${s.title}${s.text}`),
+      ]);
+      break;
+    }
     default: {
       // 数学：${...}$ 公式源码也进检索文本，学生可以按符号找知识点
       const m = entry.data as {

@@ -411,6 +411,116 @@ function historyMap(entry: Entry): MindNode[] {
   return kids;
 }
 
+/**
+ * 英语的一个知识点：按「考什么—怎么判断—怎么用」成图。
+ *
+ * 与语文、历史那几张图的差别在于：英语知识点的分支直接对应它的材料类型
+ * （词根词缀 / 近义辨析 / 语法规则 / 语篇 / 听说 / 写作），
+ * 学生一眼能看出「这个知识点是靠什么形式考的」。
+ */
+function englishMap(entry: Entry): MindNode[] {
+  const d = entry.data as {
+    unit?: string;
+    enTitle?: string;
+    summary?: string;
+    points?: { level: string; text: string; explain?: string }[];
+    affixes?: { affix: string; meaning: string; examples: { word: string; cn: string }[] }[];
+    confusables?: { a: string; b: string; diff: string }[];
+    collocations?: { phrase: string; cn: string }[];
+    rules?: { rule: string; form?: string; example: string }[];
+    mistakes?: { wrong: string; right: string; why: string }[];
+    passages?: { title: string; kind?: string }[];
+    scripts?: { title: string }[];
+    writing?: { samples?: { level: string }[]; usefulExpressions?: string[] };
+    examTips?: string[];
+  };
+  const kids: MindNode[] = [];
+
+  kids.push(
+    node('这一个知识点', d.unit, [
+      node('中文名', d.enTitle ? `${d.enTitle}` : undefined),
+      node('解决什么问题', d.summary),
+    ]),
+  );
+
+  if (d.points?.length) {
+    const levels: [string, string][] = [
+      ['重点', '必须记牢、考试直接用'],
+      ['次重点', '要能再认'],
+      ['了解', '知道即可'],
+    ];
+    const levelKids = levels
+      .map(([lv, hint]) => {
+        const list = d.points!.filter((p) => p.level === lv);
+        if (!list.length) return null;
+        return node(`${lv}（${list.length}）`, hint, list.map((p) => asItem(p.text, 16, 120)));
+      })
+      .filter((x): x is MindNode => x !== null);
+    if (levelKids.length) kids.push(node('考点分层', '先看重点', levelKids));
+  }
+
+  if (d.affixes?.length) {
+    kids.push(
+      node(
+        '词根词缀',
+        `${d.affixes.length} 组`,
+        d.affixes.map((a) => node(a.affix, a.meaning, a.examples.slice(0, 6).map((e) => node(e.word, e.cn)))),
+      ),
+    );
+  }
+  if (d.confusables?.length) {
+    kids.push(
+      node(
+        '同义近义辨析',
+        `${d.confusables.length} 组`,
+        d.confusables.map((c) => node(`${c.a} / ${c.b}`, clip(c.diff, 110))),
+      ),
+    );
+  }
+  if (d.collocations?.length) {
+    kids.push(
+      node('高频搭配', `${d.collocations.length} 条`, d.collocations.slice(0, 8).map((c) => node(c.phrase, c.cn))),
+    );
+  }
+  if (d.rules?.length) {
+    kids.push(
+      node(
+        '规则与用法',
+        `${d.rules.length} 条`,
+        d.rules.map((r) => node(clip(r.rule, 18), r.form ? `${r.form}｜${r.example}` : r.example)),
+      ),
+    );
+  }
+  if (d.mistakes?.length) {
+    kids.push(
+      node(
+        '易错点',
+        `${d.mistakes.length} 条`,
+        d.mistakes.map((m) => node(clip(m.wrong, 16), `正确：${m.right}`, undefined, 85)),
+      ),
+    );
+  }
+  if (d.passages?.length) {
+    kids.push(node('语篇', `${d.passages.length} 篇`, d.passages.map((p) => node(clip(p.title, 18), p.kind))));
+  }
+  if (d.scripts?.length) {
+    kids.push(node('听说材料', `${d.scripts.length} 段`, d.scripts.map((s) => node(clip(s.title, 18)))));
+  }
+  if (d.writing) {
+    kids.push(
+      node('书面表达', d.writing.samples ? `${d.writing.samples.length} 篇范文` : undefined, [
+        ...(d.writing.samples ?? []).map((s) => node(s.level)),
+        ...(d.writing.usefulExpressions ?? []).slice(0, 6).map((u) => node(clip(u, 18))),
+      ]),
+    );
+  }
+  if (d.examTips?.length) {
+    kids.push(node('应试策略', `${d.examTips.length} 条`, d.examTips.slice(0, 6).map((t) => asItem(t, 16, 120))));
+  }
+
+  return kids;
+}
+
 /* -------------------------------- 入口 --------------------------------- */
 
 /**
@@ -456,6 +566,16 @@ export function lessonMindMap(entry: Entry): MindMap | null {
     case 'hist-topics':
       kids = historyMap(entry);
       summary = '时间轴、分层考点、对比与考法，一张图先把骨架立起来';
+      break;
+    // 英语（词汇/语法/阅读/听说/写作/专题）：按「考什么—怎么判断—怎么用」成图
+    case 'eng-vocab':
+    case 'eng-grammar':
+    case 'eng-reading':
+    case 'eng-listening':
+    case 'eng-writing':
+    case 'eng-topics':
+      kids = englishMap(entry);
+      summary = '这一个知识点考什么、怎么判断、怎么用，一张图串起来';
       break;
     default:
       return null;

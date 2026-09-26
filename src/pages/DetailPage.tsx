@@ -16,6 +16,8 @@ import { WritingDetail } from './detail/WritingDetail';
 import { LiteratureDetail } from './detail/LiteratureDetail';
 import { HistoryDetail } from './detail/HistoryDetail';
 import { HistoryPaperDetail } from './detail/HistoryPaperDetail';
+import { EnglishDetail } from './detail/EnglishDetail';
+import { EnglishPaperDetail } from './detail/EnglishPaperDetail';
 
 /**
  * 六个模块的详情渲染器。
@@ -95,6 +97,16 @@ export default function DetailPage() {
       case 'hist-9b':
       case 'hist-topics':
         return <HistoryDetail entry={entry} moduleName={meta?.module.name ?? '历史'} />;
+      // 英语：整卷走考试页那一套，知识模块（词汇/语法/阅读/听说/写作/专题）共用知识版详情页
+      case 'eng-exam':
+        return <EnglishPaperDetail entry={entry} moduleName={meta?.module.name ?? '模拟考试'} />;
+      case 'eng-vocab':
+      case 'eng-grammar':
+      case 'eng-reading':
+      case 'eng-listening':
+      case 'eng-writing':
+      case 'eng-topics':
+        return <EnglishDetail entry={entry} moduleName={meta?.module.name ?? '英语'} />;
       case 'math-number':
       case 'math-geometry':
       case 'math-stats':

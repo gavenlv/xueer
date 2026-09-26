@@ -116,15 +116,77 @@ export function speechSegmentsOf(entry: Entry): SpeechSegment[] {
     }
 
     default: {
-      // 模拟卷：读卷面说明 + 材料 + 设问。
-      // 20 道选择题的题干与选项**不**送进语音：考试卷是拿来做的，逐题念出来只是噪音。
+      /**
+       * 英语：**按模块 id 判断**（不是按数据形状）——英语七块的「可朗读材料」各不相同：
+       *   听说脚本（本应用用它代替听力音频，点朗读条就等于听听力材料）→ 阅读语篇 →
+       *   语法/专题的**例句**（最值得跟读的东西）→ 书面表达范文与句型 →
+       *   词汇的词缀例词与高频搭配（跟着读一遍最有用）。
+       * 无论哪一块，都先读「这一个知识点解决什么问题」，因此英语条目永远至少有一段可读。
+       */
+      if (entry.moduleId.startsWith('eng-')) {
+        const e = entry.data as {
+          scripts?: { title?: string; text?: string }[];
+          passages?: { title?: string; text?: string }[];
+          writing?: { samples?: { level?: string; text?: string }[]; usefulExpressions?: string[] };
+          rules?: { rule?: string; example?: string }[];
+          affixes?: { affix: string; meaning: string; examples: { word: string; cn: string }[] }[];
+          collocations?: { phrase: string; cn: string }[];
+          summary?: string;
+        };
+        push(out, 'summary', e.summary, '本知识点');
+        (e.scripts ?? []).forEach((s, i) =>
+          push(out, `script-${i}`, s.text, s.title ? `听说材料·${s.title}` : `听说材料 ${i + 1}`),
+        );
+        (e.passages ?? []).forEach((p, i) =>
+          push(out, `passage-${i}`, p.text, p.title ? `语篇·${p.title}` : `语篇 ${i + 1}`),
+        );
+        pushList(
+          out,
+          'rule-example',
+          (i) => `例句·第 ${i + 1} 条`,
+          (e.rules ?? []).map((r) => r.example ?? ''),
+        );
+        pushList(
+          out,
+          'affix-word',
+          (i) => `例词·第 ${i + 1} 组`,
+          (e.affixes ?? []).map((a) => a.examples.map((x) => x.word).join(', ')),
+        );
+        pushList(
+          out,
+          'collocation',
+          (i) => `搭配·第 ${i + 1} 条`,
+          (e.collocations ?? []).map((c) => c.phrase),
+        );
+        (e.writing?.samples ?? []).forEach((s, i) =>
+          push(out, `sample-${i}`, s.text, s.level ? `范文·${s.level}` : `范文 ${i + 1}`),
+        );
+        pushList(out, 'expr', (i) => `句型·第 ${i + 1} 条`, e.writing?.usefulExpressions);
+        break;
+      }
+
+      // 模拟卷：读卷面说明 + 听说脚本（阅读与写作题目本身不念，考试卷是拿来做的）
       const paper = entry.data as {
+        basis?: string;
+        listening?: { title?: string; text?: string }[];
+      };
+      if (Array.isArray(paper.listening)) {
+        push(out, 'basis', paper.basis, '卷面说明');
+        paper.listening.forEach((s, i) =>
+          push(out, `listen-${i}`, s.text, s.title ? `听说·${s.title}` : `听说材料 ${i + 1}`),
+        );
+        break;
+      }
+
+      // 模拟卷（历史）：读卷面说明 + 材料 + 设问。
+      // 20 道选择题的题干与选项**不**送进语音：考试卷是拿来做的，逐题念出来只是噪音。
+      const historyPaper = entry.data as {
         basis?: string;
         materials?: { material?: string; questions: { stem: string }[] }[];
       };
-      if (Array.isArray(paper.materials) && paper.materials.some((m) => m.questions)) {
-        push(out, 'basis', paper.basis, '卷面说明');
-        paper.materials.forEach((m, i) => {
+      if (Array.isArray(historyPaper.materials) && historyPaper.materials.some((m) => m.questions)) {
+        push(out, 'basis', historyPaper.basis, '卷面说明');
+        historyPaper.materials.forEach((m, i) => {
           push(out, `mat-${i}`, m.material, `材料${i + 1}`);
           m.questions.forEach((q, k) =>
             push(out, `mat-${i}-q${k}`, q.stem, `第 ${i + 1} 题第 ${k + 1} 问`),

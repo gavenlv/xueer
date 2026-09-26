@@ -22,3 +22,15 @@ export function sampleHanzi(text: string): number {
 
 /** 中考作文的常见要求：不少于 600 字 */
 export const EXAM_MIN_WORDS = 600;
+
+/**
+ * 英文词数（按空格切分）。
+ *
+ * 别拿字符数冒充词数：英语范文要求「80—120 词」，一段 100 词的英文有 500 多个字符，
+ * 用字符数显示会写成「500 词左右」，学生一眼就看出不对（这个 bug 被内容作者抓过两次）。
+ */
+export function englishWordCount(text: string): number {
+  const t = text.trim();
+  if (!t) return 0;
+  return t.split(/\s+/).length;
+}

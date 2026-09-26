@@ -12,8 +12,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import type { HistoryPaper, QuizQuestion } from '../types';
-import { findPaper } from '../data/history';
+import type { QuizQuestion } from '../types';
+import { examPaperOf, type ExamPaper } from '../data';
 import { useDataScope, DataLoading } from '../lib/useData';
 import { useStudy } from '../store/StudyContext';
 import { OPTION_KEYS, cn, formatClock, pct } from '../lib/utils';
@@ -29,18 +29,30 @@ interface Slot {
   no: number;
   /** 该题分值 */
   score: number;
-  /** 材料题所属的材料组序号（材料组从 1 开始）；选择题为 0 */
+  /** 材料题所属的材料组序号（材料组从 1 开始）；其余为 0 */
   group: number;
 }
+
+/**
+ * 卷子属于哪个学科模块——`/exam-run/:paperId` 是跨科目的入口，
+ * 靠 id 前缀决定要加载哪个模块的数据，避免把三个学科的卷子全下载下来。
+ */
+function scopeOfPaper(paperId: string): ModuleScope {
+  if (paperId.startsWith('eng-')) return ['eng-exam'];
+  if (paperId.startsWith('paper-')) return ['hist-exam'];
+  return ['hist-exam', 'eng-exam'];
+}
+
+type ModuleScope = ('hist-exam' | 'eng-exam')[];
 
 export default function ExamRunPage() {
   const { paperId = '' } = useParams();
   const navigate = useNavigate();
-  const ready = useDataScope(['hist-exam']);
+  const ready = useDataScope(scopeOfPaper(paperId));
   const { recordAnswer, addSeconds } = useStudy();
 
-  const paper: HistoryPaper | undefined = useMemo(
-    () => (ready ? findPaper(paperId) : undefined),
+  const paper: ExamPaper | undefined = useMemo(
+    () => (ready ? examPaperOf(paperId) : undefined),
     [ready, paperId],
   );
 
@@ -50,7 +62,11 @@ export default function ExamRunPage() {
   const [attempt, setAttempt] = useState(0);
 
   /**
-   * 卷面题目：选择题在前，材料题的设问在后（顺序固定，模拟真实卷面）。
+   * 卷面题目：按「选择题 → 材料题设问 → 书面表达」排（顺序固定，模拟真实卷面）。
+   *
+   * 每题的分值按它在卷面里所属那一节算（`sections` 的 count/score 平均），
+   * 这样历史（20 选择 + 3 材料题）与英语（45 选择 + 5 简答 + 10 填空 + 1 写作）
+   * 用同一套算法就能给出正确的总分。
    *
    * 选择题的**选项每次开考重新打乱**（与练习引擎一致）：题库里正确答案的位置本来
    * 就有分布偏差（`pnpm validate` 的「选择题答案分布」一项就是在盯这件事），
@@ -59,21 +75,26 @@ export default function ExamRunPage() {
    */
   const slots = useMemo<Slot[]>(() => {
     if (!paper) return [];
-    const choiceScore = paper.sections.find((s) => s.kind === 'choice')?.score ?? 40;
-    const materialScore = paper.sections.find((s) => s.kind === 'material')?.score ?? 30;
-    const choiceQs = paper.questions
-      .filter((q) => q.type === 'choice')
-      .map((q) => ({ ...q, ...permuteOptions(q) }));
-    const perChoice = choiceQs.length ? choiceScore / choiceQs.length : 0;
-    const perGroup = paper.materials.length ? materialScore / paper.materials.length : 0;
+    const out: Slot[] = [];
 
-    const out: Slot[] = choiceQs.map((q, i) => ({
-      q,
-      no: i + 1,
-      score: perChoice,
-      group: 0,
-    }));
+    /** 按题型取该题分值：卷面 sections 里同类型题目的平均分 */
+    const scoreOf = (type: QuizQuestion['type']) => {
+      const kind = type === 'choice' ? 'choice' : type === 'fill' ? 'blank' : 'short';
+      const sec = paper.sections.find((s) => s.kind === kind);
+      if (!sec) return 0;
+      const n = paper.questions.filter((q) => q.type === type).length || 1;
+      return sec.score / n;
+    };
+
+    for (const q of paper.questions) {
+      const permuted = q.type === 'choice' ? { ...q, ...permuteOptions(q) } : q;
+      out.push({ q: permuted, no: out.length + 1, score: scoreOf(q.type), group: 0 });
+    }
+
+    // 历史材料题：材料以分组形式呈现，设问依次进入卷面
     paper.materials.forEach((g, gi) => {
+      const sec = paper.sections.find((s) => s.kind === 'material');
+      const perGroup = sec && paper.materials.length ? sec.score / paper.materials.length : 0;
       const per = g.questions.length ? perGroup / g.questions.length : 0;
       g.questions.forEach((mq) => {
         out.push({
@@ -92,6 +113,29 @@ export default function ExamRunPage() {
         });
       });
     });
+
+    // 英语书面表达：20 分的一道自评大题，参考答案用最高档次范文
+    if (paper.writing) {
+      const sec = paper.sections.find((s) => s.kind === 'writing');
+      const best = paper.writing.samples?.[0];
+      out.push({
+        q: {
+          id: `${paper.id}-writing`,
+          type: 'short',
+          stem: `${paper.writing.topic}\n\n（要求：${paper.writing.requirements.join('；')}）`,
+          answer: best ? best.text : '见卷面评分要求',
+          rubric: paper.writing.requirements,
+          explanation: best
+            ? `参考范文档次：${best.level}。点评：${best.comment}`
+            : '按内容完整、语言准确、连接自然三个方面自评。',
+          tags: ['书面表达'],
+        },
+        no: out.length + 1,
+        score: sec?.score ?? 20,
+        group: 0,
+      });
+    }
+
     return out;
   }, [paper, attempt]);
 

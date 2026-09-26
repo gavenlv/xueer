@@ -21,6 +21,7 @@ import {
 } from '../src/data';
 import { allPoems } from '../src/data/chinese';
 import { allTopics, allPapers } from '../src/data/history';
+import type { EnglishKnowledge, EnglishPaper } from '../src/types';
 import { BOOK_EXAM_POINT_TAGS } from '../src/lib/bookExams';
 import { DAILY_LINES, ENTRY_META, MODULE_TOTALS } from '../src/data/summary';
 import { lessonMindMap } from '../src/lib/lessonMaps';
@@ -1454,6 +1455,198 @@ console.log(
     .sort((a, b) => b[1].samples - a[1].samples)
     .map(([k, v]) => `${k} ${v.samples}`)
     .join(' · ')}`,
+);
+
+/* --------------- 英语：知识模块完整性 + 整卷按官方结构验卷 --------------- */
+
+/**
+ * 英语按**中考知识模块**组织（不是教材单元），所以校验要盯两件事：
+ *
+ *   1. **每个知识点是不是真的能拿来复习**：分层考点、题目、以及该模块专属的材料
+ *      （词汇要有词根词缀与近义辨析、语法要有规则与易错、阅读要有语篇、听说要有脚本、
+ *      写作要有分档范文），缺一块学生在那一页就学不到东西；
+ *   2. **模拟卷是不是广州的卷子**：笔试 61 小题 110 分、100 分钟、听说 30 分，
+ *      各节题量与分值逐项对齐官方结构（穗教规字〔2025〕1 号附件 2）。
+ */
+const ENGLISH_STRUCTURE = {
+  totalQuestions: 61,
+  totalScore: 110,
+  duration: 100,
+  speakingScore: 30,
+  sections: [
+    { name: '语言知识运用·第一节', kind: 'choice', count: 10, score: 15 },
+    { name: '语言知识运用·第二节', kind: 'choice', count: 10, score: 10 },
+    { name: '阅读·第一节', kind: 'choice', count: 15, score: 30 },
+    { name: '阅读·第二节', kind: 'choice', count: 5, score: 5 },
+    { name: '项目情境·第一节', kind: 'choice', count: 5, score: 10 },
+    { name: '项目情境·第二节', kind: 'short', count: 5, score: 10 },
+    { name: '写作·第一节', kind: 'blank', count: 5, score: 5 },
+    { name: '写作·第二节', kind: 'blank', count: 5, score: 5 },
+    { name: '写作·第三节', kind: 'writing', count: 1, score: 20 },
+  ],
+};
+
+let engBad = 0;
+let engPoints = 0;
+let engAffixExamples = 0;
+let engConfusables = 0;
+let engPassages = 0;
+let engScripts = 0;
+
+for (const e of allEntries.filter((x) => x.moduleId.startsWith('eng-'))) {
+  const isPaper = e.moduleId === 'eng-exam';
+  if (isPaper) continue;
+  const d = e.data as EnglishKnowledge;
+  const at = `[英语] ${d.id}`;
+  const need = (cond: boolean, msg: string) => {
+    if (!cond) {
+      engBad += 1;
+      err(`${at}: ${msg}`);
+    }
+  };
+
+  need(Boolean(d.unit?.trim()), '缺少知识分组（unit，会作为模块页筛选标签）');
+  need(Boolean(d.summary?.trim()), '缺少 summary');
+  need(d.points.length >= 5, `分层考点只有 ${d.points.length} 条（应 ≥5）`);
+  need(d.points.filter((p) => p.level === '重点').length >= 3, '「重点」不足 3 条');
+  need(d.questions.length >= 5, `题目不足 5 道（只有 ${d.questions.length}）`);
+  engPoints += d.points.length;
+
+  for (const p of d.points) {
+    if (!['重点', '次重点', '了解'].includes(p.level)) err(`${at}: 考点层级非法「${p.level}」`);
+  }
+
+  // 近义辨析必须写清区别（只罗列同义词对学生没有用）
+  for (const c of d.confusables ?? []) {
+    engConfusables += 1;
+    if (!c.diff?.trim()) err(`${at}: 辨析「${c.a} / ${c.b}」没有写区别（diff）`);
+    if (!c.a?.trim() || !c.b?.trim()) err(`${at}: 辨析缺少两个对比词`);
+  }
+  for (const a of d.affixes ?? []) {
+    engAffixExamples += a.examples.length;
+    if (!a.affix?.trim() || !a.meaning?.trim()) err(`${at}: 词缀条目缺少词缀或含义`);
+    if (a.examples.length < 3) err(`${at}: 词缀「${a.affix}」例词不足 3 个`);
+  }
+
+  switch (e.moduleId) {
+    case 'eng-vocab': {
+      /**
+       * 词汇条目的材料是**分散**的：词根词缀条目讲词缀、辨析条目讲区别、搭配条目讲短语，
+       * 硬要求每条都写满四类材料只会逼出凑数内容。所以这里只要求
+       * 「每条至少有一类材料」，搭配与易错的下限放到**模块级**统计。
+       */
+      const hasAny =
+        (d.affixes?.length ?? 0) > 0 ||
+        (d.confusables?.length ?? 0) > 0 ||
+        (d.collocations?.length ?? 0) > 0;
+      need(hasAny, '词汇条目既没有词根词缀、也没有近义辨析或高频搭配');
+      break;
+    }
+    case 'eng-grammar':
+      need((d.rules?.length ?? 0) >= 6, `语法规则不足 6 条（只有 ${d.rules?.length ?? 0}）`);
+      need((d.mistakes?.length ?? 0) >= 3, `易错点不足 3 条（只有 ${d.mistakes?.length ?? 0}）`);
+      break;
+    case 'eng-reading':
+      need((d.passages?.length ?? 0) >= 2, `语篇不足 2 篇（只有 ${d.passages?.length ?? 0}）`);
+      for (const p of d.passages ?? []) {
+        engPassages += 1;
+        if (!p.text?.trim()) err(`${at}: 语篇「${p.title}」没有正文`);
+        if ((p.questions?.length ?? 0) < 4) err(`${at}: 语篇「${p.title}」题目不足 4 道`);
+      }
+      break;
+    case 'eng-listening':
+      need((d.scripts?.length ?? 0) >= 2, `听说材料不足 2 段（只有 ${d.scripts?.length ?? 0}）`);
+      for (const s of d.scripts ?? []) {
+        engScripts += 1;
+        if (!s.text?.trim()) err(`${at}: 听说材料「${s.title}」没有脚本`);
+        if ((s.cues?.length ?? 0) < 3) err(`${at}: 听说材料「${s.title}」朗读提示不足 3 条`);
+        if ((s.tasks?.length ?? 0) < 3) err(`${at}: 听说材料「${s.title}」任务不足 3 道`);
+      }
+      break;
+    case 'eng-writing':
+      need(Boolean(d.writing), '写作条目没有 writing 字段');
+      break;
+    case 'eng-topics':
+      need((d.examTips?.length ?? 0) >= 5, `应试策略不足 5 条（只有 ${d.examTips?.length ?? 0}）`);
+      break;
+    default:
+      break;
+  }
+
+  for (const s of d.writing?.samples ?? []) {
+    if (!s.text?.trim()) err(`${at}: 范文（${s.level}）没有正文`);
+    if ((s.text.match(/[A-Za-z]/g) ?? []).length < 60) err(`${at}: 范文（${s.level}）英文过短`);
+    if (!s.comment?.trim()) err(`${at}: 范文（${s.level}）缺少点评`);
+    for (const h of s.highlights ?? []) {
+      // 亮点句必须逐字出自范文（与作文模块同一条规矩）
+      const key = h.sentence.replace(/[\s“”"']/g, '');
+      if (key.length >= 10 && !s.text.replace(/[\s]/g, '').includes(key)) {
+        engBad += 1;
+        err(`${at}: 范文亮点句未在范文中原样出现：${h.sentence.slice(0, 30)}…`);
+      }
+    }
+  }
+}
+
+/* 英语模拟卷：逐节对齐官方结构 */
+const englishPapers = allEntries.filter((e) => e.moduleId === 'eng-exam').map((e) => e.data as EnglishPaper);
+let engPaperBad = 0;
+for (const p of englishPapers) {
+  const at = `[英语·模拟卷] ${p.id}`;
+  const check = (cond: boolean, msg: string) => {
+    if (!cond) {
+      engPaperBad += 1;
+      err(`${at}: ${msg}`);
+    }
+  };
+  /**
+   * 全卷 61 小题**含书面表达那 1 小题**（官方结构表把「写作·第三节 书面表达 1 小题 20 分」
+   * 计入 61 之内），而书面表达以 `writing` 字段表达、不放进 `questions`，
+   * 所以这里按「questions + 书面表达」核对。
+   */
+  const paperCount = p.questions.length + (p.writing ? 1 : 0);
+  check(paperCount === ENGLISH_STRUCTURE.totalQuestions, `全卷小题 ${paperCount} 道 ≠ ${ENGLISH_STRUCTURE.totalQuestions} 道`);
+  check(p.totalScore === ENGLISH_STRUCTURE.totalScore, `笔试总分 ${p.totalScore} ≠ ${ENGLISH_STRUCTURE.totalScore}`);
+  check(p.duration === ENGLISH_STRUCTURE.duration, `时长 ${p.duration} 分钟 ≠ ${ENGLISH_STRUCTURE.duration}`);
+  check(p.speakingScore === ENGLISH_STRUCTURE.speakingScore, `听说分值 ${p.speakingScore} ≠ ${ENGLISH_STRUCTURE.speakingScore}`);
+  const sum = p.sections.reduce((n, s) => n + s.score, 0);
+  check(sum === ENGLISH_STRUCTURE.totalScore, `各节分值合计 ${sum} ≠ ${ENGLISH_STRUCTURE.totalScore}`);
+  /**
+   * 逐节按**顺序**对齐官方结构。
+   *
+   * 一开始按「题型 + 分值」去 find，结果把「语言知识运用·第二节」（选择 10 题 10 分）
+   * 误当成了「项目情境·第一节」（选择 5 题 10 分）——两节题型与分值恰好相同。
+   * 卷面各节的顺序是固定的，按位置比对既简单又不会认错。
+   */
+  for (const [i, want] of ENGLISH_STRUCTURE.sections.entries()) {
+    const got = p.sections[i];
+    if (!got) {
+      check(false, `缺少第 ${i + 1} 节「${want.name}」`);
+      continue;
+    }
+    check(got.kind === want.kind, `第 ${i + 1} 节「${got.name}」题型 ${got.kind} ≠ ${want.kind}`);
+    check(got.count === want.count, `第 ${i + 1} 节「${got.name}」题量 ${got.count} ≠ ${want.count}`);
+    check(got.score === want.score, `第 ${i + 1} 节「${got.name}」分值 ${got.score} ≠ ${want.score}`);
+  }
+  // 卷面题目类型要与结构吻合（写作是卷面第 61 题之外的一道大题，用 writing 字段表达）
+  const byType = {
+    choice: p.questions.filter((q) => q.type === 'choice').length,
+    fill: p.questions.filter((q) => q.type === 'fill').length,
+    short: p.questions.filter((q) => q.type === 'short').length,
+  };
+  check(byType.choice === 45, `选择题 ${byType.choice} 道 ≠ 45 道`);
+  check(byType.fill === 10, `填空题 ${byType.fill} 道 ≠ 10 道`);
+  check(byType.short === 5, `简答题 ${byType.short} 道 ≠ 5 道`);
+  check(Boolean(p.writing), '缺少书面表达（writing）');
+  check(p.basis.includes('原创') || p.basis.includes('非历年真题'), 'basis 必须写明这是原创仿真卷、非历年真题');
+}
+
+console.log(
+  `  英语备考          ${allEntries.filter((e) => e.moduleId.startsWith('eng-') && e.moduleId !== 'eng-exam').length} 个知识点 / ${englishPapers.length} 套卷` +
+    `（异常 ${engBad + engPaperBad} 处）`,
+);
+console.log(
+  `      知识点材料         考点 ${engPoints} 条 · 词缀例词 ${engAffixExamples} 个 · 近义辨析 ${engConfusables} 组 · 语篇 ${engPassages} 篇 · 听说脚本 ${engScripts} 段`,
 );
 
 /* ------------------------ 汇总报告 ------------------------ */

@@ -78,6 +78,8 @@ const routes: string[] = [
   // 历史：考点与考情总复习页 + 整卷模拟考试（开考前页）
   '/history-review',
   '/exam-run/paper-01',
+  // 英语：整卷模拟考试（同一套考试页，卷子来自英语数据）
+  '/exam-run/eng-paper-01',
   '/exam-run/不存在的卷子',
   '/practice/vocab?tag=%E5%BD%A2%E5%A3%B0%E5%AD%97&grade=all',
   '/this-route-does-not-exist',
@@ -516,7 +518,7 @@ if (!progressTarget) {
 
   const navChecks: [string, boolean][] = [
     ['顶栏学科下拉入口', histModuleHtml.includes('subjmenu__trigger')],
-    ['顶栏品牌副标题跟随学科', histModuleHtml.includes('初中 · 语文 / 历史')],
+    ['顶栏品牌副标题跟随学科', histModuleHtml.includes('初中 · ') && histModuleHtml.includes('语文') && histModuleHtml.includes('历史') && histModuleHtml.includes('英语')],
     ['底部栏「学科」入口', histModuleHtml.includes('📚</span><span>学科')],
     ['底部栏「更多」入口', histModuleHtml.includes('更多')],
     // 首页：学科切换 pills 里两个学科都在，且默认选中项可点
@@ -579,6 +581,59 @@ if (!progressTarget) {
       .join('、') || '七类断言全通过'}）`,
   );
   if (!sampleOk) failed += 1;
+
+  /* ------------- 接线检查：英语（词根词缀 / 近义辨析 / 听说脚本 / 范文） ------------- */
+
+  /**
+   * 英语按知识模块组织，页面里的每块材料都是「渲染失败也不报错」的：
+   * 词根词缀表没了、近义辨析只剩两个词没有区别、听说脚本读不出来——页面照样显示。
+   * 因此逐块断言（条目按模块动态取，不写死 id，免得内容一改就失效）。
+   */
+  const pickOf = (moduleId: string) => allEntries.find((e) => e.moduleId === moduleId);
+  const renderEntry = (id: string) =>
+    renderToString(
+      <MemoryRouter
+        initialEntries={[`/s/english/${allEntries.find((x) => x.id === id)?.moduleId ?? 'eng-vocab'}/${id}`]}
+      >
+        <AppWithProviders />
+      </MemoryRouter>,
+    ).replace(/<!--[\s\S]*?-->/g, '');
+
+  const vocabEntry = pickOf('eng-vocab');
+  /** 辨析类条目要单独找：词汇模块里第一条通常是词根词缀条目，没有辨析表 */
+  const confusableEntry = allEntries.find(
+    (e) => e.moduleId === 'eng-vocab' && ((e.data as { confusables?: unknown[] }).confusables?.length ?? 0) > 0,
+  );
+  const grammarEntry = pickOf('eng-grammar');
+  const readingEntry = pickOf('eng-reading');
+  const listenEntry = pickOf('eng-listening');
+  const writingEntry = pickOf('eng-writing');
+  const engPaper = allEntries.find((e) => e.moduleId === 'eng-exam');
+
+  const vocabHtml = vocabEntry ? renderEntry(vocabEntry.id) : '';
+  const confusableHtml = confusableEntry ? renderEntry(confusableEntry.id) : '';
+  const listenHtml = listenEntry ? renderEntry(listenEntry.id) : '';
+  const writingHtml = writingEntry ? renderEntry(writingEntry.id) : '';
+  const paperHtml2 = engPaper ? renderEntry(engPaper.id) : '';
+
+  const engChecks: [string, boolean][] = [
+    ['英语详情页可渲染（考点分层）', Boolean(vocabEntry) && vocabHtml.includes('考点分层')],
+    ['词根词缀表', vocabHtml.includes('词根词缀')],
+    ['近义辨析（含区别）', confusableHtml.includes('同义/近义辨析') && confusableHtml.includes('区别')],
+    ['听说材料区块', listenHtml.includes('听说材料')],
+    // 朗读按钮在服务端渲染时不出现（拿不到浏览器语音 API），因此这里断言朗读提示本身
+    ['朗读要点（重音/连读）', listenHtml.includes('朗读要点')],
+    ['书面表达分档范文', writingHtml.includes('书面表达') && writingHtml.includes('为什么好')],
+    ['模拟卷结构与听说说明', paperHtml2.includes('试卷结构') && paperHtml2.includes('听说')],
+  ];
+  const engOk = engChecks.every(([, ok]) => ok);
+  console.log(
+    `  ${engOk ? '✅' : '❌'} 接线检查：英语（${engChecks
+      .filter(([, ok]) => !ok)
+      .map(([n]) => n)
+      .join('、') || '七类断言全通过'}）`,
+  );
+  if (!engOk) failed += 1;
 }
 
 if (failed) {

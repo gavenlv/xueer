@@ -2702,6 +2702,48 @@ button.mm-label:hover {
   }
 }
 
+/* ------------------------------- 英语 ------------------------------- */
+/* 英文正文用无衬线、行距放宽；英文单词/短语用深色等宽感强调，便于对照记忆 */
+
+.en-passage {
+  font-size: 15.5px;
+  line-height: 2;
+  letter-spacing: 0.01em;
+}
+
+.en-passage p + p {
+  margin-top: 8px;
+}
+
+.en-word {
+  font-weight: 650;
+  color: var(--c-primary-ink);
+}
+
+.en-options {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.en-options li {
+  padding: 6px 10px;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  font-size: 14px;
+  line-height: 1.7;
+  background: var(--c-surface);
+}
+
+.en-example {
+  font-family: var(--font-sans);
+  line-height: 1.85;
+  color: var(--c-ink-2);
+}
+
 /* ------------------------------- 拓展阅读 ------------------------------- */.ext-list {
   display: flex;
   flex-direction: column;

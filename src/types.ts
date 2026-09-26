@@ -449,8 +449,24 @@ export type HistoryModuleId =
   | 'hist-topics'
   | 'hist-exam';
 
+/**
+ * 英语学科模块 id：**按广州中考知识模块组织，不按教材单元**。
+ *
+ * 用户的要求很明确：广州初中英语用的是沪教牛津版（上海版）教材，但英语学习最需要的
+ * 不是「跟着课本第几单元走」，而是**按中考考什么来组织**——词汇、语法、阅读、听说、
+ * 写作五大知识板块，加上横向串讲的中考专题与整卷模拟。
+ */
+export type EnglishModuleId =
+  | 'eng-vocab'
+  | 'eng-grammar'
+  | 'eng-reading'
+  | 'eng-listening'
+  | 'eng-writing'
+  | 'eng-topics'
+  | 'eng-exam';
+
 /** 全部模块 id；新增学科时在此扩展 */
-export type ModuleId = ChineseModuleId | MathModuleId | HistoryModuleId;
+export type ModuleId = ChineseModuleId | MathModuleId | HistoryModuleId | EnglishModuleId;
 
 interface EntryBase {
   id: string;
@@ -623,6 +639,155 @@ export interface HistoryPaperEntry extends EntryBase {
 
 export type HistoryEntry = HistoryTopicEntry | HistoryPaperEntry;
 
+/* ------------------------------ 英语 ------------------------------ */
+
+/** 英语知识条目的分组（模块页的筛选主标签），如「词根词缀」「时态」「书面表达」 */
+export interface EnglishPoint {
+  level: HistoryLevel;
+  text: string;
+  explain?: string;
+}
+
+/** 词根词缀：一个词缀带一串例词 */
+export interface EnglishAffix {
+  /** 词根/前缀/后缀本身，如 `-less`、`un-`、`spect` */
+  affix: string;
+  /** 词缀类型与含义，如「后缀：无……的」 */
+  meaning: string;
+  examples: { word: string; cn: string }[];
+}
+
+/**
+ * 近义词辨析：学生最需要的是**区别**，所以每条必须给 `diff`（差别在哪）
+ * 与两边各自的例句，而不是简单罗列两个近义词。
+ */
+export interface EnglishConfusable {
+  a: string;
+  b: string;
+  diff: string;
+  exampleA?: string;
+  exampleB?: string;
+}
+
+/** 语法规则：规则 + 形式 + 例句 + 提示 */
+export interface EnglishRule {
+  rule: string;
+  form?: string;
+  example: string;
+  cn?: string;
+  tip?: string;
+}
+
+/** 阅读 / 项目情境读写的语篇 */
+export interface EnglishPassage {
+  title: string;
+  /** 英文正文（段落用 \n 分隔） */
+  text: string;
+  cn?: string;
+  /** 语篇类型：应用文、记叙文、说明文、图表、多模态… */
+  kind?: string;
+  questions?: QuizQuestion[];
+}
+
+/**
+ * 听说材料。
+ *
+ * 本应用**不提供音频文件**，而是把听力材料写成脚本，由 `SpeechBar` 用浏览器内置语音
+ * 朗读出来当「听力音频」用（见 `lib/entrySpeech.ts`）；模仿朗读则给出重音、连读提示。
+ */
+export interface EnglishScript {
+  title: string;
+  /** 英文脚本（段落用 \n 分隔） */
+  text: string;
+  cn?: string;
+  /** 朗读提示：重音、连读、语调 */
+  cues?: string[];
+  tasks?: QuizQuestion[];
+}
+
+/** 书面表达 */
+export interface EnglishWriting {
+  /** 题目要求（中文题干 + 英文要点提示） */
+  topic: string;
+  requirements: string[];
+  /** 分档范文：同一题目的不同档次，让学生看出分差在哪 */
+  samples?: { level: string; text: string; cn?: string; comment: string; highlights?: { sentence: string; why: string }[] }[];
+  /** 可套用的句型与连接词 */
+  usefulExpressions?: string[];
+}
+
+/** 一条英语知识内容（词汇/语法/阅读/听说/写作/专题通用） */
+export interface EnglishKnowledge {
+  id: string;
+  grade: GradeOrAll;
+  /** 知识分组，如「词根词缀」「同义辨析」「时态」「从句」「书面表达」 */
+  unit: string;
+  /** 中文标题 */
+  title: string;
+  /** 英文知识点名或主题词 */
+  enTitle?: string;
+  summary: string;
+  /** 考点分层（与历史同一套：重点/次重点/了解） */
+  points: EnglishPoint[];
+  /** 词根词缀（词汇类） */
+  affixes?: EnglishAffix[];
+  /** 同义词与近义词（含区别） */
+  confusables?: EnglishConfusable[];
+  /** 高频搭配与短语 */
+  collocations?: { phrase: string; cn: string; note?: string }[];
+  /** 语法规则 */
+  rules?: EnglishRule[];
+  /** 易错点 */
+  mistakes?: { wrong: string; right: string; why: string }[];
+  /** 阅读语篇 */
+  passages?: EnglishPassage[];
+  /** 听说脚本 */
+  scripts?: EnglishScript[];
+  /** 书面表达 */
+  writing?: EnglishWriting;
+  /** 应试策略 */
+  examTips?: string[];
+  questions: QuizQuestion[];
+}
+
+/**
+ * 一套英语模拟卷：结构与分值**照 2027—2029 年广州中考英语**设置
+ * （见 `basis` 与 `sections`），`pnpm validate` 会按官方结构验卷。
+ * 听说部分单独成段（模仿朗读 8 + 信息获取 13 + 角色扮演 9 = 30 分）。
+ */
+export interface EnglishPaper {
+  id: string;
+  grade: GradeOrAll;
+  title: string;
+  /** 卷面依据说明 */
+  basis: string;
+  /** 笔试时长（分钟） */
+  duration: number;
+  /** 笔试满分 */
+  totalScore: number;
+  /** 听说满分（0 表示本卷不含听说） */
+  speakingScore?: number;
+  /** 笔试结构 */
+  sections: { name: string; kind: 'choice' | 'blank' | 'short' | 'writing'; count: number; score: number }[];
+  /** 卷内题目（按卷面顺序） */
+  questions: QuizQuestion[];
+  /** 书面表达（写作第三节） */
+  writing?: EnglishWriting;
+  /** 听说材料（若本卷含听说） */
+  listening?: EnglishScript[];
+}
+
+export interface EnglishKnowledgeEntry extends EntryBase {
+  moduleId: Exclude<EnglishModuleId, 'eng-exam'>;
+  data: EnglishKnowledge;
+}
+export interface EnglishPaperEntry extends EntryBase {
+  moduleId: 'eng-exam';
+  data: EnglishPaper;
+}
+
+export type EnglishEntry = EnglishKnowledgeEntry | EnglishPaperEntry;
+
 /* ------------------------------ 数学 ------------------------------ */
 
 /** 公式 / 定理 */
@@ -684,6 +849,7 @@ export type Entry =
   | WritingEntry
   | LiteratureEntry
   | HistoryEntry
+  | EnglishEntry
   | MathEntry;
 
 /** 练习会话中的一道题（带来源信息） */
