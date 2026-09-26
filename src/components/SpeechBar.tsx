@@ -84,6 +84,16 @@ export function SpeechBar({
               ⏹ 停止
             </button>
           </>
+        ) : state.speaking ? (
+          // 正在朗读别的内容（如某个单句）：这里也必须能停，否则点完单句想停却没按钮
+          <>
+            <button className="btn btn--sm" onClick={stopSpeech}>
+              ⏹ 停止朗读
+            </button>
+            <button className="btn btn--sm" onClick={() => speak(segments)}>
+              ▶ {title}（{segments.length} 段）
+            </button>
+          </>
         ) : (
           <button className="btn btn--sm btn--primary" onClick={() => speak(segments)}>
             ▶ {title}（{segments.length} 段）
