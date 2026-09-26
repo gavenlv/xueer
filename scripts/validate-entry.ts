@@ -1217,6 +1217,47 @@ for (const t of crossBookTopics) {
   }
 }
 
+/* --------------- 选择题答案分布（防「全押一个字母」） --------------- */
+
+/**
+ * 题库最容易出的「一眼假」问题：答案全集中在某个字母上，甚至某个字母一次都没出现。
+ * 这不仅让题目显得是凑出来的，还会让学生**靠位置蒙对**——选择题就失去区分度了。
+ *
+ * 实测抓过一次：某册历史初稿 36 道选择题里 B 占 23 道、D 一道没有（已用「重排选项顺序」
+ * 修正，答案分布改为 A6/B10/C10/D10）。这类问题逐题看不出来，只有统计才看得见。
+ * 只报警告不报错：偶尔缺一个字母可能是内容本身决定的。
+ */
+let distWarned = 0;
+const distLines: string[] = [];
+for (const m of ALL_MODULE_IDS) {
+  const qs = allEntries
+    .filter((e) => e.moduleId === m)
+    .flatMap((e) => e.questions)
+    .filter((q) => q.type === 'choice');
+  if (qs.length < 10) continue;
+  const counts = new Map<string, number>();
+  for (const q of qs) counts.set(q.answer, (counts.get(q.answer) ?? 0) + 1);
+  const missing = ['A', 'B', 'C', 'D'].filter((k) => !counts.has(k));
+  const [topLetter, topCount] = [...counts].sort((a, b) => b[1] - a[1])[0] ?? ['-', 0];
+  const ratio = topCount / qs.length;
+  distLines.push(
+    `${m}（${qs.length} 题：${[...counts]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([k, v]) => `${k}${v}`)
+      .join(' ')}）`,
+  );
+  if (missing.length || ratio > 0.45) {
+    distWarned += 1;
+    warn(
+      `[答案分布] ${m}：${qs.length} 道选择题中「${topLetter}」占 ${Math.round(ratio * 100)}%` +
+        `${missing.length ? `，且没有 ${missing.join('/')}` : ''}——学生能靠位置蒙对，建议打乱选项顺序`,
+    );
+  }
+}
+console.log(
+  `  选择题答案分布    ${distWarned} 个模块分布异常（单字母占比 >45% 或某字母完全缺失）`,
+);
+
 /* ------------------------ 汇总报告 ------------------------ */
 
 const perModule = ALL_MODULE_IDS.map((id) => {

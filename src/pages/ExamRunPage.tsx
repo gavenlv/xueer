@@ -17,6 +17,7 @@ import { findPaper } from '../data/history';
 import { useDataScope, DataLoading } from '../lib/useData';
 import { useStudy } from '../store/StudyContext';
 import { OPTION_KEYS, cn, formatClock, pct } from '../lib/utils';
+import { permuteOptions } from '../lib/quiz';
 import { EmptyState, ProgressBar, Tag } from '../components/common';
 import { RichText } from '../components/RichText';
 import { QuizLearnLinks } from '../components/QuizLearnLinks';
@@ -43,12 +44,26 @@ export default function ExamRunPage() {
     [ready, paperId],
   );
 
-  /** 卷面题目：选择题在前，材料题的设问在后（顺序固定，模拟真实卷面） */
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [submitted, setSubmitted] = useState(false);
+  /** 第几次开考：每次重做都换一套选项顺序 */
+  const [attempt, setAttempt] = useState(0);
+
+  /**
+   * 卷面题目：选择题在前，材料题的设问在后（顺序固定，模拟真实卷面）。
+   *
+   * 选择题的**选项每次开考重新打乱**（与练习引擎一致）：题库里正确答案的位置本来
+   * 就有分布偏差（`pnpm validate` 的「选择题答案分布」一项就是在盯这件事），
+   * 若考试页按原始顺序出题，学生「全选 B」就能拿到离谱的分数。
+   * 打乱只改选项次序与答案字母，选项内容与解析不变；`attempt` 变化即重新洗一次。
+   */
   const slots = useMemo<Slot[]>(() => {
     if (!paper) return [];
     const choiceScore = paper.sections.find((s) => s.kind === 'choice')?.score ?? 40;
     const materialScore = paper.sections.find((s) => s.kind === 'material')?.score ?? 30;
-    const choiceQs = paper.questions.filter((q) => q.type === 'choice');
+    const choiceQs = paper.questions
+      .filter((q) => q.type === 'choice')
+      .map((q) => ({ ...q, ...permuteOptions(q) }));
     const perChoice = choiceQs.length ? choiceScore / choiceQs.length : 0;
     const perGroup = paper.materials.length ? materialScore / paper.materials.length : 0;
 
@@ -78,10 +93,8 @@ export default function ExamRunPage() {
       });
     });
     return out;
-  }, [paper]);
+  }, [paper, attempt]);
 
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [submitted, setSubmitted] = useState(false);
   /** 材料题自评结果：true=基本答到 */
   const [selfGraded, setSelfGraded] = useState<Record<string, boolean>>({});
   const [elapsed, setElapsed] = useState(0);
@@ -253,6 +266,7 @@ export default function ExamRunPage() {
                 setSelfGraded({});
                 setSubmitted(false);
                 setElapsed(0);
+                setAttempt((a) => a + 1); // 重做换一套选项顺序
                 startRef.current = Date.now();
               }}
             >
