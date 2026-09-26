@@ -102,9 +102,10 @@ function write(key: string, value: string): void {
 
 /**
  * 朗读轮次令牌：每轮 speak / stop 都会递增。
- * Chrome 里 `synth.cancel()` 会给正在播的 utterance 触发 onend/onerror，
- * 如果不把这些「来自上一轮的回调」作废，回调会继续朗读下一块——
- * 表现就是「点了停止，它又跑到别的地方接着读」。
+ * 旧版用「播完一块靠 onend 再入队下一块」的链式推进，在手机浏览器上
+ * onend/onerror 触发时序不可靠（延迟、丢失、重复），会读乱顺序甚至叠音。
+ * 现改为**一次性把所有块全量入队**：顺序由浏览器语音队列（FIFO）保证，
+ * 回调只负责同步高亮与结束通知，不再驱动播放流程。
  */
 let speakToken = 0;
 
@@ -124,60 +125,58 @@ const browserEngine: SpeechEngine = {
     const token = ++speakToken;
 
     const voice = synth.getVoices().find((v) => v.voiceURI === voiceURI);
-    let i = 0;
-    // 连续失败的块数：系统级 error（切后台、语音服务重启）会连环触发 onerror，
-    // 若照常推进会在几百毫秒内「烧」完整个队列，表现为乱跳/漏读
-    let errStreak = 0;
 
-    const speakNext = () => {
-      if (token !== speakToken) return;
-      if (i >= segments.length) {
-        onEnd();
+    // 展开全部块：段 -> 块，并记录每块属于第几段（高亮「正在读哪一段」用）
+    type QItem = { text: string; segIndex: number };
+    const queue: QItem[] = [];
+    segments.forEach((seg, i) => {
+      for (const text of chunkText(seg.text)) queue.push({ text, segIndex: i });
+    });
+
+    // Chrome 桌面版对过长的语音队列会在 ~15 秒后自动暂停（历史 bug），
+    // 定期 resume() 解锁，读多长的文本都不会卡住；token 变化后自清
+    const heartbeat = window.setInterval(() => {
+      if (token !== speakToken) {
+        window.clearInterval(heartbeat);
         return;
       }
-      onTick(i);
-      const seg = segments[i];
-      const chunks = chunkText(seg.text);
-      let c = 0;
-      const speakChunk = () => {
-        if (token !== speakToken) return;
-        if (c >= chunks.length) {
-          i += 1;
-          speakNext();
-          return;
-        }
-        const u = new SpeechSynthesisUtterance(chunks[c]);
-        u.lang = voice?.lang ?? 'zh-CN';
-        if (voice) u.voice = voice;
-        u.rate = rate;
-        u.pitch = 1;
-        u.onend = () => {
-          if (token !== speakToken) return; // cancel 引起的 onend：不再推进
-          errStreak = 0;
-          c += 1;
-          speakChunk();
-        };
-        u.onerror = () => {
-          if (token !== speakToken) return; // cancel 引起的 onerror：不再推进
-          errStreak += 1;
-          if (errStreak >= 3) {
-            onEnd(); // 连续失败熔断：与其乱跳不如停下
-            return;
-          }
-          c += 1;
-          speakChunk();
-        };
-        synth.speak(u);
-      };
-      speakChunk();
-    };
+      synth.resume();
+    }, 8000);
 
-    speakNext();
+    queue.forEach((item, qi) => {
+      const u = new SpeechSynthesisUtterance(item.text);
+      u.lang = voice?.lang ?? 'zh-CN';
+      if (voice) u.voice = voice;
+      u.rate = rate;
+      u.pitch = 1;
+      u.onstart = () => {
+        if (token !== speakToken) return;
+        onTick(item.segIndex);
+      };
+      u.onend = () => {
+        // cancel 引起的 onend 直接忽略（token 已变），不触发结束通知
+        if (token !== speakToken) return;
+        if (qi === queue.length - 1) {
+          window.clearInterval(heartbeat);
+          onEnd();
+        }
+      };
+      // 单块失败（网络语音抖动等）只跳过这一块，队列其余部分由浏览器继续，
+      // 不再人工推进——避免打乱顺序
+      u.onerror = () => {
+        if (token !== speakToken) return;
+        if (qi === queue.length - 1) {
+          window.clearInterval(heartbeat);
+          onEnd();
+        }
+      };
+      synth.speak(u);
+    });
   },
   pause: () => window.speechSynthesis.pause(),
   resume: () => window.speechSynthesis.resume(),
   stop: () => {
-    const token = ++speakToken; // 先作废所有旧回调
+    const token = ++speakToken; // 作废所有旧回调与心跳
     const synth = window.speechSynthesis;
     synth.resume(); // paused 状态下 cancel 不生效（Chromium），先解除暂停
     synth.cancel();
