@@ -2,10 +2,11 @@
 
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { contentStats, entriesOfModule, entryIndex, extensions, findQuestion, mindMaps, moduleIdsOfSubject } from '../data';
+import { subjectOfModule, findQuestion } from '../data';
 import { SUBJECTS } from '../data/subjects';
-import type { ModuleId } from '../types';
 import { getModuleMeta } from '../data/subjects';
+import { ENTRY_META, MODULE_TOTALS } from '../data/summary';
+import type { ModuleId } from '../types';
 import { useStreak, useStudy } from '../store/StudyContext';
 import { useAuth } from '../auth/AuthContext';
 import { isCloudConfigured } from '../lib/supabase';
@@ -19,8 +20,30 @@ export default function StatsPage() {
   const { state, resetAll } = useStudy();
   const { user } = useAuth();
   const streak = useStreak();
-  /** 学习报告要跨模块汇总（每个模块的进度、掌握度、错题），因此这里加载全部数据 */
-  const ready = useDataScope(moduleIdsOfSubject('chinese').concat(moduleIdsOfSubject('math')));
+  /**
+   * 页面统计几乎全部来自轻量清单 summary（首屏已加载，约 20 kB gzip），
+   * **不必加载任何正文数据**——之前为了算模块进度加载语文+数学全部内容，
+   * 首次打开（清缓存/换设备登录后）要下载数 MB，报告页一等好几秒。
+   * 唯一例外是薄弱知识点：需要错题所属模块的题库才能查到题目标签，
+   * 因此只按需加载错题涉及的模块（通常一两个 chunk）。
+   */
+  const wrongModuleIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const w of Object.values(state.wrong)) if (w.moduleId) ids.add(w.moduleId);
+    return [...ids] as ModuleId[];
+  }, [state.wrong]);
+  const ready = useDataScope(wrongModuleIds);
+
+  /* summary 骨架索引 */
+  const metaById = useMemo(() => new Map(ENTRY_META.map((e) => [e.id, e])), []);
+  const grandTotals = useMemo(
+    () => ({
+      questions: MODULE_TOTALS.reduce((n, m) => n + m.questions, 0),
+      mindMaps: MODULE_TOTALS.reduce((n, m) => n + m.mindMaps, 0),
+      extensions: MODULE_TOTALS.reduce((n, m) => n + m.extensions, 0),
+    }),
+    [],
+  );
 
   /* 累计统计 */
   const totals = useMemo(() => {
@@ -63,20 +86,26 @@ export default function StatsPage() {
 
   const maxAnswered = Math.max(1, ...chart.map((d) => d.answered));
 
-  /* 模块进度：按学科分组，学科无关 */
+  /* 模块进度：条目总数取自轻量清单（含历史等所有学科），已学数按 progress 里的骨架 id 统计 */
   const moduleRows = useMemo(() => {
+    const studiedByModule = new Map<string, number>();
+    for (const e of ENTRY_META) {
+      if ((state.progress[e.id]?.studied ?? 0) > 0) {
+        studiedByModule.set(e.moduleId, (studiedByModule.get(e.moduleId) ?? 0) + 1);
+      }
+    }
     return SUBJECTS.filter((s) => s.available && !s.hidden).map((subject) => ({
       subject,
       rows: subject.modules.map((m) => {
-        const entries = entriesOfModule(m.id as ModuleId);
-        const studied = entries.filter((e) => (state.progress[e.id]?.studied ?? 0) > 0).length;
-        return { id: m.id, meta: m, total: entries.length, studied };
+        const t = MODULE_TOTALS.find((x) => x.id === m.id);
+        return { id: m.id, meta: m, total: t?.entries ?? 0, studied: studiedByModule.get(m.id) ?? 0 };
       }),
     }));
-  }, [state.progress, ready]);
+  }, [state.progress]);
 
-  /* 薄弱知识点：错题标签聚合 */
+  /* 薄弱知识点：错题标签聚合（错题所属模块的数据已按需加载，findQuestion 可查到题目） */
   const weakTags = useMemo(() => {
+    if (!ready) return [];
     const counts = new Map<string, number>();
     for (const w of Object.values(state.wrong)) {
       const found = findQuestion(w.questionId);
@@ -88,14 +117,14 @@ export default function StatsPage() {
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
   }, [state.wrong, ready]);
 
-  /* 收藏 */
+  /* 收藏：从轻量清单取骨架信息，不必加载任何正文 */
   const starred = useMemo(
     () =>
       Object.entries(state.progress)
         .filter(([, p]) => p.starred)
-        .map(([id]) => entryIndex.get(id))
+        .map(([id]) => metaById.get(id))
         .filter(Boolean),
-    [state.progress, ready],
+    [state.progress, metaById],
   );
 
   const hasData = totals.answered > 0 || totals.studied > 0;
@@ -159,7 +188,7 @@ export default function StatsPage() {
                 label="总正确率"
                 tone="#1a9a6c"
               />
-              <Stat value={totals.studied} label={`已学内容 / ${entryIndex.size}`} />
+              <Stat value={totals.studied} label={`已学内容 / ${ENTRY_META.length}`} />
               <Stat value={totals.recited} label="背诵打卡" tone="#7355cf" />
               <Stat value={totals.wrong} label="当前错题" tone="#d24f3d" />
             </div>
@@ -271,8 +300,8 @@ export default function StatsPage() {
               </div>
             ))}
             <div className="small muted" style={{ marginTop: 6 }}>
-              题库共 {contentStats.questions} 道练习题 · {entryIndex.size} 条学习内容 ·{' '}
-              {mindMaps.length} 张导图 · {extensions.length} 篇拓展
+              题库共 {grandTotals.questions} 道练习题 · {ENTRY_META.length} 条学习内容 ·{' '}
+              {grandTotals.mindMaps} 张导图 · {grandTotals.extensions} 篇拓展
             </div>
           </section>
 
@@ -301,7 +330,11 @@ export default function StatsPage() {
               <div style={{ marginTop: 4 }}>
                 {starred.map((e) =>
                   e ? (
-                    <Link className="list-item" key={e.id} to={`/s/chinese/${e.moduleId}/${e.id}`}>
+                    <Link
+                      className="list-item"
+                      key={e.id}
+                      to={`/s/${subjectOfModule(e.moduleId) ?? 'chinese'}/${e.moduleId}/${e.id}`}
+                    >
                       <span className="list-item__index">
                         {getModuleMeta(e.moduleId)?.module.icon}
                       </span>
