@@ -42,6 +42,9 @@ export function SpeechBar({
   const [open, setOpen] = useState(false);
   const [voices, setVoices] = useState(() => engine.voices());
 
+  // 离开详情页时彻底停止朗读，别让声音跟着用户「跑」到别的页面
+  useEffect(() => () => stopSpeech(), []);
+
   // 浏览器语音列表异步就绪，隔一段时间再取一次
   useEffect(() => {
     const t = window.setTimeout(() => setVoices(engine.voices()), 600);

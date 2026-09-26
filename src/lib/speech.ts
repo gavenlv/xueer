@@ -119,11 +119,15 @@ const browserEngine: SpeechEngine = {
   },
   speak(segments, { rate, voiceURI, onTick, onEnd }) {
     const synth = window.speechSynthesis;
+    synth.resume(); // Chromium：paused 状态下 cancel() 不生效，先解除暂停再清队列
     synth.cancel();
     const token = ++speakToken;
 
     const voice = synth.getVoices().find((v) => v.voiceURI === voiceURI);
     let i = 0;
+    // 连续失败的块数：系统级 error（切后台、语音服务重启）会连环触发 onerror，
+    // 若照常推进会在几百毫秒内「烧」完整个队列，表现为乱跳/漏读
+    let errStreak = 0;
 
     const speakNext = () => {
       if (token !== speakToken) return;
@@ -149,11 +153,17 @@ const browserEngine: SpeechEngine = {
         u.pitch = 1;
         u.onend = () => {
           if (token !== speakToken) return; // cancel 引起的 onend：不再推进
+          errStreak = 0;
           c += 1;
           speakChunk();
         };
         u.onerror = () => {
           if (token !== speakToken) return; // cancel 引起的 onerror：不再推进
+          errStreak += 1;
+          if (errStreak >= 3) {
+            onEnd(); // 连续失败熔断：与其乱跳不如停下
+            return;
+          }
           c += 1;
           speakChunk();
         };
@@ -167,8 +177,14 @@ const browserEngine: SpeechEngine = {
   pause: () => window.speechSynthesis.pause(),
   resume: () => window.speechSynthesis.resume(),
   stop: () => {
-    speakToken += 1; // 先作废所有旧回调，再清队列
-    window.speechSynthesis.cancel();
+    const token = ++speakToken; // 先作废所有旧回调
+    const synth = window.speechSynthesis;
+    synth.resume(); // paused 状态下 cancel 不生效（Chromium），先解除暂停
+    synth.cancel();
+    // 部分安卓机型 cancel 延迟生效，稍后再补一刀；若期间开启了新一轮朗读则不补
+    window.setTimeout(() => {
+      if (token === speakToken) synth.cancel();
+    }, 200);
   },
 };
 
