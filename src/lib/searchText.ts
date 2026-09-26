@@ -167,6 +167,47 @@ export function searchTextOf(entry: Entry): string {
       ]);
       break;
     }
+    /**
+     * 道德与法治：把「学生要背、要查的东西」全放进索引——
+     * 主线、核心观点、必背金句、易错辨析、对比表、时政热点与答题角度、材料与设问。
+     * 学生常按一个提法去找（如「全过程人民民主」「总体国家安全观」），
+     * 只有把这些规范表述全进索引，才搜得到对应单元。
+     */
+    case 'pol-growth':
+    case 'pol-moral':
+    case 'pol-law':
+    case 'pol-nation':
+    case 'pol-current':
+    case 'pol-exam': {
+      // pol-exam 里既有整卷模拟（有 sections），也有题型专题知识条目：
+      // 按数据形状分流，两者都要能搜到。
+      if ('sections' in entry.data) {
+        const p = entry.data;
+        text = join([
+          p.title,
+          p.basis,
+          p.questions.map((q) => `${q.stem}${(q.options ?? []).join('')}`),
+          (p.materials ?? []).map((m) => `${m.material}${m.questions.map((q) => q.stem).join('')}`),
+        ]);
+        break;
+      }
+      const t = entry.data;
+      text = join([
+        t.title,
+        t.unit,
+        t.mainline,
+        t.points.map((p) => `${p.level}${p.text}${p.explain ?? ''}`),
+        t.keySentences,
+        t.confusions?.map((c) => `${c.wrong}${c.right}${c.why}`),
+        t.compares?.map((c) => `${c.title}${c.aspect}${c.rows.map((r) => `${r.item}${r.left}${r.right}`).join('')}`),
+        t.examAngles?.map((a) => `${a.angle}${a.detail}`),
+        t.hotspots?.map(
+          (h) => `${h.event}${h.background}${h.angles.map((a) => `${a.angle}${a.point}${a.answer}`).join('')}`,
+        ),
+        t.materials?.map((m) => `${m.material}${m.questions.map((q) => q.stem).join('')}`),
+      ]);
+      break;
+    }
     default: {
       // 数学：${...}$ 公式源码也进检索文本，学生可以按符号找知识点
       const m = entry.data as {

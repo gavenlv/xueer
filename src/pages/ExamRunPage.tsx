@@ -39,11 +39,12 @@ interface Slot {
  */
 function scopeOfPaper(paperId: string): ModuleScope {
   if (paperId.startsWith('eng-')) return ['eng-exam'];
+  if (paperId.startsWith('pol-')) return ['pol-exam'];
   if (paperId.startsWith('paper-')) return ['hist-exam'];
-  return ['hist-exam', 'eng-exam'];
+  return ['hist-exam', 'eng-exam', 'pol-exam'];
 }
 
-type ModuleScope = ('hist-exam' | 'eng-exam')[];
+type ModuleScope = ('hist-exam' | 'eng-exam' | 'pol-exam')[];
 
 export default function ExamRunPage() {
   const { paperId = '' } = useParams();

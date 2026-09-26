@@ -533,6 +533,89 @@ function englishMap(entry: Entry): MindNode[] {
   return kids;
 }
 
+/**
+ * 道德与法治的一条内容：按**备考八块**成图（与历史那张图同一骨架）。
+ *
+ * 道法学生复习时最需要「这一单元要背哪几句观点」与「这一单元考什么题」，
+ * 因此图里把「核心观点分层」「必背金句」「易错辨析」「时政角度」单列成分支。
+ */
+function politicsMap(entry: Entry): MindNode[] {
+  const d = entry.data as {
+    unit?: string;
+    mainline?: string;
+    points?: { level: string; text: string; explain?: string }[];
+    keySentences?: string[];
+    confusions?: { wrong: string; right: string; why: string }[];
+    compares?: { title: string; aspect: string }[];
+    examAngles?: { angle: string; detail: string }[];
+    hotspots?: { event: string; angles: { angle: string; point: string }[] }[];
+    materials?: { questions: { id: string }[] }[];
+  };
+  const kids: MindNode[] = [];
+
+  kids.push(node('这一条是什么', d.unit, [node('主线', d.mainline)]));
+
+  if (d.points?.length) {
+    const levels: [string, string][] = [
+      ['重点', '必须能默写出来'],
+      ['次重点', '要能再认与简述'],
+      ['了解', '背景知识'],
+    ];
+    const levelKids = levels
+      .map(([lv, hint]) => {
+        const list = d.points!.filter((p) => p.level === lv);
+        if (!list.length) return null;
+        return node(`${lv}（${list.length}）`, hint, list.map((p) => asItem(p.text, 16, 120)));
+      })
+      .filter((x): x is MindNode => x !== null);
+    if (levelKids.length) kids.push(node('核心观点分层', '答题卡的规范表述', levelKids));
+  }
+
+  if (d.keySentences?.length) {
+    kids.push(node('必背金句', '材料题的分数落在这几句上', d.keySentences.map((k) => asItem(k, 16, 130))));
+  }
+  if (d.confusions?.length) {
+    kids.push(
+      node(
+        '易错辨析',
+        `${d.confusions.length} 组`,
+        d.confusions.map((c) => node(clip(c.wrong, 16), `正确：${c.right}`, undefined, 85)),
+      ),
+    );
+  }
+  if (d.compares?.length) {
+    kids.push(node('关联与对比', `${d.compares.length} 组`, d.compares.map((c) => node(clip(c.title, 18), c.aspect))));
+  }
+  if (d.hotspots?.length) {
+    kids.push(
+      node(
+        '时政热点与角度',
+        `${d.hotspots.length} 个`,
+        d.hotspots.map((h) =>
+          node(clip(h.event, 18), undefined, h.angles.slice(0, 6).map((a) => node(clip(a.angle, 16), clip(a.point, 90)))),
+        ),
+      ),
+    );
+  }
+  if (d.examAngles?.length) {
+    kids.push(
+      node(
+        '命题角度与考法',
+        `${d.examAngles.length} 条`,
+        d.examAngles.map((a) => node(clip(a.angle, 16), clip(a.detail, 120))),
+      ),
+    );
+  }
+  if (d.materials?.length) {
+    const asks = d.materials.reduce((n, m) => n + m.questions.length, 0);
+    kids.push(
+      node('材料大题', `${d.materials.length} 组 · ${asks} 问`, [node('观点 + 材料依据 + 结论', '按分值分点作答')]),
+    );
+  }
+
+  return kids;
+}
+
 /* -------------------------------- 入口 --------------------------------- */
 
 /**
@@ -588,6 +671,15 @@ export function lessonMindMap(entry: Entry): MindMap | null {
     case 'eng-topics':
       kids = englishMap(entry);
       summary = '这一个知识点考什么、怎么判断、怎么用，一张图串起来';
+      break;
+    // 道德与法治（成长/道德/法治/国情/时政）：与历史那张图同一骨架
+    case 'pol-growth':
+    case 'pol-moral':
+    case 'pol-law':
+    case 'pol-nation':
+    case 'pol-current':
+      kids = politicsMap(entry);
+      summary = '主线、核心观点、必背金句与考法，一张图先把该背的立起来';
       break;
     default:
       return null;

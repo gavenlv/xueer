@@ -21,7 +21,10 @@ import {
 } from '../src/data';
 import { allPoems } from '../src/data/chinese';
 import { allTopics, allPapers } from '../src/data/history';
-import type { EnglishKnowledge, EnglishPaper } from '../src/types';
+// allTopics 含 pol-exam 的「题型专题」（与整卷共用 pol-exam），allPapers 只含卷子：
+// 校验卷面结构必须从 allPapers 取，不能按 moduleId === 'pol-exam' 从条目里筛。
+import { allPapers as polPapers, allTopics as polTopics } from '../src/data/politics';
+import type { EnglishKnowledge, EnglishPaper, PoliticsPaper } from '../src/types';
 import { BOOK_EXAM_POINT_TAGS } from '../src/lib/bookExams';
 import { DAILY_LINES, ENTRY_META, MODULE_TOTALS } from '../src/data/summary';
 import { lessonMindMap } from '../src/lib/lessonMaps';
@@ -359,6 +362,8 @@ let suppEmpty = 0;
 const suppEmptyIds: string[] = [];
 let suppBadGroup = 0;
 let suppAsym = 0;
+/** 「同一考点」分组的关联条数（降噪规则的直接体现） */
+let suppSamePoint = 0;
 const suppLink = new Map<string, Set<string>>();
 /** 「相关文学常识」的入边：被哪些条目关联到（用于发现写了却关联不上的常识条目） */
 const litInbound = new Map<string, string[]>();
@@ -445,6 +450,8 @@ for (const e of allEntries) {
     }
     suppGroups.set(g.kind, (suppGroups.get(g.kind) ?? 0) + g.items.length);
     suppTotal += g.items.length;
+    // 「同一考点」是靠稀有标签挑出来的，数量直接反映降噪规则的松紧，单独统计给报告用
+    if (g.kind === '同一考点') suppSamePoint += g.items.length;
 
     for (const it of g.items) {
       if (!it.entry) {
@@ -1710,6 +1717,161 @@ console.log(
     `（${[...engWordByUnit].map(([k, v]) => `${k} ${v}`).join(' · ')}）`,
 );
 
+/* --------------- 道德与法治：备考八块 + 按官方结构验卷 --------------- */
+
+/**
+ * 道法与历史同一套要求：每条内容给全「备考八块」，模拟卷按官方结构验卷。
+ *
+ * 官方结构（穗教规字〔2025〕1 号附件 2）：单项选择 17 小题 34 分 +
+ * 非选择题（阅读材料，回答问题）3 小题 36 分 = 全卷 20 小题 70 分，闭卷 60 分钟，
+ * 与历史同场分卷。道法的特点是**非选择题分值过半**，所以材料题的参考答案与踩分点
+ * 是这一科的核心资产，缺了就等于白做。
+ */
+const POLITICS_STRUCTURE = {
+  choice: { count: 17, score: 34 },
+  material: { count: 3, score: 36 },
+  totalQuestions: 20,
+  totalScore: 70,
+  duration: 60,
+};
+
+const politicsTopics = polTopics;
+const POLITICS_TEXTBOOK_MODULES = ['pol-growth', 'pol-moral', 'pol-law', 'pol-nation'];
+let polBad = 0;
+let polPoints = 0;
+let polKeySentences = 0;
+let polMaterialGroups = 0;
+let polAsks = 0;
+let polHotspots = 0;
+let polAngles = 0;
+/** 考点分层统计（与历史同口径：重点 / 次重点 / 了解） */
+const polLevels: Record<string, number> = { 重点: 0, 次重点: 0, 了解: 0 };
+let polConfusions = 0;
+let polCompares = 0;
+
+for (const t of politicsTopics) {
+  const at = `[道法] ${t.id}`;
+  const isCurrent = t.id.startsWith('pol-current');
+  const need = (cond: boolean, msg: string) => {
+    if (!cond) {
+      polBad += 1;
+      err(`${at}: ${msg}`);
+    }
+  };
+
+  need(Boolean(t.mainline?.trim()), '缺少主线（mainline）');
+  need(Boolean(t.unit?.trim()), '缺少单元/专题分组（unit，会作为模块页筛选主标签）');
+  need(t.points.length >= 5, `核心观点只有 ${t.points.length} 条（应 ≥5）`);
+  need(t.points.filter((p) => p.level === '重点').length >= 3, '「重点」不足 3 条');
+  need((t.keySentences?.length ?? 0) >= 3, `必背金句不足 3 条（只有 ${t.keySentences?.length ?? 0}）`);
+  need((t.confusions?.length ?? 0) >= 2, '易错辨析不足 2 条');
+  need((t.compares?.length ?? 0) >= 1, '缺少关联与对比表');
+  need((t.examAngles?.length ?? 0) >= 2, '命题角度不足 2 条');
+  need((t.materials?.length ?? 0) >= 1, '缺少材料大题');
+  need(t.questions.length >= 5, `选择题不足 5 道（只有 ${t.questions.length}）`);
+  if (isCurrent) {
+    need((t.hotspots?.length ?? 0) >= 1, '时政专题条目缺少 hotspots（时政热点与答题角度）');
+  }
+
+  polPoints += t.points.length;
+  polKeySentences += t.keySentences?.length ?? 0;
+  polAngles += t.examAngles?.length ?? 0;
+  polHotspots += t.hotspots?.length ?? 0;
+
+  for (const p of t.points) {
+    if (!['重点', '次重点', '了解'].includes(p.level)) err(`${at}: 考点层级非法「${p.level}」`);
+    else polLevels[p.level] += 1;
+    if (!p.text?.trim()) err(`${at}: 有核心观点没有内容`);
+  }
+  polConfusions += t.confusions?.length ?? 0;
+  polCompares += t.compares?.length ?? 0;
+  for (const c of t.compares ?? []) {
+    if (!c.rows?.length) err(`${at}: 对比表「${c.title}」没有行`);
+  }
+  for (const h of t.hotspots ?? []) {
+    if (!h.event?.trim() || !h.background?.trim()) err(`${at}: 时政热点缺少事件或背景`);
+    if ((h.angles?.length ?? 0) < 3) err(`${at}: 时政热点「${h.event}」答题角度不足 3 个`);
+    for (const a of h.angles ?? []) {
+      if (!a.point?.trim() || !a.answer?.trim()) {
+        err(`${at}: 时政热点「${h.event}」的角度「${a.angle}」缺少教材考点或答案`);
+      }
+    }
+  }
+  for (const g of t.materials ?? []) {
+    polMaterialGroups += 1;
+    polAsks += g.questions.length;
+    if (g.questions.length < 2) err(`${at}: 材料组 ${g.id} 只有 ${g.questions.length} 个设问（应 ≥2）`);
+    if (!g.material?.includes('【材料')) warn(`${at}: 材料组 ${g.id} 未用【材料一】标注材料`);
+    for (const q of g.questions) {
+      if (!q.answer?.trim()) err(`${at}: 材料设问 ${q.id} 没有参考答案`);
+      if (!q.rubric?.length) err(`${at}: 材料设问 ${q.id} 没有踩分点`);
+    }
+  }
+}
+
+/* 道法模拟卷：按官方结构验卷 */
+const politicsPapers = polPapers;
+let polPaperBad = 0;
+for (const p of politicsPapers) {
+  const at = `[道法·模拟卷] ${p.id}`;
+  const choice = p.sections.find((s) => s.kind === 'choice');
+  const material = p.sections.find((s) => s.kind === 'material');
+  const scoreSum = p.sections.reduce((n, s) => n + s.score, 0);
+  const countSum = p.sections.reduce((n, s) => n + s.count, 0);
+  const choiceQs = p.questions.filter((q) => q.type === 'choice').length;
+  const check = (cond: boolean, msg: string) => {
+    if (!cond) {
+      polPaperBad += 1;
+      err(`${at}: ${msg}`);
+    }
+  };
+  check(p.totalScore === POLITICS_STRUCTURE.totalScore, `全卷 ${p.totalScore} 分 ≠ ${POLITICS_STRUCTURE.totalScore} 分`);
+  check(scoreSum === POLITICS_STRUCTURE.totalScore, `各节分值合计 ${scoreSum} ≠ ${POLITICS_STRUCTURE.totalScore}`);
+  check(p.duration === POLITICS_STRUCTURE.duration, `时长 ${p.duration} 分钟 ≠ ${POLITICS_STRUCTURE.duration}`);
+  check(
+    countSum === POLITICS_STRUCTURE.totalQuestions,
+    `全卷小题 ${countSum} ≠ ${POLITICS_STRUCTURE.totalQuestions}`,
+  );
+  check(
+    choice?.count === POLITICS_STRUCTURE.choice.count && choice?.score === POLITICS_STRUCTURE.choice.score,
+    `选择题结构应为 ${POLITICS_STRUCTURE.choice.count} 题 ${POLITICS_STRUCTURE.choice.score} 分，实际 ${choice?.count} 题 ${choice?.score} 分`,
+  );
+  check(
+    material?.count === POLITICS_STRUCTURE.material.count && material?.score === POLITICS_STRUCTURE.material.score,
+    `非选择题结构应为 ${POLITICS_STRUCTURE.material.count} 题 ${POLITICS_STRUCTURE.material.score} 分，实际 ${material?.count} 题 ${material?.score} 分`,
+  );
+  check(choiceQs === POLITICS_STRUCTURE.choice.count, `卷内选择题 ${choiceQs} 道 ≠ ${POLITICS_STRUCTURE.choice.count} 道`);
+  check(p.materials.length === POLITICS_STRUCTURE.material.count, `材料题 ${p.materials.length} 组 ≠ ${POLITICS_STRUCTURE.material.count} 组`);
+  check(p.basis.includes('广州'), 'basis 缺少「按广州中考结构命题」的说明');
+  check(p.basis.includes('原创') || p.basis.includes('非历年真题'), 'basis 必须写明原创仿真、非历年真题');
+  for (const g of p.materials) {
+    for (const q of g.questions) {
+      if (!q.answer?.trim() || !q.rubric?.length) err(`${at}: 材料设问 ${q.id} 缺少参考答案或踩分点`);
+    }
+  }
+}
+
+// 教材四块不得为空（新科目最容易漏一册）
+const emptyPolModules = POLITICS_TEXTBOOK_MODULES.filter(
+  (m) => !allEntries.some((e) => e.moduleId === m),
+);
+if (emptyPolModules.length) err(`[道法] 下列教材模块没有任何内容：${emptyPolModules.join('、')}`);
+
+console.log(
+  `  道法备考          ${politicsTopics.length} 个单元/专题 / ${politicsPapers.length} 套卷` +
+    `（异常 ${polBad + polPaperBad} 处）`,
+);
+console.log(
+  `      核心观点与金句     观点 ${polPoints} 条 · 必背金句 ${polKeySentences} 句 · 命题角度 ${polAngles} 条 · 时政热点 ${polHotspots} 个`,
+);
+console.log(
+  `      分层考点           重点 ${polLevels['重点']} · 次重点 ${polLevels['次重点']} · 了解 ${polLevels['了解']}` +
+    `（易错辨析 ${polConfusions} 条 · 对比表 ${polCompares} 张）`,
+);
+console.log(
+  `      材料大题           ${polMaterialGroups} 组 / ${polAsks} 问（参考答案与踩分点齐全）`,
+);
+
 /* ------------------------ 汇总报告 ------------------------ */
 
 const perModule = ALL_MODULE_IDS.map((id) => {
@@ -1872,6 +2034,25 @@ console.log(
 console.log(
   `  知识联动         学一补多 ${suppTotal} 条 / 关联学习 ${relTotal} 条`,
 );
+{
+  /**
+   * 题库里的**知识点标签**总数与稀有标签数。
+   * 「同一考点」分组只认有区分度的标签（权重要求见 lib/relations.ts），
+   * 这个数字直接用来说明「为什么不能拿『实词』这种标签做关联」——降到多少条有意义关联，
+   * 与标签基数直接相关，所以顺手打印出来，别让 README 里再出现手抄的旧数字。
+   */
+  const tagFreq = new Map<string, number>();
+  for (const e of FULL_POOL) for (const t of e.qTags) tagFreq.set(t, (tagFreq.get(t) ?? 0) + 1);
+  const rare = [...tagFreq.values()].filter((n) => n <= 8).length;
+  const perEntry = (suppTotal / allEntries.length).toFixed(1);
+  console.log(
+    `      ${'知识点标签'.padEnd(22)} 题库共 ${tagFreq.size} 个` +
+      `（其中 ${rare} 个为稀有标签，覆盖条目数 ≤8）· 每条内容平均补出 ${perEntry} 个知识点`,
+  );
+  console.log(
+    `      ${'同一考点关联'.padEnd(22)} ${suppSamePoint} 条（只有「有区分度」的标签才成组）`,
+  );
+}
 console.log(
   `      ${'自指'.padEnd(22)} ${String(suppSelfRef + relSelfRef).padStart(4)}` +
     `   重复 ${suppDup}   空分组条目 ${suppEmpty}   不对称 ${suppAsym}   缺理由 ${relNoReason}`,

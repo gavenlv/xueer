@@ -23,6 +23,7 @@ import RecitePage from './pages/RecitePage';
 import ExamPage from './pages/ExamPage';
 import ExamRunPage from './pages/ExamRunPage';
 import HistoryReviewPage from './pages/HistoryReviewPage';
+import PoliticsReviewPage from './pages/PoliticsReviewPage';
 import AccountPage from './pages/AccountPage';
 import NotFound from './pages/NotFound';
 
@@ -34,6 +35,8 @@ import NotFound from './pages/NotFound';
 function SubjectExamRoute() {
   const { subjectId = 'chinese' } = useParams();
   if (subjectId === 'history') return <HistoryReviewPage />;
+  // 道法与历史同构：核心观点分层 + 必背金句 + 时政角度 + 材料大题
+  if (subjectId === 'politics') return <PoliticsReviewPage />;
   return <ExamPage />;
 }
 

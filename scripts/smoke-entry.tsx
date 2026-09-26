@@ -97,6 +97,9 @@ const routes: string[] = [
   '/exam-run/paper-01',
   // 英语：整卷模拟考试（同一套考试页，卷子来自英语数据）
   '/exam-run/eng-paper-01',
+  // 道法：考点与考情总复习 + 整卷模拟考试
+  '/s/politics/exam',
+  '/exam-run/pol-paper-01',
   '/exam-run/不存在的卷子',
   '/practice/vocab?tag=%E5%BD%A2%E5%A3%B0%E5%AD%97&grade=all',
   '/this-route-does-not-exist',
@@ -784,6 +787,62 @@ if (!progressTarget) {
       .join('、') || '七类断言全通过'}）`,
   );
   if (!engOk) failed += 1;
+
+  /* ------------- 接线检查：道法备考八块（与历史同一套结构） ------------- */
+
+  /**
+   * 道法与历史同构：主线、核心观点分层、必背金句、易错、对比、时政角度、命题角度、材料大题。
+   * 这些块「渲染失败也不报错」——金句没了、材料题没渲出来，页面照样显示，
+   * 只是学生复习时发现少了最要紧的东西。因此逐块断言。
+   */
+  const polTopic = allEntries.find((e) => e.moduleId === 'pol-nation');
+  const polCurrent = allEntries.find(
+    (e) => e.moduleId === 'pol-current' && ((e.data as { hotspots?: unknown[] }).hotspots?.length ?? 0) > 0,
+  );
+  // pol-exam 里既有整卷也有题型专题，按数据形状取卷子（否则抓到专题，结构表断言会假失败）
+  const polPaper = allEntries.find((e) => e.moduleId === 'pol-exam' && 'sections' in e.data);
+  const renderPol = (id: string) =>
+    renderToString(
+      <MemoryRouter
+        initialEntries={[`/s/politics/${allEntries.find((x) => x.id === id)?.moduleId ?? 'pol-nation'}/${id}`]}
+      >
+        <AppWithProviders />
+      </MemoryRouter>,
+    ).replace(/<!--[\s\S]*?-->/g, '');
+  const polHtml = polTopic ? renderPol(polTopic.id) : '';
+  const polCurrentHtml = polCurrent ? renderPol(polCurrent.id) : '';
+  const polPaperHtml = polPaper ? renderPol(polPaper.id) : '';
+  // pol-exam 里的「题型专题」是知识条目（无 sections），要与整卷走同一路由但不串渲染
+  const polStrategy = allEntries.find((e) => e.moduleId === 'pol-exam' && !('sections' in e.data));
+  const polStrategyHtml = polStrategy ? renderPol(polStrategy.id) : '';
+  const polReviewHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/politics/exam']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+
+  const polChecks: [string, boolean][] = [
+    ['道法详情页有主线', polHtml.includes('这一条的主线')],
+    ['核心观点与考点分层', polHtml.includes('核心观点与考点分层') && polHtml.includes('只看重点')],
+    ['必背金句与答题术语', polHtml.includes('必背金句')],
+    ['易错辨析与关联对比', polHtml.includes('易错辨析') && polHtml.includes('关联与对比')],
+    ['材料大题与踩分点入口', polHtml.includes('材料大题') && polHtml.includes('看参考答案与踩分点')],
+    ['时政热点与答题角度', polCurrentHtml.includes('时政热点与答题角度')],
+    ['考点与考情总复习页', polReviewHtml.includes('道法考点与考情总复习') && polReviewHtml.includes('70 分')],
+    ['模拟卷结构表', polPaperHtml.includes('试卷结构') && polPaperHtml.includes('非选择题')],
+    [
+      'pol-exam 题型专题按知识条目渲染',
+      polStrategyHtml.includes('核心观点与考点分层') && !polStrategyHtml.includes('试卷结构'),
+    ],
+  ];
+  const polOk = polChecks.every(([, ok]) => ok);
+  console.log(
+    `  ${polOk ? '✅' : '❌'} 接线检查：道法备考（${polChecks
+      .filter(([, ok]) => !ok)
+      .map(([n]) => n)
+      .join('、') || '九类断言全通过'}）`,
+  );
+  if (!polOk) failed += 1;
 }
 
 if (failed) {

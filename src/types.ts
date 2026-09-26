@@ -870,6 +870,90 @@ export interface EnglishPaperEntry extends EntryBase {
 
 export type EnglishEntry = EnglishKnowledgeEntry | EnglishPaperEntry;
 
+/* ------------------------------ 道德与法治 ------------------------------ */
+
+/**
+ * 时政热点：道法中考试题的「材料」几乎都是当年的时政事件，
+ * 因此热点条目要写清「事件是什么 + 可以从哪几个教材考点切入答题」。
+ */
+export interface PoliticsHotspot {
+  /** 热点名称，如「全过程人民民主的基层实践」 */
+  event: string;
+  /** 背景与关键事实（写清可核查的公开信息，不编造细节） */
+  background: string;
+  /** 答题角度：每个角度对应一个教材考点 + 怎么说 */
+  angles: { angle: string; point: string; answer: string }[];
+}
+
+/**
+ * 一条道法内容（一个教材单元或一个专题）。
+ *
+ * 与历史条目同一套骨架（主线 → 分层考点 → 必背结论 → 易错 → 对比 → 考法 → 材料题），
+ * 但道法的「时空坐标」换成了**核心观点与金句**：这一科考的是价值判断与规范表述，
+ * 学生要能把教材上的结论准确写进答题卡，而不是背年份。
+ */
+export interface PoliticsTopic {
+  id: string;
+  grade: GradeOrAll;
+  title: string;
+  /** 所属教材单元或专题分组（作为模块页的筛选主标签） */
+  unit: string;
+  /** 一句话主线：这一单元在讲什么、为什么重要 */
+  mainline: string;
+  /** 核心观点与考点分层（重点/次重点/了解） */
+  points: PoliticsPoint[];
+  /** 必背金句与答题术语（材料题直接能用的规范表述） */
+  keySentences?: string[];
+  /** 易错辨析 */
+  confusions?: { wrong: string; right: string; why: string }[];
+  /** 关联与对比（跨单元/跨册/概念对照） */
+  compares?: HistoryCompare[];
+  /** 命题角度与考法 */
+  examAngles?: HistoryExamAngle[];
+  /** 时政热点与答题角度（时政专题条目用） */
+  hotspots?: PoliticsHotspot[];
+  /** 材料大题（阅读材料，回答问题） */
+  materials?: HistoryMaterialGroup[];
+  questions: QuizQuestion[];
+}
+
+/** 核心观点：与历史同一套层级词，但内容是一句可作答的规范表述 */
+export interface PoliticsPoint {
+  level: HistoryLevel;
+  text: string;
+  explain?: string;
+}
+
+/** 道法模拟卷：结构与历史类似（选择 + 材料题），分值照官方结构 */
+export interface PoliticsPaper {
+  id: string;
+  grade: GradeOrAll;
+  title: string;
+  basis: string;
+  duration: number;
+  totalScore: number;
+  sections: { name: string; kind: 'choice' | 'material'; count: number; score: number }[];
+  materials: HistoryMaterialGroup[];
+  questions: QuizQuestion[];
+}
+
+export interface PoliticsTopicEntry extends EntryBase {
+  /**
+   * 知识条目可以落在**任意**道法模块——包括 `pol-exam`。
+   * `pol-exam` 里除整卷模拟外还有「题型专题」这类知识条目（卷面时间分配、非选择题
+   * 答题模板、材料读题与取材）。因此它与 PoliticsPaperEntry 共用 `pol-exam`，
+   * 渲染时按数据形状区分（有 `sections` 的是卷子，否则是知识条目）。
+   */
+  moduleId: PoliticsModuleId;
+  data: PoliticsTopic;
+}
+export interface PoliticsPaperEntry extends EntryBase {
+  moduleId: 'pol-exam';
+  data: PoliticsPaper;
+}
+
+export type PoliticsEntry = PoliticsTopicEntry | PoliticsPaperEntry;
+
 /* ------------------------------ 数学 ------------------------------ */
 
 /** 公式 / 定理 */
@@ -932,6 +1016,7 @@ export type Entry =
   | LiteratureEntry
   | HistoryEntry
   | EnglishEntry
+  | PoliticsEntry
   | MathEntry;
 
 /** 练习会话中的一道题（带来源信息） */

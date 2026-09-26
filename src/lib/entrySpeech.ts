@@ -184,15 +184,37 @@ export function speechSegmentsOf(entry: Entry): SpeechSegment[] {
         break;
       }
 
-      // 模拟卷（历史）：读卷面说明 + 材料 + 设问。
-      // 20 道选择题的题干与选项**不**送进语音：考试卷是拿来做的，逐题念出来只是噪音。
-      const historyPaper = entry.data as {
+      // 模拟卷（历史/道法）：读卷面说明 + 材料 + 设问。
+      // 选择题的题干与选项**不**送进语音：考试卷是拿来做的，逐题念出来只是噪音。
+      const materialPaper = entry.data as {
         basis?: string;
         materials?: { material?: string; questions: { stem: string }[] }[];
       };
-      if (Array.isArray(historyPaper.materials) && historyPaper.materials.some((m) => m.questions)) {
-        push(out, 'basis', historyPaper.basis, '卷面说明');
-        historyPaper.materials.forEach((m, i) => {
+      if (Array.isArray(materialPaper.materials) && materialPaper.materials.some((m) => m.questions)) {
+        push(out, 'basis', materialPaper.basis, '卷面说明');
+        materialPaper.materials.forEach((m, i) => {
+          push(out, `mat-${i}`, m.material, `材料${i + 1}`);
+          m.questions.forEach((q, k) =>
+            push(out, `mat-${i}-q${k}`, q.stem, `第 ${i + 1} 题第 ${k + 1} 问`),
+          );
+        });
+        break;
+      }
+
+      /**
+       * 道德与法治：按备考顺序读——主线 → 必背金句 → 材料与设问。
+       * 核心观点与对比表是「看」的（要看层级与表格），逐条念出来反而听不清主次；
+       * **金句最值得听**：道法材料题的分数就落在那几句规范表述上，听着记比看着记牢。
+       */
+      const pol = entry.data as {
+        mainline?: string;
+        keySentences?: string[];
+        materials?: { material?: string; questions: { stem: string }[] }[];
+      };
+      if (Array.isArray(pol.keySentences)) {
+        push(out, 'mainline', pol.mainline, '这一条的主线');
+        pushList(out, 'keysentence', (i) => `必背金句·第 ${i + 1} 句`, pol.keySentences);
+        (pol.materials ?? []).forEach((m, i) => {
           push(out, `mat-${i}`, m.material, `材料${i + 1}`);
           m.questions.forEach((q, k) =>
             push(out, `mat-${i}-q${k}`, q.stem, `第 ${i + 1} 题第 ${k + 1} 问`),

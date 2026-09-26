@@ -21,6 +21,7 @@ import type {
   MindMap,
   ModuleId,
   Poem,
+  PoliticsModuleId,
   QuizQuestion,
 } from '../types';
 import { SUBJECTS } from './subjects';
@@ -30,6 +31,7 @@ import { matchesKeyword } from '../lib/searchText';
 import * as chinese from './chinese';
 import * as history from './history';
 import * as english from './english';
+import * as politics from './politics';
 import * as math from './math';
 
 /* ------------------------------ 聚合 ------------------------------ */
@@ -55,7 +57,13 @@ export const MODULE_SUBJECT: Map<string, string> = new Map(
 
 /** 把某一学科的容器内容同步进全局容器（去重，按 id） */
 function syncSubjectContainers(): void {
-  for (const e of [...chinese.allEntries, ...history.allEntries, ...english.allEntries, ...math.allEntries]) {
+  for (const e of [
+    ...chinese.allEntries,
+    ...history.allEntries,
+    ...english.allEntries,
+    ...politics.allEntries,
+    ...math.allEntries,
+  ]) {
     if (!entryIndex.has(e.id)) {
       entryIndex.set(e.id, e);
       allEntries.push(e);
@@ -75,6 +83,8 @@ const MATH_MODULE_IDS = new Set<string>(math.MATH_MODULE_IDS);
 const HISTORY_MODULE_IDS = new Set<string>(history.MODULE_IDS);
 /** 英语模块 id（七块：词汇/语法/阅读/听说/写作 + 中考专题 + 整卷模拟） */
 const ENGLISH_MODULE_IDS = new Set<string>(english.MODULE_IDS);
+/** 道法模块 id（六块：成长/道德/法治/国情 + 时政专题 + 整卷模拟） */
+const POLITICS_MODULE_IDS = new Set<string>(politics.MODULE_IDS);
 /** 语文模块 id —— 也是 splitScope 的兜底分支，必须显式判断，见下 */
 const CHINESE_MODULE_IDS = new Set<string>(chinese.MODULE_IDS);
 
@@ -91,6 +101,7 @@ export function isScopeReady(scope: DataScope[]): boolean {
     chinese.isScopeReady(request.chinese) &&
     history.isScopeReady(request.history) &&
     english.isScopeReady(request.english) &&
+    politics.isScopeReady(request.politics) &&
     (request.math.length ? math.isLoaded() : true)
   );
 }
@@ -102,6 +113,7 @@ export async function ensureModules(scope: DataScope[]): Promise<void> {
     chinese.loadModules(request.chinese),
     history.loadModules(request.history),
     english.loadModules(request.english),
+    politics.loadModules(request.politics),
   ]);
   if (request.math.length) await math.load();
   syncSubjectContainers();
@@ -112,12 +124,14 @@ function splitScope(scope: DataScope[]): {
   chinese: (chinese.ChineseModuleId | 'extras')[];
   history: HistoryModuleId[];
   english: EnglishModuleId[];
+  politics: PoliticsModuleId[];
   math: ModuleId[];
 } {
   const out = {
     chinese: [] as (chinese.ChineseModuleId | 'extras')[],
     history: [] as HistoryModuleId[],
     english: [] as EnglishModuleId[],
+    politics: [] as PoliticsModuleId[],
     math: [] as ModuleId[],
   };
   for (const s of scope) {
@@ -125,6 +139,7 @@ function splitScope(scope: DataScope[]): {
     else if (MATH_MODULE_IDS.has(s)) out.math.push(s);
     else if (HISTORY_MODULE_IDS.has(s)) out.history.push(s as HistoryModuleId);
     else if (ENGLISH_MODULE_IDS.has(s)) out.english.push(s as EnglishModuleId);
+    else if (POLITICS_MODULE_IDS.has(s)) out.politics.push(s as PoliticsModuleId);
     else if (CHINESE_MODULE_IDS.has(s)) out.chinese.push(s as chinese.ChineseModuleId);
     // 其余模块 id 属于「待开发」科目的占位模块：没有内容可加载，直接忽略，
     // 由页面渲染「内容正在准备中」。兜底到语文会拿未知 id 去查加载器，反而出错。
@@ -134,7 +149,7 @@ function splitScope(scope: DataScope[]): {
 
 /** 加载全部学科的全部模块（校验脚本与跨模块聚合页面用） */
 export async function ensureAll(): Promise<void> {
-  await Promise.all([chinese.loadAll(), history.loadAll(), english.loadAll()]);
+  await Promise.all([chinese.loadAll(), history.loadAll(), english.loadAll(), politics.loadAll()]);
   await math.load();
   syncSubjectContainers();
 }
@@ -205,6 +220,22 @@ export function examPaperOf(id: string): ExamPaper | undefined {
       materials: [],
       questions: e.questions,
       writing: e.writing,
+    };
+  }
+
+  const pol = politics.allPapers.find((p) => p.id === id);
+  if (pol) {
+    return {
+      id: pol.id,
+      subjectId: 'politics',
+      moduleId: 'pol-exam',
+      title: pol.title,
+      basis: pol.basis,
+      duration: pol.duration,
+      totalScore: pol.totalScore,
+      sections: pol.sections,
+      materials: pol.materials,
+      questions: pol.questions,
     };
   }
 

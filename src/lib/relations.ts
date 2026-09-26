@@ -186,10 +186,12 @@ function authorKeys(entry: Rel): string[] {
 const MATH_MODULE_PREFIX = 'math-';
 const HISTORY_MODULE_PREFIX = 'hist-';
 const ENGLISH_MODULE_PREFIX = 'eng-';
+const POLITICS_MODULE_PREFIX = 'pol-';
 function subjectOf(moduleId: string): string {
   if (moduleId.startsWith(MATH_MODULE_PREFIX)) return 'math';
   if (moduleId.startsWith(HISTORY_MODULE_PREFIX)) return 'history';
   if (moduleId.startsWith(ENGLISH_MODULE_PREFIX)) return 'english';
+  if (moduleId.startsWith(POLITICS_MODULE_PREFIX)) return 'politics';
   return 'chinese';
 }
 
