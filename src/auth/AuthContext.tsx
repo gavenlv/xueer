@@ -16,11 +16,14 @@ interface AuthContextValue {
   user: User | null;
   /** 初始会话是否已恢复完毕（避免刷新瞬间登录态闪变） */
   ready: boolean;
+  /** 展示用的昵称：注册时填的用户名，退而求其次用邮箱前缀 */
+  displayName: string;
   /**
-   * 注册。返回 'confirm-email' 表示项目开启了邮箱确认，
+   * 注册。用户名存入 user_metadata，作为顶栏与账户页的展示名。
+   * 返回 'confirm-email' 表示项目开启了邮箱确认，
    * 需要先去邮箱点击确认链接才能登录。
    */
-  signUp: (email: string, password: string) => Promise<'session' | 'confirm-email'>;
+  signUp: (email: string, password: string, username: string) => Promise<'session' | 'confirm-email'>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -53,14 +56,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const displayName = useMemo(() => {
+    const metaName = (session?.user?.user_metadata as { username?: string } | null)?.username;
+    if (metaName && metaName.trim()) return metaName.trim();
+    const email = session?.user?.email ?? '';
+    return email ? email.split('@')[0] : '';
+  }, [session]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
       user: session?.user ?? null,
       ready,
-      signUp: async (email, password) => {
+      displayName,
+      signUp: async (email, password, username) => {
         if (!supabase) throw new Error('云端未配置');
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { username } },
+        });
         if (error) throw error;
         return data.session ? 'session' : 'confirm-email';
       },
@@ -75,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) throw error;
       },
     }),
-    [session, ready],
+    [session, ready, displayName],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -44,20 +44,32 @@ export default function ModulePage() {
     [moduleId, ready],
   );
 
+  /**
+   * 生效的学段筛选：有些模块（如历史六册）按「一册 = 一个学段」组织，
+   * 学生点进 hist-7b 时全局学段可能还是 7 上——若照搬会把整页过滤成空。
+   * 因此数据就绪后做一次校正：当前学段在模块里没有条目时，自动落到该模块自己的学段。
+   */
+  const effectiveGrade = useMemo<GradeId | 'all'>(() => {
+    if (!ready || gradeFilter === 'all') return gradeFilter;
+    if (allEntries.some((e) => e.grade === gradeFilter || e.grade === 'all')) return gradeFilter;
+    const first = allEntries.find((e) => e.grade !== 'all');
+    return (first?.grade as GradeId | undefined) ?? 'all';
+  }, [allEntries, gradeFilter, ready]);
+
   const tags = useMemo(
-    () => filterTagsOfModule(moduleId as ModuleId, gradeFilter),
-    [moduleId, gradeFilter],
+    () => filterTagsOfModule(moduleId as ModuleId, effectiveGrade),
+    [moduleId, effectiveGrade],
   );
 
   const filtered = useMemo(() => {
     const kw = keyword.trim().toLowerCase();
     return allEntries.filter((e) => {
-      if (gradeFilter !== 'all' && e.grade !== gradeFilter && e.grade !== 'all') return false;
+      if (effectiveGrade !== 'all' && e.grade !== effectiveGrade && e.grade !== 'all') return false;
       if (tagFilter !== 'all' && !e.tags.includes(tagFilter)) return false;
       if (kw && !matchesKeyword(e, kw)) return false;
       return true;
     });
-  }, [allEntries, gradeFilter, tagFilter, keyword]);
+  }, [allEntries, effectiveGrade, tagFilter, keyword]);
 
   const studiedCount = filtered.filter((e) => (state.progress[e.id]?.studied ?? 0) > 0).length;
   const questionCount = filtered.reduce((n, e) => n + e.questions.length, 0);
@@ -88,7 +100,7 @@ export default function ModulePage() {
           <>
             <Link
               className="btn btn--primary btn--sm"
-              to={`/practice/${moduleId}?grade=${gradeFilter}`}
+              to={`/practice/${moduleId}?grade=${effectiveGrade}`}
             >
               🎲 随机练习
             </Link>
@@ -113,7 +125,7 @@ export default function ModulePage() {
 
         <div className="scroll-x">
           <button
-            className={cn('chip', gradeFilter === 'all' && 'is-active')}
+            className={cn('chip', effectiveGrade === 'all' && 'is-active')}
             onClick={() => setGradeFilter('all')}
           >
             全部学段
@@ -121,7 +133,7 @@ export default function ModulePage() {
           {GRADES.map((g) => (
             <button
               key={g.id}
-              className={cn('chip', gradeFilter === g.id && 'is-active')}
+              className={cn('chip', effectiveGrade === g.id && 'is-active')}
               onClick={() => {
                 setGradeFilter(g.id);
                 setGrade(g.id);

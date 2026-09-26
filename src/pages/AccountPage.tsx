@@ -10,8 +10,9 @@ import { isCloudConfigured, LAST_SYNC_KEY } from '../lib/supabase';
 type Mode = 'signin' | 'signup';
 
 export default function AccountPage() {
-  const { user, signIn, signUp, signOut } = useAuth();
+  const { user, displayName, signIn, signUp, signOut } = useAuth();
   const [mode, setMode] = useState<Mode>('signin');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -48,7 +49,10 @@ export default function AccountPage() {
           <div className="card card--pad">
             <div className="row row--between">
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 600, wordBreak: 'break-all' }}>{user.email}</div>
+                <div style={{ fontWeight: 600, fontSize: 17 }}>{displayName || '同学'}</div>
+                <div className="page-desc" style={{ wordBreak: 'break-all', marginTop: 2 }}>
+                  {user.email}
+                </div>
                 <div className="page-desc" style={{ marginTop: 4 }}>
                   {lastSync
                     ? `上次同步：${new Date(lastSync).toLocaleString()}`
@@ -78,7 +82,7 @@ export default function AccountPage() {
     setNotice(null);
     try {
       if (mode === 'signup') {
-        const result = await signUp(email.trim(), password);
+        const result = await signUp(email.trim(), password, username.trim());
         if (result === 'confirm-email') {
           setNotice('注册成功！项目开启了邮箱确认，请先到邮箱点击确认链接，再回来登录。');
         }
@@ -134,6 +138,21 @@ export default function AccountPage() {
             </span>
           </div>
           <form onSubmit={(e) => void submit(e)} className="stack stack--sm">
+            {mode === 'signup' ? (
+              <label className="stack" style={{ gap: 6 }}>
+                <span className="section-sub">用户名（显示在右上角与学习报告）</span>
+                <input
+                  className="input"
+                  type="text"
+                  required
+                  minLength={2}
+                  maxLength={16}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="给同学起个名字，如：小明"
+                />
+              </label>
+            ) : null}
             <label className="stack" style={{ gap: 6 }}>
               <span className="section-sub">邮箱</span>
               <input

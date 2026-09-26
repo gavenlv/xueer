@@ -301,6 +301,22 @@ img {
   white-space: nowrap;
 }
 
+/* 顶栏右上角的账户状态：已登录是用户名 pill，未登录是「登录 / 注册」小按钮 */
+.topbar__account {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+@media (max-width: 720px) {
+  /* 窄屏顶栏空间有限：隐藏连续打卡，保留账户状态 */
+  .topbar__streak {
+    display: none;
+  }
+}
+
 /* ------------------------------ 底部标签栏 ------------------------------ */
 .tabbar {
   position: fixed;

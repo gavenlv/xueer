@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useStreak, useStudy } from '../store/StudyContext';
+import { useAuth } from '../auth/AuthContext';
 import { isCloudConfigured } from '../lib/supabase';
 import { cn, dateKey } from '../lib/utils';
 
@@ -29,6 +30,7 @@ const MORE_NAV = NAV.filter((n) => !n.mobile);
 export default function AppShell() {
   const streak = useStreak();
   const { checkin, state } = useStudy();
+  const { user, displayName } = useAuth();
   const location = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -83,6 +85,23 @@ export default function AppShell() {
           <span className="topbar__streak" title="连续打卡天数">
             🔥 连续 {streak} 天
           </span>
+
+          {/* 右上角账户状态：已登录显示用户名，未登录提供登录入口（纯本地模式下不显示） */}
+          {isCloudConfigured ? (
+            user ? (
+              <NavLink
+                to="/account"
+                className="timer-pill topbar__account"
+                title="账户：点这里查看登录与同步状态"
+              >
+                👤 {displayName || '同学'}
+              </NavLink>
+            ) : (
+              <NavLink to="/account" className="btn btn--primary btn--sm topbar__account">
+                登录 / 注册
+              </NavLink>
+            )
+          ) : null}
         </div>
       </header>
 
