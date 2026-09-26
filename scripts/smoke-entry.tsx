@@ -537,6 +537,48 @@ if (!progressTarget) {
       .join('、') || '九类断言全通过'}）`,
   );
   if (!navOk) failed += 1;
+
+  /* ------------- 接线检查：作文范文（多篇全文 + 亮点句 + 分项点评） ------------- */
+
+  /**
+   * 作文是语文单项分值最高的题（60/140 ≈ 43%），这次按主题补了多篇完整例文。
+   * 与其它内容一样，「渲染失败也不报错」的风险在于：亮点句或分项点评没接上，
+   * 页面照常显示，只是学生看不到最该学的那两块。所以逐块断言。
+   */
+  const sampleEntry = allEntries.find(
+    (e) => e.moduleId === 'writing' && (e.data as { id?: string }).id === 'w-sample-qinqin-2',
+  );
+  const sampleHtml = sampleEntry
+    ? renderToString(
+        <MemoryRouter initialEntries={[`/s/chinese/writing/${sampleEntry.id}`]}>
+          <AppWithProviders />
+        </MemoryRouter>,
+      ).replace(/<!--[\s\S]*?-->/g, '')
+    : '';
+  const writingListHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/chinese/writing']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+
+  const sampleChecks: [string, boolean][] = [
+    ['范文详情页可渲染', Boolean(sampleEntry) && sampleHtml.includes('范文与点评')],
+    ['多篇例文（同题两篇）', sampleHtml.split('accordion').length - 1 >= 2],
+    ['亮点句区块', sampleHtml.includes('亮点句') && sampleHtml.includes('为什么好')],
+    ['分项点评区块', sampleHtml.includes('分项点评') && sampleHtml.includes('升格建议')],
+    ['主题标签与全文篇数', sampleHtml.includes('主题·亲情') && sampleHtml.includes('篇完整范例')],
+    ['命题形式与档次', sampleHtml.includes('题目要求') && sampleHtml.includes('分')],
+    // 模块页要能按主题筛选（「亲情」是这次给范文加的标签）
+    ['模块页可按主题筛范文', writingListHtml.includes('亲情')],
+  ];
+  const sampleOk = sampleChecks.every(([, ok]) => ok);
+  console.log(
+    `  ${sampleOk ? '✅' : '❌'} 接线检查：作文范文（${sampleChecks
+      .filter(([, ok]) => !ok)
+      .map(([n]) => n)
+      .join('、') || '七类断言全通过'}）`,
+  );
+  if (!sampleOk) failed += 1;
 }
 
 if (failed) {

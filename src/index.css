@@ -2635,6 +2635,73 @@ button.mm-label:hover {
   }
 }
 
+/* --------------------- 范文的亮点句与分项点评 --------------------- */
+/* 学生最缺的是「可以直接背下来化用的句子」，所以亮点句单列并置顶于点评之前 */
+
+.sample-highlight {
+  border-left: 3px solid var(--c-gold);
+  background: rgba(189, 138, 37, 0.06);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  padding: 9px 12px;
+}
+
+.sample-highlight__sentence {
+  font-family: var(--font-kai);
+  font-size: 15.5px;
+  line-height: 1.9;
+  font-weight: 600;
+}
+
+.sample-highlight__why {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--c-ink-3);
+}
+
+.sample-review {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.sample-review__row {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  line-height: 1.8;
+  font-size: 14px;
+}
+
+.sample-review__row + .sample-review__row {
+  border-top: 1px solid var(--c-line);
+}
+
+.sample-review__aspect {
+  flex: 0 0 76px;
+  font-weight: 700;
+  color: var(--c-primary-ink);
+}
+
+.sample-review__text {
+  flex: 1;
+  min-width: 0;
+  color: var(--c-ink-2);
+}
+
+@media (max-width: 560px) {
+  .sample-review__row {
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .sample-review__aspect {
+    flex: none;
+  }
+}
+
 /* ------------------------------- 拓展阅读 ------------------------------- */.ext-list {
   display: flex;
   flex-direction: column;

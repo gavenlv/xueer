@@ -197,6 +197,37 @@ export interface ReadingPassage {
 /* 模块五：作文训练                                                    */
 /* ------------------------------------------------------------------ */
 
+/**
+ * 一篇范文 + 点评。
+ *
+ * 为什么把点评拆成「分项 + 亮点句」而不是一段总评：中考作文按**内容、结构、语言**分项
+ * 评分（广州 60 分），学生看一段笼统的好评学不到可迁移的东西。拆开之后：
+ * `review` 说清每个评分维度好在哪、还差什么；`highlights` 把原文里值得背下来的句子
+ * 单列出来并说明为什么好——这是最能被直接学走的部分。
+ */
+export interface WritingExample {
+  title: string;
+  /** 命题形式（中考原题风格的一两句情境或题目要求） */
+  prompt?: string;
+  /** 全文，段落用 \n 分隔 */
+  text: string;
+  /** 总评：一段话讲清这篇的得分点与不足 */
+  comment: string;
+  /** 分项点评：审题立意 / 结构布局 / 语言表达 / 素材运用 / 升格建议 等 */
+  review?: { aspect: string; text: string }[];
+  /** 亮点句：原句 + 为什么好（可背下来化用） */
+  highlights?: { sentence: string; why: string }[];
+  /**
+   * 档次参考，如「一类文上（55—60 分）」。
+   *
+   * 注意这里**没有字数字段**：字数由 `lib/writing.ts` 的 `sampleLength()` 现算
+   * （去掉空白后的字符数，含标点，与考场按格计字一致）。曾经在数据里写死 `words`，
+   * 36 篇由多人分批撰写时立刻出现「含标点」与「纯汉字」两种口径混用，
+   * 同一篇范文在不同文件里的数字含义不同——能推导的就不存。
+   */
+  score?: string;
+}
+
 export interface WritingLesson {
   id: string;
   grade: GradeOrAll;
@@ -219,10 +250,15 @@ export interface WritingLesson {
     | '考场技巧';
   title: string;
   summary: string;
+  /**
+   * 中考高频主题（亲情、师生、成长、家国、文化传承……）。
+   * 范文类条目必填：它会被装配成筛选标签，学生才能「按主题找同题多篇范文」。
+   */
+  theme?: string;
   /** 正文段落，首行 `## ` 视为小标题 */
   content: string[];
   /** 范例（片段或全文）+点评 */
-  examples?: { title: string; text: string; comment: string }[];
+  examples?: WritingExample[];
   /** 可积累的写作素材 */
   materials?: { theme: string; items: string[] }[];
   /** 训练任务 */

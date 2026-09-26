@@ -156,7 +156,11 @@ const buildWritingEntries = (items: WritingLesson[]): WritingEntry[] =>
     title: w.title,
     subtitle: w.category,
     grade: w.grade,
-    tags: [w.category],
+    /**
+     * 标签第一位是类别（模块页的筛选主标签），**中考主题作为第二个标签**：
+     * 范文类条目有了主题标签，学生才能在模块页筛出「亲情（3 篇）」这样的一组同题范文。
+     */
+    tags: [w.category, ...(w.theme ? [w.theme] : [])],
     questions: dedupeQuestions(w.questions ?? []),
     data: w,
   }));

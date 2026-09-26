@@ -32,6 +32,7 @@ import { relOfEntry, relOfEntryFull, relPool } from '../src/lib/relNode';
 import { speechSegmentsOf } from '../src/lib/entrySpeech';
 import { glossaryOf } from '../src/lib/glossary';
 import { splitSegments } from '../src/components/ReciteTrainer';
+import { sampleLength, EXAM_MIN_WORDS } from '../src/lib/writing';
 import { answerModeFor, checkFill } from '../src/lib/utils';
 import { applyAnswerToProgress } from '../src/lib/progress';
 import {
@@ -40,7 +41,7 @@ import {
   daysUntilDue,
   isDue,
 } from '../src/lib/recite';
-import type { Entry, MindNode, ModuleId, QuizQuestion } from '../src/types';
+import type { Entry, MindNode, ModuleId, QuizQuestion, WritingLesson } from '../src/types';
 
 /**
  * 内容数据已改为**按需加载**（见 `src/data/chinese/index.ts`）：
@@ -1296,6 +1297,134 @@ for (const m of ALL_MODULE_IDS) {
 }
 console.log(
   `  选择题答案分布    ${distWarned} 个模块分布异常（单字母占比 >45% 或某字母完全缺失）`,
+);
+
+/* --------------- 中考作文范文：每个主题都要有多篇完整例文 --------------- */
+
+/**
+ * 作文是语文中考里单项分值最高的题（广州 2027 起：写作与表达 60 分 / 全卷 140 分，约 43%），
+ * 所以范文不能只给「片段 + 一段好评」。这里逐主题、逐篇检查：
+ *
+ *   1. 每个中考高频主题至少 **3 篇完整例文**（不是片段）；
+ *   2. 每篇例文要能直接拿来学：命题形式、字数、档次、亮点句（≥2）、
+ *      分项点评（≥4 个评分维度）、总评（≥120 字）；
+ *   3. 正文字数要够（≥500 汉字），且**声明字数与正文实际字数一致**（差得太多会误导学生）。
+ *
+ * 「完整例文」是这次改版的核心要求：片段范文能讲技法，但学生看不到一篇 800 字的文章
+ * 是怎么一步步走完的，所以按主题成组给全文。
+ */
+const WRITING_THEMES = [
+  '亲情', '师生', '成长', '城市生活', '家国', '文化传承',
+  '挫折', '思辨', '自然感悟', '平凡英雄', '传统文化', '生活哲理',
+];
+const hanziCount = (s: string) => (s.match(/[\u4e00-\u9fa5]/g) ?? []).length;
+
+const sampleLessons = allEntries.filter(
+  (e) => e.moduleId === 'writing' && (e.data as WritingLesson).category === '范文点评',
+);
+const themeStat = new Map<string, { samples: number; words: number; lessons: number }>();
+let sampleBad = 0;
+let sampleTotal = 0;
+let sampleWords = 0;
+
+/**
+ * 范文条目里有两类 example，要求不同，不能一刀切：
+ *
+ *   - **完整例文**（≥600 字，按含标点计）——学生要拿它当整篇的样板，因此必须带
+ *     命题形式、档次参考、亮点句、分项点评与足量总评；
+ *   - **片段对照 / 升格示例**（短）——它是「改前 → 改后」的局部示范，
+ *     只要求 `comment` 讲清改动的道理，不要求命题形式与档次。
+ *
+ * 主题覆盖率只统计**完整例文**：用户要的是「每个主题多篇完整例文」。
+ */
+for (const e of sampleLessons) {
+  const w = e.data as WritingLesson;
+  const at = `[作文范文] ${e.id}`;
+  if (!w.theme) {
+    sampleBad += 1;
+    err(`${at}: 范文点评条目缺少 theme（主题），学生无法按主题筛同题范文`);
+  }
+  const stat = themeStat.get(w.theme ?? '未标注') ?? { samples: 0, words: 0, lessons: 0 };
+  stat.lessons += 1;
+  if (!w.examples?.length) {
+    sampleBad += 1;
+    err(`${at}: 范文点评条目没有任何例文`);
+  }
+  for (const [i, ex] of (w.examples ?? []).entries()) {
+    sampleTotal += 1;
+    /**
+     * 字数**现算**（去掉空白后的字符数，含标点）——中考按格计字、标点占格，
+     * 所以「不少于 600 字」说的是这个数。数据里不再写死 `words`：
+     * 36 篇由多人分批撰写，一开始就出现了「含标点」与「纯汉字」两种口径混用。
+     */
+    const chars = sampleLength(ex.text);
+    const hanzi = hanziCount(ex.text);
+    const isFull = chars >= EXAM_MIN_WORDS;
+    sampleWords += chars;
+    if (!isFull) {
+      // 片段：只要求点评讲清道理（片段确实可以只写一两句，短了不报错只提醒）
+      if (hanziCount(ex.comment ?? '') < 45) {
+        warn(`${at} 第 ${i + 1} 篇（片段 ${chars} 字）的点评偏短，最好讲清改动前后的差别`);
+      }
+      continue;
+    }
+
+    stat.samples += 1;
+    if (hanzi < 450) {
+      sampleBad += 1;
+      err(`${at} 第 ${i + 1} 篇 ${chars} 字里汉字仅 ${hanzi} 个，标点占比过高`);
+    }
+    if (!ex.prompt?.trim()) err(`${at} 第 ${i + 1} 篇缺少命题形式（prompt）`);
+    if (!ex.score?.trim()) warn(`${at} 第 ${i + 1} 篇缺少档次参考（score）`);
+    if ((ex.highlights?.length ?? 0) < 2) {
+      sampleBad += 1;
+      err(`${at} 第 ${i + 1} 篇亮点句不足 2 条（学生最需要能背下来化用的句子）`);
+    }
+    if ((ex.review?.length ?? 0) < 4) {
+      sampleBad += 1;
+      err(`${at} 第 ${i + 1} 篇分项点评不足 4 项（应对照中考评分维度）`);
+    }
+    if (hanziCount(ex.comment ?? '') < 120) {
+      sampleBad += 1;
+      err(`${at} 第 ${i + 1} 篇总评过短（应 ≥120 字，讲清得分点与不足）`);
+    }
+    // 亮点句必须真的摘自正文，否则学生按图索骥会找不到
+    // （两边都按同一套规则归一：忽略空白与引号差异，但汉字一字不能差）
+    const norm = (s: string) => s.replace(/[「」“”‘’…\s]/g, '');
+    for (const h of ex.highlights ?? []) {
+      const key = norm(h.sentence);
+      if (key.length >= 6 && !norm(ex.text).includes(key)) {
+        sampleBad += 1;
+        err(`${at} 第 ${i + 1} 篇的亮点句未在正文中原样出现：${h.sentence.slice(0, 20)}…`);
+      }
+    }
+  }
+  themeStat.set(w.theme ?? '未标注', stat);
+}
+
+for (const theme of WRITING_THEMES) {
+  const stat = themeStat.get(theme);
+  if (!stat) {
+    sampleBad += 1;
+    err(`[作文范文] 主题「${theme}」没有任何范文`);
+    continue;
+  }
+  if (stat.samples < 3) {
+    sampleBad += 1;
+    err(`[作文范文] 主题「${theme}」只有 ${stat.samples} 篇例文（每个主题应 ≥3 篇完整例文）`);
+  }
+}
+
+const fullSampleTotal = [...themeStat.values()].reduce((n, s) => n + s.samples, 0);
+console.log(
+  `  中考作文范文      ${WRITING_THEMES.length} 个主题 / ${fullSampleTotal} 篇完整例文` +
+    `（另有 ${sampleTotal - fullSampleTotal} 则片段对照，合计约 ${(sampleWords / 10000).toFixed(1)} 万字；异常 ${sampleBad} 处）`,
+);
+console.log(
+  `      ${'按主题分布'.padEnd(22)} ${[...themeStat]
+    .sort((a, b) => b[1].samples - a[1].samples)
+    .map(([k, v]) => `${k} ${v.samples}`)
+    .join(' · ')}`,
 );
 
 /* ------------------------ 汇总报告 ------------------------ */
