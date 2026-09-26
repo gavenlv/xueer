@@ -116,6 +116,47 @@ export function speechSegmentsOf(entry: Entry): SpeechSegment[] {
     }
 
     default: {
+      // 模拟卷：读卷面说明 + 材料 + 设问。
+      // 20 道选择题的题干与选项**不**送进语音：考试卷是拿来做的，逐题念出来只是噪音。
+      const paper = entry.data as {
+        basis?: string;
+        materials?: { material?: string; questions: { stem: string }[] }[];
+      };
+      if (Array.isArray(paper.materials) && paper.materials.some((m) => m.questions)) {
+        push(out, 'basis', paper.basis, '卷面说明');
+        paper.materials.forEach((m, i) => {
+          push(out, `mat-${i}`, m.material, `材料${i + 1}`);
+          m.questions.forEach((q, k) =>
+            push(out, `mat-${i}-q${k}`, q.stem, `第 ${i + 1} 题第 ${k + 1} 问`),
+          );
+        });
+        break;
+      }
+
+      // 历史：按备考顺序读——主线 → 时间轴 → 必背结论 → 材料题设问
+      // （考点分层与对比表是「看」的，逐条念出来反而听不清主次）
+      const h = entry.data as {
+        mainline?: string;
+        period?: string;
+        timeline?: { time: string; event: string; note?: string }[];
+        conclusions?: string[];
+        materials?: { material?: string; questions: { stem: string; answer: string }[] }[];
+      };
+      if (Array.isArray(h.timeline) || Array.isArray(h.conclusions)) {
+        push(out, 'mainline', h.mainline, '这一条的主线');
+        (h.timeline ?? []).forEach((p, i) =>
+          push(out, `tl-${i}`, `${p.time}，${p.event}${p.note ? `。${p.note}` : ''}`, `时间轴·${p.time}`),
+        );
+        pushList(out, 'conclusion', (i) => `必背结论·第 ${i + 1} 条`, h.conclusions);
+        (h.materials ?? []).forEach((m, i) => {
+          push(out, `mat-${i}`, m.material, `材料${i + 1}`);
+          m.questions.forEach((q, k) =>
+            push(out, `mat-${i}-q${k}`, q.stem, `第 ${i + 1} 题第 ${k + 1} 问`),
+          );
+        });
+        break;
+      }
+
       // 数学模块 id 形如 `math-*`，是另一套 `MathModuleId`，只能用前缀判断
       if (!entry.moduleId.startsWith('math-')) break;
       const m = entry.data as {

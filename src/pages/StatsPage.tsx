@@ -7,6 +7,8 @@ import { SUBJECTS } from '../data/subjects';
 import type { ModuleId } from '../types';
 import { getModuleMeta } from '../data/subjects';
 import { useStreak, useStudy } from '../store/StudyContext';
+import { useAuth } from '../auth/AuthContext';
+import { isCloudConfigured } from '../lib/supabase';
 import { dateKey, formatDuration, pct, shiftDate } from '../lib/utils';
 import { useDataScope, DataLoading } from '../lib/useData';
 import { EmptyState, PageHeader, ProgressBar, SectionTitle, Stat, Tag } from '../components/common';
@@ -15,6 +17,7 @@ const DAYS = 14;
 
 export default function StatsPage() {
   const { state, resetAll } = useStudy();
+  const { user } = useAuth();
   const streak = useStreak();
   /** 学习报告要跨模块汇总（每个模块的进度、掌握度、错题），因此这里加载全部数据 */
   const ready = useDataScope(moduleIdsOfSubject('chinese').concat(moduleIdsOfSubject('math')));
@@ -104,20 +107,32 @@ export default function StatsPage() {
       <PageHeader
         crumbs={[{ label: '首页', to: '/' }, { label: '学习报告' }]}
         title="📊 学习报告"
-        desc="所有数据保存在本机浏览器，不会上传到任何服务器。"
+        desc={
+          user
+            ? '进度已登录云端，多设备自动同步。'
+            : '所有数据保存在本机浏览器，不会上传到任何服务器。'
+        }
         extra={
-          hasData ? (
-            <button
-              className="btn btn--sm"
-              onClick={() => {
-                if (window.confirm('确定要清空全部学习数据（进度、错题、打卡）吗？此操作不可撤销。')) {
-                  resetAll();
-                }
-              }}
-            >
-              🗑 清空学习数据
-            </button>
-          ) : null
+          <>
+            {/* 云端已配置且未登录时，提示登录以开启多设备同步 */}
+            {!user && isCloudConfigured ? (
+              <Link className="btn btn--sm btn--outline" to="/account">
+                ☁️ 登录同步进度
+              </Link>
+            ) : null}
+            {hasData ? (
+              <button
+                className="btn btn--sm"
+                onClick={() => {
+                  if (window.confirm('确定要清空全部学习数据（进度、错题、打卡）吗？此操作不可撤销。')) {
+                    resetAll();
+                  }
+                }}
+              >
+                🗑 清空学习数据
+              </button>
+            ) : null}
+          </>
         }
       />
 

@@ -36,6 +36,10 @@ jobs:
 
       - name: 构建（含类型检查）
         run: pnpm build
+        env:
+          # Supabase 云同步配置（GitHub Secrets 中设置）
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
       - name: 配置 Pages
         uses: actions/configure-pages@v5

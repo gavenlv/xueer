@@ -17,6 +17,7 @@ import type { GradeId, ItemProgress, StudyState, WrongRecord } from '../types';
 import { dateKey } from '../lib/utils';
 import { applyAnswerToProgress } from '../lib/progress';
 import { applyRecite } from '../lib/recite';
+import { normalizeStudyState } from '../lib/sync';
 
 const STORAGE_KEY = 'xueer.study.state.v1';
 
@@ -24,6 +25,7 @@ function emptyState(): StudyState {
   return {
     progress: {},
     wrong: {},
+    wrongRemoved: {},
     checkins: [],
     daily: {},
     grade: '7a',
@@ -36,17 +38,8 @@ function loadState(): StudyState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return emptyState();
-    const parsed = JSON.parse(raw) as Partial<StudyState>;
-    const base = emptyState();
-    return {
-      progress: parsed.progress ?? base.progress,
-      wrong: parsed.wrong ?? base.wrong,
-      checkins: Array.isArray(parsed.checkins) ? parsed.checkins : base.checkins,
-      daily: parsed.daily ?? base.daily,
-      grade: (parsed.grade as GradeId) ?? base.grade,
-      totalSeconds: typeof parsed.totalSeconds === 'number' ? parsed.totalSeconds : 0,
-      recite: parsed.recite ?? base.recite,
-    };
+    // 规范化逻辑与云端合并共用（lib/sync），避免两处漂移
+    return normalizeStudyState(JSON.parse(raw));
   } catch {
     return emptyState();
   }
@@ -105,6 +98,8 @@ interface StudyContextValue {
   clearWrong: () => void;
   /** 移除单条错题 */
   removeWrong: (questionId: string) => void;
+  /** 用一份完整状态替换当前状态（云端合并后写回用），并立即落盘 */
+  replaceState: (next: StudyState) => void;
   getProgress: (itemId: string) => ItemProgress;
   isStarred: (itemId: string) => boolean;
 }
@@ -201,15 +196,22 @@ export function StudyProvider({ children }: { children: ReactNode }) {
   const recordAnswer = useCallback((input: AnswerInput) => {
     const { questionId, correct, moduleId, sourceTitle, sourceId, userAnswer } = input;
     const today = dateKey();
+    const now = Date.now();
     setState((s) => {
       const prevWrong = s.wrong[questionId];
       const nextWrong: Record<string, WrongRecord> = { ...s.wrong };
+      const nextRemoved = { ...(s.wrongRemoved ?? {}) };
 
       if (correct) {
-        // 答对后减少一次错误计数，归零即移出错题本
+        // 答对后减少一次错误计数，归零即移出错题本；
+        // 同时写入墓碑，让「消错」这个删除操作也能同步到云端
         if (prevWrong) {
-          if (prevWrong.wrongCount <= 1) delete nextWrong[questionId];
-          else nextWrong[questionId] = { ...prevWrong, wrongCount: prevWrong.wrongCount - 1 };
+          if (prevWrong.wrongCount <= 1) {
+            delete nextWrong[questionId];
+            nextRemoved[questionId] = now;
+          } else {
+            nextWrong[questionId] = { ...prevWrong, wrongCount: prevWrong.wrongCount - 1 };
+          }
         }
       } else {
         nextWrong[questionId] = {
@@ -218,7 +220,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
           sourceTitle,
           lastAnswer: userAnswer,
           wrongCount: (prevWrong?.wrongCount ?? 0) + 1,
-          lastAt: Date.now(),
+          lastAt: now,
         };
       }
 
@@ -234,6 +236,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
       return {
         ...s,
         wrong: nextWrong,
+        wrongRemoved: nextRemoved,
         progress,
         daily: {
           ...s.daily,
@@ -285,6 +288,12 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  /** 云端合并后整体写回：立即落盘，不等防抖 */
+  const replaceState = useCallback((next: StudyState) => {
+    setState(next);
+    saveState(next);
+  }, []);
+
   const getProgress = useCallback(
     (itemId: string) => state.progress[itemId] ?? EMPTY_PROGRESS,
     [state.progress],
@@ -310,6 +319,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
       resetAll,
       clearWrong,
       removeWrong,
+      replaceState,
       getProgress,
       isStarred,
     }),
@@ -326,6 +336,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
       resetAll,
       clearWrong,
       removeWrong,
+      replaceState,
       getProgress,
       isStarred,
     ],

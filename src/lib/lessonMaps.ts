@@ -317,6 +317,100 @@ function literatureMap(
   return kids;
 }
 
+/**
+ * 历史的一课（一个单元或一个中考专题）：按**备考顺序**成图。
+ *
+ * 与语文那几张图不同，这里的分支直接对应详情页的八块内容（时间轴、分层考点、
+ * 结论、易错、对比、考法），因此「导图 → 详情页」是同一套结构的两级展开：
+ * 先看导图回忆骨架，想不起来再点进详情看展开。
+ */
+function historyMap(entry: Entry): MindNode[] {
+  const d = entry.data as {
+    mainline?: string;
+    period?: string;
+    timeline?: { time: string; event: string; note?: string; key?: boolean }[];
+    points?: { level: string; text: string; explain?: string }[];
+    conclusions?: string[];
+    confusions?: { wrong: string; right: string; why: string }[];
+    compares?: { title: string; aspect: string; rows: { item: string; left: string; right: string }[] }[];
+    examAngles?: { angle: string; detail: string }[];
+    materials?: { questions: { id: string }[] }[];
+  };
+  const kids: MindNode[] = [];
+
+  kids.push(
+    node('这一条是什么', d.period, [
+      node('主线', d.mainline),
+      node('时段', d.period),
+    ]),
+  );
+
+  if (d.timeline?.length) {
+    kids.push(
+      node(
+        '时空坐标',
+        `${d.timeline.length} 个节点`,
+        d.timeline.map((p) =>
+          node(`${p.time} ${clip(p.event, 16)}`, p.note, undefined, p.key ? 95 : 60),
+        ),
+      ),
+    );
+  }
+
+  if (d.points?.length) {
+    const levels: [string, string][] = [
+      ['重点', '必须会背会写'],
+      ['次重点', '要能再认与简述'],
+      ['了解', '背景知识'],
+    ];
+    const levelKids = levels
+      .map(([lv, hint]) => {
+        const list = d.points!.filter((p) => p.level === lv);
+        if (!list.length) return null;
+        return node(`${lv}（${list.length}）`, hint, list.map((p) => asItem(p.text, 16, 120)));
+      })
+      .filter((x): x is MindNode => x !== null);
+    if (levelKids.length) kids.push(node('考点分层', '复习先分主次', levelKids));
+  }
+
+  if (d.conclusions?.length) {
+    kids.push(node('必背结论', '材料题直接用', d.conclusions.map((c) => asItem(c, 16, 130))));
+  }
+
+  if (d.confusions?.length) {
+    kids.push(
+      node(
+        '易错易混',
+        `${d.confusions.length} 组`,
+        d.confusions.map((c) => node(clip(c.wrong, 16), `正确理解：${c.right}`, undefined, 85)),
+      ),
+    );
+  }
+
+  if (d.compares?.length) {
+    kids.push(
+      node(
+        '关联与对比',
+        `${d.compares.length} 组`,
+        d.compares.map((c) => node(clip(c.title, 18), c.aspect)),
+      ),
+    );
+  }
+
+  if (d.examAngles?.length) {
+    kids.push(
+      node('考法与命题角度', `${d.examAngles.length} 条`, d.examAngles.map((a) => node(clip(a.angle, 16), clip(a.detail, 120)))),
+    );
+  }
+
+  if (d.materials?.length) {
+    const asks = d.materials.reduce((n, m) => n + m.questions.length, 0);
+    kids.push(node('材料大题', `${d.materials.length} 组 · ${asks} 问`, [node('先读材料圈关键词', '再按分值分点作答')]));
+  }
+
+  return kids;
+}
+
 /* -------------------------------- 入口 --------------------------------- */
 
 /**
@@ -351,6 +445,17 @@ export function lessonMindMap(entry: Entry): MindMap | null {
     case 'literature':
       kids = literatureMap(entry, entry.data);
       summary = '这一条的知识骨架与必记要点';
+      break;
+    // 历史（六册 + 中考专题）：备考顺序成图；模拟卷不进这里（它有自己的考试页）
+    case 'hist-7a':
+    case 'hist-7b':
+    case 'hist-8a':
+    case 'hist-8b':
+    case 'hist-9a':
+    case 'hist-9b':
+    case 'hist-topics':
+      kids = historyMap(entry);
+      summary = '时间轴、分层考点、对比与考法，一张图先把骨架立起来';
       break;
     default:
       return null;

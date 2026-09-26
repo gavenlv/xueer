@@ -20,6 +20,7 @@ import {
   ensureAll,
 } from '../src/data';
 import { allPoems } from '../src/data/chinese';
+import { allTopics, allPapers } from '../src/data/history';
 import { BOOK_EXAM_POINT_TAGS } from '../src/lib/bookExams';
 import { DAILY_LINES, ENTRY_META, MODULE_TOTALS } from '../src/data/summary';
 import { lessonMindMap } from '../src/lib/lessonMaps';
@@ -386,8 +387,19 @@ function groupSignature(groups: { kind: string; items: { entry: { id: string }; 
 
 for (const e of allEntries) {
   const at = `[学一补多] ${e.id}`;
-  const groups = supplementsOf(LIGHT_POOL.find((x) => x.id === e.id)!, LIGHT_POOL);
-  const baseGroups = supplementsOf(FULL_POOL.find((x) => x.id === e.id)!, FULL_POOL);
+  const self = LIGHT_POOL.find((x) => x.id === e.id);
+  const baseSelf = FULL_POOL.find((x) => x.id === e.id);
+  /**
+   * 清单里没有这条内容，说明 `src/data/summary.ts` 过期（内容改了没跑 `pnpm gen`）。
+   * 这里必须**报错而不是崩溃**：崩掉的校验脚本只会留下一行 TypeError，
+   * 完全看不出该做什么。
+   */
+  if (!self || !baseSelf) {
+    err(`${at}: 轻量清单（src/data/summary.ts）里没有这条内容，清单已过期——请运行 pnpm gen`);
+    continue;
+  }
+  const groups = supplementsOf(self, LIGHT_POOL);
+  const baseGroups = supplementsOf(baseSelf, FULL_POOL);
   if (groupSignature(groups) !== groupSignature(baseGroups)) {
     suppParity += 1;
     err(
@@ -1036,6 +1048,174 @@ const duanjuCases: [input: string, answer: string, expect: boolean, note: string
 const duanjuFailures = duanjuCases.filter(
   ([input, answer, expect]) => checkFill(input, answer, answerModeFor('classical', answer)) !== expect,
 );
+
+/* ------------------------ 历史：备考内容完整性 ------------------------ */
+
+/**
+ * 历史这一科的价值全在「内容是否真的能拿来复习」，因此逐条检查结构完整性：
+ * 缺时间轴、缺分层考点、缺材料题，页面都不会报错，只是学生复习时发现少东西。
+ *
+ * 另外**照官方结构验卷**：2027—2029 年广州中考历史为
+ * 单项选择 20 小题 40 分 + 非选择题（阅读材料，回答问题）3 小题 30 分 = 70 分、60 分钟闭卷
+ * （广州市教育局《2027—2029年广州市初中学业水平考试录取计分科目考试实施方案》）。
+ * 结构一改，这里的数字就要跟着改——这正是它存在的意义：防止卷子悄悄变成「不是广州的卷子」。
+ */
+const HISTORY_STRUCTURE = { choice: { count: 20, score: 40 }, material: { count: 3, score: 30 }, total: 70, duration: 60 };
+
+const historyTopics = allTopics;
+let histBad = 0;
+const levelCount: Record<string, number> = { 重点: 0, 次重点: 0, 了解: 0 };
+let histMaterialGroups = 0;
+let histAsks = 0;
+
+for (const t of historyTopics) {
+  const at = `[历史] ${t.id}`;
+  const isTopic = t.id.startsWith('ht-');
+  const need = (cond: boolean, msg: string) => {
+    if (!cond) {
+      histBad += 1;
+      err(`${at}: ${msg}`);
+    }
+  };
+
+  need(Boolean(t.mainline?.trim()), '缺少主线（mainline）');
+  need(Boolean(t.period?.trim()), '缺少时段（period）');
+  need(Boolean(t.unit?.trim()), '缺少单元/专题分类（unit，会作为模块页筛选的主标签）');
+  need(t.timeline.length >= (isTopic ? 8 : 4), `时间轴只有 ${t.timeline.length} 条（应 ≥${isTopic ? 8 : 4}）`);
+  need(t.points.length >= 5, `分层考点只有 ${t.points.length} 条（应 ≥5）`);
+  need(t.points.filter((p) => p.level === '重点').length >= 3, '「重点」不足 3 条（备考要先分出主次）');
+  need((t.conclusions?.length ?? 0) >= 3, '必背结论不足 3 条');
+  need((t.confusions?.length ?? 0) >= 2, '易错易混不足 2 条');
+  need((t.compares?.length ?? 0) >= 1, '缺少关联与对比表');
+  need((t.examAngles?.length ?? 0) >= 2, '命题角度不足 2 条');
+  need((t.materials?.length ?? 0) >= 1, '缺少材料大题');
+  need(t.questions.length >= 4, `选择题不足 4 道（只有 ${t.questions.length}）`);
+
+  for (const p of t.points) {
+    if (!['重点', '次重点', '了解'].includes(p.level)) {
+      histBad += 1;
+      err(`${at}: 考点层级非法「${p.level}」`);
+    } else levelCount[p.level] += 1;
+    if (!p.text?.trim()) err(`${at}: 有考点没有内容`);
+  }
+
+  for (const p of t.timeline) {
+    if (!p.time?.trim() || !p.event?.trim()) err(`${at}: 时间轴存在缺时间或缺事件的行`);
+    /*
+     * 时间表述要能看出年代，否则学生无从定位。
+     * 但历史上「时间」有三种合法写法，不能只认公历年：
+     *   ① 公元纪年：「公元前 221 年」「1840 年」；② 世纪/年代：「公元前 5 世纪」；
+     *   ③ 朝代与帝号：「隋唐、北宋」「唐太宗时」「元朝」。
+     */
+    if (p.time && !/年|世纪|年代|时期|初|末|[隋唐宋元明清秦汉晋周夏商]/.test(p.time)) {
+      err(`${at}: 时间「${p.time}」看不出年代`);
+    }
+  }
+
+  for (const c of t.compares ?? []) {
+    if (!c.rows?.length) err(`${at}: 对比表「${c.title}」没有行`);
+    if (!c.left?.trim() || !c.right?.trim()) err(`${at}: 对比表「${c.title}」缺少左右两栏名称`);
+  }
+
+  for (const g of t.materials ?? []) {
+    histMaterialGroups += 1;
+    histAsks += g.questions.length;
+    if (g.questions.length < 2) err(`${at}: 材料组 ${g.id} 只有 ${g.questions.length} 个设问（应 ≥2）`);
+    if (!g.material?.includes('【材料')) warn(`${at}: 材料组 ${g.id} 未用【材料一】标注材料`);
+    for (const q of g.questions) {
+      if (!q.answer?.trim()) err(`${at}: 材料设问 ${q.id} 没有参考答案`);
+      if (!q.rubric?.length) err(`${at}: 材料设问 ${q.id} 没有踩分点`);
+    }
+  }
+}
+
+/* 模拟卷：严格照广州中考结构验卷 */
+const papers = allPapers;
+let paperBad = 0;
+for (const p of papers) {
+  const at = `[历史·模拟卷] ${p.id}`;
+  const score = p.sections.reduce((n, s) => n + s.score, 0);
+  const choice = p.sections.find((s) => s.kind === 'choice');
+  const material = p.sections.find((s) => s.kind === 'material');
+  const choiceQs = p.questions.filter((q) => q.type === 'choice').length;
+  const check = (cond: boolean, msg: string) => {
+    if (!cond) {
+      paperBad += 1;
+      err(`${at}: ${msg}`);
+    }
+  };
+  check(score === p.totalScore, `各题型分值合计 ${score} ≠ 全卷 ${p.totalScore}`);
+  check(p.totalScore === HISTORY_STRUCTURE.total, `全卷 ${p.totalScore} 分 ≠ 广州结构 ${HISTORY_STRUCTURE.total} 分`);
+  check(p.duration === HISTORY_STRUCTURE.duration, `时长 ${p.duration} 分钟 ≠ ${HISTORY_STRUCTURE.duration} 分钟`);
+  check(
+    choice?.count === HISTORY_STRUCTURE.choice.count && choice?.score === HISTORY_STRUCTURE.choice.score,
+    `选择题结构应为 ${HISTORY_STRUCTURE.choice.count} 题 ${HISTORY_STRUCTURE.choice.score} 分，实际 ${choice?.count} 题 ${choice?.score} 分`,
+  );
+  check(
+    material?.count === HISTORY_STRUCTURE.material.count && material?.score === HISTORY_STRUCTURE.material.score,
+    `非选择题结构应为 ${HISTORY_STRUCTURE.material.count} 题 ${HISTORY_STRUCTURE.material.score} 分，实际 ${material?.count} 题 ${material?.score} 分`,
+  );
+  check(choiceQs === HISTORY_STRUCTURE.choice.count, `卷内选择题 ${choiceQs} 道 ≠ ${HISTORY_STRUCTURE.choice.count} 道`);
+  check(p.materials.length === HISTORY_STRUCTURE.material.count, `材料题 ${p.materials.length} 组 ≠ ${HISTORY_STRUCTURE.material.count} 组`);
+  check(Boolean(p.basis?.includes('广州')), '缺少「按广州中考结构命题」的说明（basis）');
+}
+
+console.log(
+  `  历史备考          条目 ${historyTopics.length} 个 / 模拟卷 ${papers.length} 套` +
+    `（结构异常 ${histBad + paperBad} 处）`,
+);
+console.log(
+  `      分层考点           重点 ${levelCount['重点']} · 次重点 ${levelCount['次重点']} · 了解 ${levelCount['了解']}`,
+);
+console.log(
+  `      材料大题           ${histMaterialGroups} 组 / ${histAsks} 问（参考答案与踩分点齐全）`,
+);
+
+/* ----------------- 历史：中考专题与考点索引是否覆盖各册 ----------------- */
+
+/**
+ * 两个「导航性」检查：
+ *   1. 中考专题必须真的**跨册**：一个专题只引用一册的内容就不是专题，而是单元复习；
+ *   2. 六册教材每一册都要有内容，否则学生点进去是空的（新学科最容易漏一册）。
+ */
+const HISTORY_TEXTBOOK_MODULES = ['hist-7a', 'hist-7b', 'hist-8a', 'hist-8b', 'hist-9a', 'hist-9b'];
+const emptyModules = HISTORY_TEXTBOOK_MODULES.filter(
+  (m) => !allEntries.some((e) => e.moduleId === m),
+);
+if (emptyModules.length) err(`[历史] 下列教材模块没有任何内容：${emptyModules.join('、')}`);
+
+const crossBookTopics = historyTopics.filter((t) => t.id.startsWith('ht-'));
+if (crossBookTopics.length < 6) {
+  warn(`[历史] 中考专题只有 ${crossBookTopics.length} 个（建议 ≥6 个，覆盖主要横向线索）`);
+}
+for (const t of crossBookTopics) {
+  const text = [
+    t.mainline,
+    ...t.timeline.map((p) => `${p.time}${p.event}`),
+    ...t.points.map((p) => p.text),
+  ].join(' ');
+  /**
+   * 跨册判据：一条专题必须触及**两「段」教材**，否则它只是单元复习。
+   * 这里按四个「段落」打桶，命中 ≥2 桶即算跨册：
+   *   ① 古代（朝代名或公元前的年份）；② 近代中国（1840—1949）；
+   *   ③ 现代中国（1950 年及以后）；④ 世界史（一战/二战/苏联/新航路/工业革命…）。
+   *
+   * 一开始只按「年代跨度 ≥300 年」判断，结果把「党史百年」这种正经专题误判了——
+   * 近现代专题跨度本来就不到 200 年，但它横跨八上、八下与九下，显然是跨册的。
+   */
+  const years = [...text.matchAll(/(公元前)?(\d{1,4})\s?年/g)].map((m) =>
+    m[1] ? -Number(m[2]) : Number(m[2]),
+  );
+  const buckets = [
+    /[秦汉魏晋隋唐宋元明清]|公元前/.test(text),
+    years.some((y) => y >= 1840 && y <= 1949),
+    years.some((y) => y >= 1950),
+    /一战|一战|第二次世界大战|苏联|新航路|工业革命|文艺复兴|冷战|联合国|欧洲|美国|日本|英国|法国|俄国|雅典|罗马/.test(text),
+  ].filter(Boolean).length;
+  if (buckets < 2) {
+    warn(`[历史·专题] ${t.id}「${t.title}」看不出跨册跨度（只触及 ${buckets} 段教材范围）`);
+  }
+}
 
 /* ------------------------ 汇总报告 ------------------------ */
 

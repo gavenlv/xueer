@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useStreak, useStudy } from '../store/StudyContext';
+import { isCloudConfigured } from '../lib/supabase';
 import { cn, dateKey } from '../lib/utils';
 
 const NAV = [
@@ -16,6 +17,10 @@ const NAV = [
   { to: '/extras', label: '知识拓展', icon: '🧩', end: false, mobile: false },
   { to: '/wrong', label: '错题本', icon: '🗂️', end: false, mobile: true },
   { to: '/stats', label: '学习报告', icon: '📊', end: false, mobile: true },
+  // 账户入口仅在配置了 Supabase 环境变量后出现（纯本地模式下没有意义）
+  ...(isCloudConfigured
+    ? [{ to: '/account', label: '账户', icon: '👤', end: false, mobile: false }]
+    : []),
 ];
 
 /** 移动端 tab 放不下的入口，收进「更多」面板 */

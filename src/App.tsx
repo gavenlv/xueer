@@ -21,6 +21,9 @@ import StatsPage from './pages/StatsPage';
 import ExtrasPage from './pages/ExtrasPage';
 import RecitePage from './pages/RecitePage';
 import ExamPage from './pages/ExamPage';
+import ExamRunPage from './pages/ExamRunPage';
+import HistoryReviewPage from './pages/HistoryReviewPage';
+import AccountPage from './pages/AccountPage';
 import NotFound from './pages/NotFound';
 
 export default function App() {
@@ -38,6 +41,11 @@ export default function App() {
         <Route path="extras" element={<ExtrasPage />} />
         <Route path="recite" element={<RecitePage />} />
         <Route path="exam" element={<ExamPage />} />
+        {/* 整卷模拟考试（历史）：60 分钟、交卷才批改 */}
+        <Route path="exam-run/:paperId" element={<ExamRunPage />} />
+        {/* 历史考点与考情总复习：分层考点 / 命题角度 / 材料大题索引 */}
+        <Route path="history-review" element={<HistoryReviewPage />} />
+        <Route path="account" element={<AccountPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

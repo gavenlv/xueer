@@ -14,6 +14,8 @@ import { ClassicalDetail } from './detail/ClassicalDetail';
 import { ReadingDetail } from './detail/ReadingDetail';
 import { WritingDetail } from './detail/WritingDetail';
 import { LiteratureDetail } from './detail/LiteratureDetail';
+import { HistoryDetail } from './detail/HistoryDetail';
+import { HistoryPaperDetail } from './detail/HistoryPaperDetail';
 
 /**
  * 六个模块的详情渲染器。
@@ -82,6 +84,17 @@ export default function DetailPage() {
         return <WritingDetail entry={entry} moduleName={meta?.module.name ?? '作文训练'} />;
       case 'literature':
         return <LiteratureDetail entry={entry} moduleName={meta?.module.name ?? '文学常识'} />;
+      // 历史：模拟卷走「整卷考试」那一套渲染，其余八块（六册 + 中考专题）共用备考版详情页
+      case 'hist-exam':
+        return <HistoryPaperDetail entry={entry} moduleName={meta?.module.name ?? '模拟考试'} />;
+      case 'hist-7a':
+      case 'hist-7b':
+      case 'hist-8a':
+      case 'hist-8b':
+      case 'hist-9a':
+      case 'hist-9b':
+      case 'hist-topics':
+        return <HistoryDetail entry={entry} moduleName={meta?.module.name ?? '历史'} />;
       case 'math-number':
       case 'math-geometry':
       case 'math-stats':

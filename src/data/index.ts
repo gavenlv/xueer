@@ -12,12 +12,22 @@
  * 校验脚本则先 `await ensureAll()`，所以既有断言不受影响。
  */
 
-import type { Entry, Extension, GradeId, MindMap, ModuleId, Poem, QuizQuestion } from '../types';
+import type {
+  Entry,
+  Extension,
+  GradeId,
+  HistoryModuleId,
+  MindMap,
+  ModuleId,
+  Poem,
+  QuizQuestion,
+} from '../types';
 import { SUBJECTS } from './subjects';
 import { imageryOf, examThemesOf } from '../lib/relations';
 import { relOfEntry } from '../lib/relNode';
 import { matchesKeyword } from '../lib/searchText';
 import * as chinese from './chinese';
+import * as history from './history';
 import * as math from './math';
 
 /* ------------------------------ 聚合 ------------------------------ */
@@ -43,7 +53,7 @@ export const MODULE_SUBJECT: Map<string, string> = new Map(
 
 /** 把某一学科的容器内容同步进全局容器（去重，按 id） */
 function syncSubjectContainers(): void {
-  for (const e of [...chinese.allEntries, ...math.allEntries]) {
+  for (const e of [...chinese.allEntries, ...history.allEntries, ...math.allEntries]) {
     if (!entryIndex.has(e.id)) {
       entryIndex.set(e.id, e);
       allEntries.push(e);
@@ -59,6 +69,8 @@ function syncSubjectContainers(): void {
 
 /** 数学模块 id 前缀 → 学科加载器 */
 const MATH_MODULE_IDS = new Set<string>(math.MATH_MODULE_IDS);
+/** 历史模块 id（八块：六册教材 + 中考专题 + 模拟考试） */
+const HISTORY_MODULE_IDS = new Set<string>(history.MODULE_IDS);
 
 /**
  * 页面要声明的数据范围：某个学科的模块 id，或语文的 `'extras'`
@@ -68,32 +80,45 @@ export type DataScope = ModuleId | 'extras';
 
 /** 该范围是否已经就绪 */
 export function isScopeReady(scope: DataScope[]): boolean {
-  const needChinese = scope.filter((m) => m !== 'extras' && !MATH_MODULE_IDS.has(m));
-  const needExtras = scope.some((m) => m === 'extras');
-  const needMath = scope.some((m) => m !== 'extras' && MATH_MODULE_IDS.has(m));
+  const request = splitScope(scope);
   return (
-    chinese.isScopeReady([
-      ...(needChinese as chinese.ChineseModuleId[]),
-      ...(needExtras ? (['extras'] as const) : []),
-    ]) && (needMath ? math.isLoaded() : true)
+    chinese.isScopeReady(request.chinese) &&
+    history.isScopeReady(request.history) &&
+    (request.math.length ? math.isLoaded() : true)
   );
 }
 
 /** 加载这些范围的数据 */
 export async function ensureModules(scope: DataScope[]): Promise<void> {
-  const needChinese = scope.filter((m) => m !== 'extras' && !MATH_MODULE_IDS.has(m));
-  const needExtras = scope.some((m) => m === 'extras');
-  await chinese.loadModules([
-    ...(needChinese as chinese.ChineseModuleId[]),
-    ...(needExtras ? (['extras'] as const) : []),
-  ]);
-  if (scope.some((m) => m !== 'extras' && MATH_MODULE_IDS.has(m))) await math.load();
+  const request = splitScope(scope);
+  await Promise.all([chinese.loadModules(request.chinese), history.loadModules(request.history)]);
+  if (request.math.length) await math.load();
   syncSubjectContainers();
+}
+
+/** 把「页面声明的范围」分派给三个学科的加载器 */
+function splitScope(scope: DataScope[]): {
+  chinese: (chinese.ChineseModuleId | 'extras')[];
+  history: HistoryModuleId[];
+  math: ModuleId[];
+} {
+  const out = {
+    chinese: [] as (chinese.ChineseModuleId | 'extras')[],
+    history: [] as HistoryModuleId[],
+    math: [] as ModuleId[],
+  };
+  for (const s of scope) {
+    if (s === 'extras') out.chinese.push('extras');
+    else if (MATH_MODULE_IDS.has(s)) out.math.push(s);
+    else if (HISTORY_MODULE_IDS.has(s)) out.history.push(s as HistoryModuleId);
+    else out.chinese.push(s as chinese.ChineseModuleId);
+  }
+  return out;
 }
 
 /** 加载全部学科的全部模块（校验脚本与跨模块聚合页面用） */
 export async function ensureAll(): Promise<void> {
-  await chinese.loadAll();
+  await Promise.all([chinese.loadAll(), history.loadAll()]);
   await math.load();
   syncSubjectContainers();
 }

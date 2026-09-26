@@ -111,6 +111,12 @@ export default function SubjectPage() {
             <Link className="btn btn--sm" to="/wrong">
               🗂️ 错题本
             </Link>
+            {/* 历史是备考型学科：把「考点与考情总复习」放在学科页入口，别让它埋在模块里 */}
+            {subject.id === 'history' ? (
+              <Link className="btn btn--sm btn--primary" to="/history-review">
+                📊 考点与考情总复习
+              </Link>
+            ) : null}
           </>
         }
       />

@@ -8,6 +8,7 @@ declare const process: { exitCode: number };
 import { renderToString } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import App from '../src/App';
+import { AuthProvider } from '../src/auth/AuthContext';
 import { StudyProvider } from '../src/store/StudyContext';
 import { allEntries, ensureAll, entryIndex } from '../src/data';
 import { allPoems } from '../src/data/chinese';
@@ -27,6 +28,20 @@ await ensureAll();
 /** 取某模块第一条内容的 id，用于详情页与单篇练习 */
 function firstId(moduleId: string): string {
   return allEntries.find((e) => e.moduleId === moduleId)?.id ?? '';
+}
+
+/**
+ * 冒烟渲染树：与线上 main.tsx 的 Provider 嵌套保持一致。
+ * 账户页/学习报告页会用 useAuth，缺了 AuthProvider 会直接抛错。
+ */
+function AppWithProviders() {
+  return (
+    <AuthProvider>
+      <StudyProvider>
+        <App />
+      </StudyProvider>
+    </AuthProvider>
+  );
 }
 
 const routes: string[] = [
@@ -52,12 +67,18 @@ const routes: string[] = [
   '/practice/literature?type=choice&grade=all',
   '/wrong',
   '/stats',
+  // 账户页（云端未配置时渲染降级提示）
+  '/account',
   // 知识拓展页：思维导图与拓展阅读两条渲染路径
   '/extras',
   // 今日背诵（间隔重复清单）
   '/recite',
   // 中考考点
   '/exam',
+  // 历史：考点与考情总复习页 + 整卷模拟考试（开考前页）
+  '/history-review',
+  '/exam-run/paper-01',
+  '/exam-run/不存在的卷子',
   '/practice/vocab?tag=%E5%BD%A2%E5%A3%B0%E5%AD%97&grade=all',
   '/this-route-does-not-exist',
 ];
@@ -69,9 +90,7 @@ for (const route of routes) {
   try {
     const html = renderToString(
       <MemoryRouter initialEntries={[route]}>
-        <StudyProvider>
-          <App />
-        </StudyProvider>
+        <AppWithProviders />
       </MemoryRouter>,
     );
 
@@ -164,9 +183,7 @@ if (!progressTarget) {
   // 去掉 React 在静态文本与插值之间插入的注释分隔符
   const plain = renderToString(
     <MemoryRouter initialEntries={['/s/chinese/vocab']}>
-      <StudyProvider>
-        <App />
-      </StudyProvider>
+      <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
 
@@ -185,9 +202,7 @@ if (!progressTarget) {
    */
   const suppHtml = renderToString(
     <MemoryRouter initialEntries={['/s/chinese/classical/c-loushiming']}>
-      <StudyProvider>
-        <App />
-      </StudyProvider>
+      <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
 
@@ -211,9 +226,7 @@ if (!progressTarget) {
   } else {
     const actionHtml = renderToString(
       <MemoryRouter initialEntries={[`/s/chinese/${actionTarget.moduleId}/${actionTarget.id}`]}>
-        <StudyProvider>
-          <App />
-        </StudyProvider>
+        <AppWithProviders />
       </MemoryRouter>,
     ).replace(/<!--[\s\S]*?-->/g, '');
     suppChecks.push([
@@ -240,9 +253,7 @@ if (!progressTarget) {
    */
   const examHtml = renderToString(
     <MemoryRouter initialEntries={['/exam']}>
-      <StudyProvider>
-        <App />
-      </StudyProvider>
+      <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
 
@@ -281,9 +292,7 @@ if (!progressTarget) {
   );
   const drillHtml = renderToString(
     <MemoryRouter initialEntries={[`/practice/poems?poems=${drillPoems.map((p) => p.id).join(',')}`]}>
-      <StudyProvider>
-        <App />
-      </StudyProvider>
+      <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
 
@@ -303,9 +312,7 @@ if (!progressTarget) {
    */
   const bookHtml = renderToString(
     <MemoryRouter initialEntries={['/s/chinese/literature/l-xiyouji']}>
-      <StudyProvider>
-        <App />
-      </StudyProvider>
+      <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
 
@@ -342,9 +349,7 @@ if (!progressTarget) {
   const mapChecks: [string, boolean][] = mapTargets.map(({ id, name, moduleId }) => {
     const html = renderToString(
       <MemoryRouter initialEntries={[`/s/chinese/${moduleId}/${id}`]}>
-        <StudyProvider>
-          <App />
-        </StudyProvider>
+        <AppWithProviders />
       </MemoryRouter>,
     ).replace(/<!--[\s\S]*?-->/g, '');
     const m = /(\d+)\s*节点/.exec(html);
@@ -418,17 +423,13 @@ if (!progressTarget) {
   const audioHtml = audioEntry
     ? renderToString(
         <MemoryRouter initialEntries={[`/s/chinese/poems/${audioEntry.id}`]}>
-          <StudyProvider>
-            <App />
-          </StudyProvider>
+          <AppWithProviders />
         </MemoryRouter>,
       ).replace(/<!--[\s\S]*?-->/g, '')
     : '';
   const litHtml = renderToString(
     <MemoryRouter initialEntries={['/s/chinese/literature/l-xiyouji']}>
-      <StudyProvider>
-        <App />
-      </StudyProvider>
+      <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
 
@@ -450,6 +451,50 @@ if (!progressTarget) {
       .join('、') || '五类断言全通过'}）`,
   );
   if (!audioOk) failed += 1;
+
+  /* ------------- 接线检查：历史备考三件套（时间轴 / 分层考点 / 材料题） ------------- */
+
+  /**
+   * 历史这一科的价值全在「能不能拿来复习」，而这三块都是**渲染失败也不报错**的：
+   * 时间轴没画出来、考点层级丢了、材料题没渲染——页面照样显示，只是学生复习时发现少东西。
+   * 因此拿一条真实内容逐块断言（默认收起不影响：这些都在正文里直接渲染）。
+   */
+  const histEntry = allEntries.find((e) => e.moduleId === 'hist-8a');
+  const histHtml = histEntry
+    ? renderToString(
+        <MemoryRouter initialEntries={[`/s/history/hist-8a/${histEntry.id}`]}>
+          <AppWithProviders />
+        </MemoryRouter>,
+      ).replace(/<!--[\s\S]*?-->/g, '')
+    : '';
+  const reviewHtml = renderToString(
+    <MemoryRouter initialEntries={['/history-review']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+  const paperHtml = renderToString(
+    <MemoryRouter initialEntries={['/exam-run/paper-01']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+
+  const histChecks: [string, boolean][] = [
+    ['历史详情页有主线', histHtml.includes('这一条的主线')],
+    [`时间轴渲染（${histHtml.split('history-timeline__item').length - 1} 个节点）`, histHtml.split('history-timeline__item').length - 1 >= 4],
+    ['考点分层三档', ['重点', '次重点', '了解'].every((s) => histHtml.includes(s))],
+    ['关联与对比表', histHtml.includes('关联与对比') && histHtml.includes('history-table')],
+    ['材料大题与参考答案入口', histHtml.includes('材料大题') && histHtml.includes('看参考答案与踩分点')],
+    ['考点与考情总复习页', reviewHtml.includes('考点与考情总复习') && reviewHtml.includes('70 分')],
+    ['整卷模拟开考前页（含结构说明）', paperHtml.includes('开始考试') && paperHtml.includes('70')],
+  ];
+  const histOk = histChecks.every(([, ok]) => ok);
+  console.log(
+    `  ${histOk ? '✅' : '❌'} 接线检查：历史备考（${histChecks
+      .filter(([, ok]) => !ok)
+      .map(([n]) => n)
+      .join('、') || '七类断言全通过'}）`,
+  );
+  if (!histOk) failed += 1;
 }
 
 if (failed) {

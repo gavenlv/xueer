@@ -336,6 +336,13 @@ export interface StudyState {
   progress: Record<string, ItemProgress>;
   /** 题目 id -> 错题记录 */
   wrong: Record<string, WrongRecord>;
+  /**
+   * 错题墓碑：questionId -> 消错（移出错题本）时间戳。
+   * 「答对消错」是删除操作，删除本身无法被同步；记录删除时间后，
+   * 云端合并时才能区分一条错题是「待同步的旧记录」还是「已被消掉」，
+   * 避免消掉的错题在下次登录时复活。
+   */
+  wrongRemoved?: Record<string, number>;
   /** 已打卡日期，YYYY-MM-DD */
   checkins: string[];
   /** 每日学习统计 date -> 答题数 */
@@ -389,8 +396,25 @@ export type MathModuleId =
   | 'math-model'
   | 'math-exam';
 
+/**
+ * 历史学科模块 id。
+ *
+ * 六册教材各成一块（七上～九下），另有两块**备考专用**：
+ * `hist-topics` 中考专题（横向串联、中外对比），`hist-exam` 整卷模拟考试。
+ * 这两块不是教材单元，但正是初三总复习最需要的入口，因此与教材模块同级。
+ */
+export type HistoryModuleId =
+  | 'hist-7a'
+  | 'hist-7b'
+  | 'hist-8a'
+  | 'hist-8b'
+  | 'hist-9a'
+  | 'hist-9b'
+  | 'hist-topics'
+  | 'hist-exam';
+
 /** 全部模块 id；新增学科时在此扩展 */
-export type ModuleId = ChineseModuleId | MathModuleId;
+export type ModuleId = ChineseModuleId | MathModuleId | HistoryModuleId;
 
 interface EntryBase {
   id: string;
@@ -438,6 +462,130 @@ export interface LiteratureEntry extends EntryBase {
   moduleId: 'literature';
   data: LiteratureItem;
 }
+
+/* ------------------------------ 历史 ------------------------------ */
+
+/**
+ * 考点层级：备考时最先要分清的一件事——哪些必须滚瓜烂熟，哪些认得出来即可。
+ * 取值有意用中文，因为它会直接显示在学生面前。
+ */
+export type HistoryLevel = '重点' | '次重点' | '了解';
+
+/** 时间轴上的一个坐标 */
+export interface HistoryTimePoint {
+  /** 时间，如「1842 年」「公元前 221 年」 */
+  time: string;
+  /** 事件 */
+  event: string;
+  /** 补充说明（意义、易错点、关联） */
+  note?: string;
+  /** 是否为重点时间（页面上加重显示） */
+  key?: boolean;
+}
+
+/** 分层考点 */
+export interface HistoryPoint {
+  level: HistoryLevel;
+  /** 考点表述（尽量写成「可作答」的句子，而不是关键词） */
+  text: string;
+  /** 展开说明：为什么考、怎么答、易错在哪 */
+  explain?: string;
+}
+
+/** 对比表：中外对比、跨册对比、同一主题的横向比较 */
+export interface HistoryCompare {
+  title: string;
+  /** 比较的维度说明，如「同一时期的中西方」 */
+  aspect: string;
+  /** 表头左右两栏的名称 */
+  left: string;
+  right: string;
+  rows: { item: string; left: string; right: string }[];
+}
+
+/**
+ * 材料题（广州中考历史的非选择题：「阅读材料，回答问题」）。
+ * 材料可多则（用 `【材料一】` 这类标记写在 `material` 里），设问带分值。
+ */
+export interface HistoryMaterialGroup {
+  id: string;
+  material: string;
+  /** 设问与参考答案、踩分点 */
+  questions: { id: string; stem: string; answer: string; rubric?: string[]; tags?: string[] }[];
+}
+
+/** 命题角度：这一考点在历年中考里怎么被考（考情研判） */
+export interface HistoryExamAngle {
+  angle: string;
+  /** 出现过的年份或范围（如「2021—2025」），没有具体年份时留空 */
+  years?: string;
+  detail: string;
+}
+
+/** 一条历史内容（一个单元/一课/一个专题） */
+export interface HistoryTopic {
+  id: string;
+  grade: GradeOrAll;
+  title: string;
+  /** 时段，如「1840—1919」 */
+  period: string;
+  /** 所属单元或专题分组名 */
+  unit?: string;
+  /** 一句话主线：这一段的「因果一句话」 */
+  mainline: string;
+  /** 时空坐标 */
+  timeline: HistoryTimePoint[];
+  /** 分层考点 */
+  points: HistoryPoint[];
+  /** 必背结论与答题术语 */
+  conclusions?: string[];
+  /** 易错易混 */
+  confusions?: { wrong: string; right: string; why: string }[];
+  /** 关联与对比表 */
+  compares?: HistoryCompare[];
+  /** 命题角度与考情 */
+  examAngles?: HistoryExamAngle[];
+  /** 材料大题 */
+  materials?: HistoryMaterialGroup[];
+  questions: QuizQuestion[];
+}
+
+/**
+ * 一套模拟卷。
+ *
+ * 结构**照 2027—2029 年广州中考历史真题的结构**设置（见 `basis`）：
+ * 单项选择 20 小题 40 分 + 非选择题（阅读材料，回答问题）3 小题 30 分 = 23 题 70 分，60 分钟闭卷。
+ * 因此这里的 `sections` 是**验卷依据**：`pnpm validate` 会核对题量与分值是否与官方结构一致，
+ * 以后官方若调整结构（如 2027 年配套文件公布具体分值），改数据即可，不需要改代码。
+ */
+export interface HistoryPaper {
+  id: string;
+  grade: GradeOrAll;
+  title: string;
+  /** 卷面说明（如「按 2027—2029 年广州中考历史结构命题」） */
+  basis: string;
+  /** 考试时长（分钟） */
+  duration: number;
+  /** 全卷满分 */
+  totalScore: number;
+  /** 试卷结构（用于验卷与页面上的结构表） */
+  sections: { name: string; kind: 'choice' | 'material'; count: number; score: number }[];
+  /** 材料题材料组 */
+  materials: HistoryMaterialGroup[];
+  /** 全卷题目：选择题 + 材料题的设问（材料题设问按 `material` 题型入库） */
+  questions: QuizQuestion[];
+}
+
+export interface HistoryTopicEntry extends EntryBase {
+  moduleId: Exclude<HistoryModuleId, 'hist-exam'>;
+  data: HistoryTopic;
+}
+export interface HistoryPaperEntry extends EntryBase {
+  moduleId: 'hist-exam';
+  data: HistoryPaper;
+}
+
+export type HistoryEntry = HistoryTopicEntry | HistoryPaperEntry;
 
 /* ------------------------------ 数学 ------------------------------ */
 
@@ -499,6 +647,7 @@ export type Entry =
   | ReadingEntry
   | WritingEntry
   | LiteratureEntry
+  | HistoryEntry
   | MathEntry;
 
 /** 练习会话中的一道题（带来源信息） */

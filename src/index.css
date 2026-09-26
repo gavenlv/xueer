@@ -1968,6 +1968,369 @@ button.mm-label:hover {
   }
 }
 
+/* ------------------------------- 历史 ------------------------------- */
+/* 备考导向：主线 → 时间轴 → 分层考点 → 结论 → 易错 → 对比 → 考法 → 材料题 */
+
+.history-mainline {
+  background: linear-gradient(135deg, rgba(138, 106, 59, 0.09), rgba(138, 106, 59, 0.02));
+  border-color: rgba(138, 106, 59, 0.28);
+}
+
+.history-mainline__label {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #8a6a3b;
+}
+
+.history-mainline__text {
+  margin-top: 6px;
+  font-size: 16px;
+  line-height: 1.95;
+  font-weight: 600;
+}
+
+/* 时间轴：左侧竖线 + 圆点，重点节点加重 */
+.history-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 4px;
+  position: relative;
+}
+
+.history-timeline::before {
+  content: '';
+  position: absolute;
+  left: 78px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--c-line);
+}
+
+.history-timeline__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 0;
+  position: relative;
+}
+
+.history-timeline__time {
+  width: 68px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--c-ink-3);
+  padding-top: 2px;
+}
+
+.history-timeline__dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--c-surface);
+  border: 2px solid var(--c-line);
+  margin-top: 5px;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.history-timeline__item.is-key .history-timeline__time {
+  color: #c1483a;
+}
+
+.history-timeline__item.is-key .history-timeline__dot {
+  background: #c1483a;
+  border-color: #c1483a;
+}
+
+.history-timeline__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.history-timeline__event {
+  font-weight: 600;
+  line-height: 1.7;
+}
+
+.history-timeline__note {
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--c-ink-3);
+}
+
+/* 考点分层 */
+.history-level + .history-level {
+  margin-top: 14px;
+}
+
+.history-level__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.history-point {
+  border-left: 3px solid var(--c-line);
+  padding: 2px 0 2px 11px;
+}
+
+.history-point__text {
+  line-height: 1.9;
+  font-weight: 550;
+}
+
+.history-point__explain {
+  margin-top: 4px;
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--c-ink-3);
+}
+
+/* 易错易混 */
+.history-confuse {
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  padding: 11px 13px;
+  background: var(--c-surface);
+}
+
+.history-confuse__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.85;
+}
+
+.history-confuse__row + .history-confuse__row {
+  margin-top: 6px;
+}
+
+.history-confuse .small.muted {
+  margin-top: 6px;
+}
+
+/* 对比表 */
+.history-compare__title {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  min-width: 520px;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid var(--c-line);
+  padding: 9px 12px;
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.75;
+}
+
+.table thead th {
+  background: var(--c-surface-2);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.history-table__item {
+  font-weight: 650;
+  white-space: nowrap;
+  color: var(--c-ink-2);
+}
+
+/* 命题角度 */
+.history-angle {
+  border: 1px dashed var(--c-line);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+}
+
+.history-angle__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.history-angle__detail {
+  margin-top: 6px;
+  line-height: 1.85;
+  color: var(--c-ink-2);
+}
+
+/* 材料题 */
+.history-material {
+  border: 1px solid var(--c-line);
+  border-left: 3px solid #8a6a3b;
+  border-radius: var(--r-md);
+  background: var(--c-surface-2);
+  padding: 11px 13px;
+}
+
+.history-material__label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #8a6a3b;
+  margin-bottom: 4px;
+}
+
+.history-material__text {
+  font-family: var(--font-kai);
+  font-size: 15.5px;
+  line-height: 2;
+  white-space: pre-line;
+}
+
+.history-ask {
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  padding: 11px 13px;
+}
+
+.history-ask__stem {
+  display: flex;
+  gap: 8px;
+  font-weight: 600;
+  line-height: 1.9;
+}
+
+.history-ask__no {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--c-primary-soft);
+  color: var(--c-primary-ink);
+  font-size: 12px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  margin-top: 3px;
+}
+
+/* 手机端：时间轴收窄，表格横向滚动 */
+@media (max-width: 640px) {
+  .history-timeline::before {
+    left: 62px;
+  }
+
+  .history-timeline__time {
+    width: 52px;
+    font-size: 12px;
+  }
+
+  .table {
+    min-width: 460px;
+  }
+}
+
+/* 整卷模拟考试：顶部计时条 + 答题卡 + 卷面题目 */
+.exam-bar {
+  position: sticky;
+  top: 8px;
+  z-index: 20;
+  backdrop-filter: blur(6px);
+  background: var(--c-surface);
+}
+
+.exam-bar__clock {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 16px;
+  color: #c1483a;
+}
+
+.exam-sheet {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.exam-sheet__cell {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--c-line);
+  display: grid;
+  place-items: center;
+  font-size: 12.5px;
+  color: var(--c-ink-2);
+  background: var(--c-surface);
+}
+
+.exam-sheet__cell.is-done {
+  background: var(--c-primary-soft);
+  border-color: var(--c-primary);
+  color: var(--c-primary-ink);
+  font-weight: 700;
+}
+
+.exam-sheet__cell.is-short {
+  border-style: dashed;
+}
+
+.exam-q + .exam-q {
+  margin-top: 18px;
+}
+
+.exam-q__stem {
+  display: flex;
+  gap: 9px;
+  font-weight: 600;
+  line-height: 1.9;
+  margin-bottom: 10px;
+}
+
+.exam-q__no {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-line);
+  font-size: 12px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  margin-top: 3px;
+}
+
+@media (max-width: 640px) {
+  .exam-bar {
+    position: static;
+  }
+
+  .exam-sheet__cell {
+    width: 28px;
+    height: 28px;
+  }
+}
+
 /* ------------------------------- 拓展阅读 ------------------------------- */.ext-list {
   display: flex;
   flex-direction: column;

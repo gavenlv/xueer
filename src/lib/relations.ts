@@ -179,10 +179,16 @@ function authorKeys(entry: Rel): string[] {
   return inner && inner !== a ? [a.toLowerCase(), inner.toLowerCase()] : [a.toLowerCase()];
 }
 
-/** 模块 id → 学科 id（避免依赖 data 层造成循环引用） */
+/**
+ * 模块 id → 学科 id（用前缀判断，避免依赖 data 层造成循环引用）。
+ * 只同学科内做关联：语文与历史、数学混在一起推荐没有教学价值。
+ */
 const MATH_MODULE_PREFIX = 'math-';
+const HISTORY_MODULE_PREFIX = 'hist-';
 function subjectOf(moduleId: string): string {
-  return moduleId.startsWith(MATH_MODULE_PREFIX) ? 'math' : 'chinese';
+  if (moduleId.startsWith(MATH_MODULE_PREFIX)) return 'math';
+  if (moduleId.startsWith(HISTORY_MODULE_PREFIX)) return 'history';
+  return 'chinese';
 }
 
 /* ------------------------------------------------------------------ */

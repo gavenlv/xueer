@@ -85,6 +85,44 @@ export function searchTextOf(entry: Entry): string {
       ]);
       break;
     }
+    /**
+     * 历史：检索文本要把「备考要用的东西」全放进来——
+     * 时间轴、分层考点、必背结论、易错、对比表、材料与设问都进索引，
+     * 学生才能按「推恩令」「经济重心南移」「罗斯福新政」这类关键词直接搜到对应的单元。
+     */
+    case 'hist-7a':
+    case 'hist-7b':
+    case 'hist-8a':
+    case 'hist-8b':
+    case 'hist-9a':
+    case 'hist-9b':
+    case 'hist-topics': {
+      const h = entry.data;
+      text = join([
+        h.title,
+        h.period,
+        h.unit,
+        h.mainline,
+        h.timeline.map((p) => `${p.time}${p.event}${p.note ?? ''}`),
+        h.points.map((p) => `${p.level}${p.text}${p.explain ?? ''}`),
+        h.conclusions,
+        h.confusions?.map((c) => `${c.wrong}${c.right}${c.why}`),
+        h.compares?.map((c) => `${c.title}${c.aspect}${c.rows.map((r) => `${r.item}${r.left}${r.right}`).join('')}`),
+        h.examAngles?.map((a) => `${a.angle}${a.detail}`),
+        h.materials?.map((m) => `${m.material}${m.questions.map((q) => q.stem).join('')}`),
+      ]);
+      break;
+    }
+    case 'hist-exam': {
+      const p = entry.data;
+      text = join([
+        p.title,
+        p.basis,
+        p.questions.map((q) => `${q.stem}${(q.options ?? []).join('')}`),
+        p.materials.map((m) => `${m.material}${m.questions.map((q) => q.stem).join('')}`),
+      ]);
+      break;
+    }
     default: {
       // 数学：${...}$ 公式源码也进检索文本，学生可以按符号找知识点
       const m = entry.data as {
