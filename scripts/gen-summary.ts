@@ -33,6 +33,7 @@ import {
 import { allPoems, CONTENT_STATS } from '../src/data/chinese';
 import { imageryOfLines, relOfEntryFull } from '../src/lib/relNode';
 import { litMatchIndex } from '../src/lib/relations';
+import { reciteCardsOf } from '../src/lib/reciteCards';
 import { SUBJECTS } from '../src/data/subjects';
 import type { ModuleId } from '../src/types';
 
@@ -71,10 +72,18 @@ async function main(): Promise<void> {
   const imageryOf = (e: (typeof allEntries)[number]): string[] =>
     e.moduleId === 'poems' ? imageryOfLines((e.data as { lines?: string[] }).lines ?? []) : [];
 
-  /** 词语模块的词条名（「本篇涉及的字词」分组要在未加载词语模块时也能匹配） */
+  /** 词条名（「本篇涉及的字词」分组要在未加载词语模块时也能匹配） */
   const termOf = (e: (typeof allEntries)[number]): string =>
     e.moduleId === 'vocab' ? ((e.data as { term?: string }).term ?? '') : '';
 
+  /**
+   * 每个条目能派生出多少张「知识点卡片」（见 `lib/reciteCards.ts`）。
+   *
+   * 卡片本身是**派生**的（不落库），但学习报告要说清「本科目共多少知识点、掌握多少」，
+   * 而报告页刻意不加载正文。所以这里只把**张数**存进清单：算掌握率只看清单 + 稀疏的
+   * 背诵记录，一张正文都不用下载。
+   */
+  const cardsOf = (e: (typeof allEntries)[number]): number => reciteCardsOf(e).length;
 
   const entryMeta = allEntries.map((e) => ({
     id: e.id,
@@ -95,6 +104,8 @@ async function main(): Promise<void> {
     term: termOf(e),
     /** 该条目题目上的知识点标签（关联「同一考点」用） */
     qTags: [...new Set(e.questions.flatMap((q2) => q2.tags ?? []))],
+    /** 该条目能派生出的知识点卡片数（背诵清单与掌握率统计用） */
+    cards: cardsOf(e),
   }));
 
   const moduleTotals = SUBJECTS.flatMap((s) =>
@@ -106,6 +117,7 @@ async function main(): Promise<void> {
         questions: list.reduce((n, e) => n + e.questions.length, 0),
         mindMaps: mindMaps.filter((x) => x.moduleId === m.id).length,
         extensions: extensions.filter((x) => x.moduleId === m.id).length,
+        cards: list.reduce((n, e) => n + cardsOf(e), 0),
       };
     }),
   );
@@ -150,6 +162,8 @@ async function main(): Promise<void> {
   lines.push('  term: string;');
   lines.push('  /** 该条目题目上的知识点标签（用于跨模块的「同一考点」分组） */');
   lines.push('  qTags: string[];');
+  lines.push('  /** 该条目能派生出的「知识点卡片」张数（背诵清单与掌握率统计用，见 lib/reciteCards.ts） */');
+  lines.push('  cards: number;');
   lines.push('}');
   lines.push('');
   lines.push('/**');
@@ -170,6 +184,8 @@ async function main(): Promise<void> {
   lines.push('  questions: number;');
   lines.push('  mindMaps: number;');
   lines.push('  extensions: number;');
+  lines.push('  /** 本模块的「知识点卡片」总数（掌握率分母） */');
+  lines.push('  cards: number;');
   lines.push('}');
   lines.push('');
   lines.push('/** 每条内容的骨架信息（全部条目，含数学） */');
@@ -187,16 +203,16 @@ async function main(): Promise<void> {
         e.authors,
       )}, matchFrom: parseMatchFrom(${q(mf)}), imagery: ${JSON.stringify(e.imagery)}, term: ${q(
         e.term,
-      )}, qTags: ${JSON.stringify(e.qTags)} },`,
+      )}, qTags: ${JSON.stringify(e.qTags)}, cards: ${e.cards} },`,
     );
   }
   lines.push('];');
   lines.push('');
-  lines.push('/** 每个模块的条目数、题量、导图数与拓展数 */');
+  lines.push('/** 每个模块的条目数、题量、导图数、拓展数与知识点卡片数 */');
   lines.push('export const MODULE_TOTALS: ModuleTotals[] = [');
   for (const m of moduleTotals) {
     lines.push(
-      `  { id: ${q(m.id)}, entries: ${m.entries}, questions: ${m.questions}, mindMaps: ${m.mindMaps}, extensions: ${m.extensions} },`,
+      `  { id: ${q(m.id)}, entries: ${m.entries}, questions: ${m.questions}, mindMaps: ${m.mindMaps}, extensions: ${m.extensions}, cards: ${m.cards} },`,
     );
   }
   lines.push('];');
@@ -233,6 +249,9 @@ async function main(): Promise<void> {
   console.log('\n================ 轻量清单已生成 ================');
   console.log(`  条目骨架      ${entryMeta.length} 条`);
   console.log(`  模块汇总      ${moduleTotals.length} 个模块`);
+  console.log(
+    `  知识点卡片    ${moduleTotals.reduce((n, m) => n + m.cards, 0)} 张（背诵清单用，见 lib/reciteCards.ts）`,
+  );
   console.log(`  每日一句池     ${dailyLines.length} 句`);
   console.log(`  文件          src/data/summary.ts`);
   console.log(`  考点（校验用）${poemExamPoints().length} 个古诗词聚类考点`);

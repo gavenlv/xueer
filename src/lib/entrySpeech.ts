@@ -123,6 +123,71 @@ export function speechSegmentsOf(entry: Entry): SpeechSegment[] {
 
     default: {
       /**
+       * 物理：按**理解顺序**读——问题 → 理解的关键 → 逐步讲解（含图的文字描述）
+       * → 应用（情境、模型、结论）。
+       *
+       * 必须放在「通用试卷分支」**之前**：物理知识点的 `materials` 也有材料与设问，
+       * 若先被那个分支截走，整段理解过程就不会被读出来。
+       *
+       * 图的 `alt` 一定要读：物理的图承载着文字没说的信息（受力方向、光路走向、
+       * 电路连接方式），只听文字不听图，等于听了一半。公式的适用条件也读出来，
+       * 因为「什么时候能用」正是理科最容易错的地方。
+       */
+      if (entry.moduleId.startsWith('phy-')) {
+        const ph = entry.data as {
+          question?: string;
+          keyIdea?: string;
+          steps?: { heading?: string; body?: string; note?: string; figure?: { title?: string; alt?: string } }[];
+          apps?: { title?: string; scene?: string; model?: string; result?: string; figure?: { title?: string; alt?: string } }[];
+          formulas?: { name?: string; usage?: string; units?: string }[];
+          materials?: { material?: string; questions: { stem: string }[] }[];
+          basis?: string;
+        };
+        if (Array.isArray(ph.steps)) {
+          push(out, 'question', ph.question, '要解决的问题');
+          push(out, 'keyIdea', ph.keyIdea, '理解的关键');
+          ph.steps.forEach((s, i) => {
+            push(
+              out,
+              `step-${i}`,
+              `${s.heading ?? ''}。${s.body ?? ''}${s.note ? `。注意：${s.note}` : ''}`,
+              `理解第 ${i + 1} 步`,
+            );
+            if (s.figure) {
+              push(out, `step-${i}-fig`, `${s.figure.title ?? ''}。${s.figure.alt ?? ''}`, `第 ${i + 1} 步的图`);
+            }
+          });
+          ph.apps?.forEach((a, i) => {
+            push(
+              out,
+              `app-${i}`,
+              `${a.scene ?? ''}。物理模型：${a.model ?? ''}。结论：${a.result ?? ''}`,
+              `应用·${a.title ?? i + 1}`,
+            );
+            if (a.figure) {
+              push(out, `app-${i}-fig`, `${a.figure.title ?? ''}。${a.figure.alt ?? ''}`, `应用 ${i + 1} 的图`);
+            }
+          });
+          ph.formulas?.forEach((f, i) =>
+            push(
+              out,
+              `formula-${i}`,
+              `${f.name ?? ''}。${f.units ?? ''}。适用条件：${f.usage ?? ''}`,
+              `公式·${f.name ?? i + 1}`,
+            ),
+          );
+          break;
+        }
+        // 物理整卷：只读卷面说明与综合题材料（题目留给学生做，念出来只是噪音）
+        push(out, 'basis', ph.basis, '卷面说明');
+        (ph.materials ?? []).forEach((m, i) => {
+          push(out, `mat-${i}`, m.material, `材料${i + 1}`);
+          m.questions.forEach((q, k) => push(out, `mat-${i}-q${k}`, q.stem, `第 ${i + 1} 题第 ${k + 1} 问`));
+        });
+        break;
+      }
+
+      /**
        * 英语：**按模块 id 判断**（不是按数据形状）——英语七块的「可朗读材料」各不相同：
        *   听说脚本（本应用用它代替听力音频，点朗读条就等于听听力材料）→ 阅读语篇 →
        *   语法/专题的**例句**（最值得跟读的东西）→ 书面表达范文与句型 →

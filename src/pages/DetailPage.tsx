@@ -2,7 +2,7 @@
 
 import { Suspense, lazy, useEffect, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import type { ModuleId, PoliticsPaperEntry, PoliticsTopicEntry } from '../types';
+import type { ModuleId, PhysicsPaperEntry, PhysicsTopicEntry, PoliticsPaperEntry, PoliticsTopicEntry } from '../types';
 import { findEntryById } from '../data';
 import { getModuleMeta } from '../data/subjects';
 import { useStudy } from '../store/StudyContext';
@@ -20,6 +20,8 @@ import { EnglishDetail } from './detail/EnglishDetail';
 import { EnglishPaperDetail } from './detail/EnglishPaperDetail';
 import { PoliticsDetail } from './detail/PoliticsDetail';
 import { PoliticsPaperDetail } from './detail/PoliticsPaperDetail';
+import { PhysicsDetail } from './detail/PhysicsDetail';
+import { PhysicsPaperDetail } from './detail/PhysicsPaperDetail';
 
 /**
  * 六个模块的详情渲染器。
@@ -124,6 +126,21 @@ export default function DetailPage() {
       case 'pol-nation':
       case 'pol-current':
         return <PoliticsDetail entry={entry} moduleName={meta?.module.name ?? '道德与法治'} />;
+      // 物理：phy-exam 里同样既有整卷也有题型专题，按数据形状分流
+      case 'phy-exam':
+        return 'sections' in entry.data ? (
+          <PhysicsPaperDetail entry={entry as PhysicsPaperEntry} moduleName={meta?.module.name ?? '模拟考试'} />
+        ) : (
+          <PhysicsDetail entry={entry as PhysicsTopicEntry} moduleName={meta?.module.name ?? '物理'} />
+        );
+      case 'phy-light':
+      case 'phy-heat':
+      case 'phy-mech':
+      case 'phy-work':
+      case 'phy-electric':
+      case 'phy-magnet':
+      case 'phy-experiment':
+        return <PhysicsDetail entry={entry} moduleName={meta?.module.name ?? '物理'} />;
       case 'math-number':
       case 'math-geometry':
       case 'math-stats':

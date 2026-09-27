@@ -9,6 +9,8 @@ import { subjectOfModule } from '../data';
 import type { ModuleId } from '../types';
 import { useStreak, useStudy } from '../store/StudyContext';
 import { dateKey, pct, timeAgo } from '../lib/utils';
+import { isMastered } from '../lib/recite';
+import { entryIdOfCard } from '../lib/reciteCards';
 import type { ItemProgress } from '../types';
 import { ProgressBar, SectionTitle, Stat, Tag } from '../components/common';
 import { WeightBoard } from '../components/SubjectBoard';
@@ -108,7 +110,6 @@ export default function Home() {
   const overall = useMemo(() => {
     const ids = Object.keys(state.progress);
     const studied = ids.filter((id) => (state.progress[id]?.studied ?? 0) > 0).length;
-    const total = ENTRY_META.length;
     let correct = 0;
     let answered = 0;
     for (const p of Object.values(state.progress)) {
@@ -124,11 +125,41 @@ export default function Home() {
     }
     return {
       studied,
-      total,
       accuracy: dAnswered > 0 ? Math.round((dCorrect / dAnswered) * 100) : null,
       wrongCount: Object.keys(state.wrong).length,
     };
   }, [state.progress, state.daily, state.wrong]);
+
+  /** 全库条目数（来自轻量清单，不加载正文） */
+  const totalEntries = ENTRY_META.length;
+
+  /**
+   * 全库知识点卡片总数（= 掌握率的分母）。
+   *
+   * 分母必须是**卡片**数而不是条目数：一条历史内容能派生出几十个时间点，
+   * 拿条目数当分母会让进度条永远贴着 0，看着像没学。
+   */
+  const totalCards = useMemo(() => MODULE_TOTALS.reduce((n, t) => n + t.cards, 0), []);
+
+  /**
+   * 已标熟的知识点（= 完全掌握）。
+   *
+   * 和上面的 `已学内容` 是两个不同的数字，刻意都显示出来：
+   * 「已学」只说明打开过这条内容，「已标熟」才说明真的背下来了。
+   * 卡片 id 里带着条目 id，用清单反查模块即可按学科汇总，不需要加载任何正文。
+   */
+  const masteredBySubject = useMemo(() => {
+    const out: Record<string, number> = {};
+    let total = 0;
+    for (const [id, rec] of Object.entries(state.cards ?? {})) {
+      if (!isMastered(rec)) continue;
+      total += 1;
+      const meta = META_BY_ID.get(entryIdOfCard(id));
+      const sid = meta ? subjectOfModule(meta.moduleId) : undefined;
+      if (sid) out[sid] = (out[sid] ?? 0) + 1;
+    }
+    return { total, bySubject: out };
+  }, [state.cards]);
 
   /* 继续学习：最近学过的 3 条 */
   const recent = useMemo(() => {
@@ -368,10 +399,12 @@ export default function Home() {
       <section className="stack stack--sm">
         <SectionTitle sub="不用记路径，一步直达">快捷入口</SectionTitle>
         <div className="scroll-x quick-row">
-          <Link className="quick" to="/s/chinese/recite">
-            <span className="quick__icon">📅</span>
-            <span className="quick__label">今日背诵</span>
-            <span className="quick__desc">间隔重复排期</span>
+          <Link className="quick" to={`/s/${subject?.id ?? 'chinese'}/recite`}>
+            <span className="quick__icon">🧠</span>
+            <span className="quick__label">知识点背诵</span>
+            <span className="quick__desc">
+              {masteredBySubject.total > 0 ? `已标熟 ${masteredBySubject.total} 个` : '每点背了 1 次'}
+            </span>
           </Link>
           <Link className="quick" to="/s/history/hist-exam">
             <span className="quick__icon">📝</span>
@@ -383,15 +416,20 @@ export default function Home() {
             <span className="quick__label">历史考点与考情</span>
             <span className="quick__desc">重点 / 次重点 / 材料大题</span>
           </Link>
-          <Link className="quick" to="/s/chinese/exam">
-            <span className="quick__icon">🎯</span>
-            <span className="quick__label">语文考点</span>
-            <span className="quick__desc">按知识点聚合</span>
+          <Link className="quick" to="/s/history/hist-exam">
+            <span className="quick__icon">🕰️</span>
+            <span className="quick__label">历史时间线</span>
+            <span className="quick__desc">按时间点背诵驱散混乱</span>
           </Link>
           <Link className="quick" to="/s/history/hist-topics">
             <span className="quick__icon">🔀</span>
             <span className="quick__label">历史中考专题</span>
             <span className="quick__desc">跨册关联与中外对比</span>
+          </Link>
+          <Link className="quick" to="/s/chinese/exam">
+            <span className="quick__icon">🎯</span>
+            <span className="quick__label">语文考点</span>
+            <span className="quick__desc">按知识点聚合</span>
           </Link>
           <Link className="quick" to="/s/chinese/extras">
             <span className="quick__icon">🧩</span>
@@ -410,15 +448,33 @@ export default function Home() {
 
       {/* 学习总览 */}
       <section className="card card--pad stack stack--sm">
-        <SectionTitle sub="全部学科累计数据">我的进度</SectionTitle>
+        <SectionTitle sub="看过 ≠ 掌握，两个数字分开看">我的进度</SectionTitle>
         <div className="row row--between small">
           <span>
-            已学内容 {overall.studied} / {overall.total}
+            已学内容 {overall.studied} / {totalEntries}
           </span>
           <span className="muted">总正确率 {overall.accuracy === null ? '—' : `${overall.accuracy}%`}</span>
         </div>
-        <ProgressBar value={overall.studied} max={Math.max(1, overall.total)} />
+        <ProgressBar value={overall.studied} max={Math.max(1, totalEntries)} />
+        <div className="row row--between small">
+          <span>
+            已标熟知识点 {masteredBySubject.total} / {totalCards}
+            {subject ? `（${subject.name} ${masteredBySubject.bySubject[subject.id] ?? 0} 个）` : ''}
+          </span>
+          <span className="muted">
+            {masteredBySubject.total > 0 ? '连续背对 3 次才算掌握' : '去背诵页背几个试试'}
+          </span>
+        </div>
+        <ProgressBar
+          value={masteredBySubject.total}
+          max={Math.max(1, totalCards)}
+          tone="jade"
+          thin
+        />
         <div className="row row--wrap" style={{ marginTop: 6 }}>
+          <Link className="btn btn--sm" to={`/s/${subject?.id ?? 'chinese'}/recite`}>
+            🧠 知识点背诵
+          </Link>
           <Link className="btn btn--sm" to="/s/chinese/extras">
             🧩 思维导图与拓展
           </Link>

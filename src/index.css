@@ -1061,6 +1061,144 @@ img {
   font-size: 13px;
 }
 
+/* ---------------------------- 知识点背诵卡片 ---------------------------- */
+/* 正面提示 → 翻面看答案 → 自评「背了／没记住」，标熟用左侧绿条一眼认出 */
+.rcard {
+  position: relative;
+  padding: 13px 15px 11px 17px;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  background: var(--c-surface);
+  transition: border-color 0.16s, box-shadow 0.16s;
+}
+
+.rcard::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: var(--r-md) 0 0 var(--r-md);
+  background: var(--c-line-2);
+}
+
+.rcard:hover {
+  border-color: var(--c-line-2);
+  box-shadow: var(--sh-1);
+}
+
+/* 重点知识点（历史/道法考点的「重点」层） */
+.rcard.is-key::before {
+  background: var(--c-red);
+}
+
+/* 已标熟：绿条 + 淡绿底，扫一眼就知道哪些不用再花力气 */
+.rcard.is-mastered {
+  background: var(--c-jade-soft);
+  border-color: #cbe9dc;
+}
+
+.rcard.is-mastered::before {
+  background: var(--c-jade);
+}
+
+.rcard__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--c-ink-3);
+}
+
+.rcard__kind {
+  font-weight: 650;
+  color: var(--c-primary-ink);
+  background: var(--c-primary-soft);
+  border-radius: 6px;
+  padding: 1px 7px;
+}
+
+.rcard__from {
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 熟练度三点：●●○ */
+.rcard__dots {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.rcard__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c-surface-3);
+  border: 1px solid var(--c-line-2);
+}
+
+.rcard__dot.is-on {
+  background: var(--c-jade);
+  border-color: var(--c-jade);
+}
+
+.rcard__front {
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.7;
+  font-weight: 600;
+  color: var(--c-ink);
+  white-space: pre-wrap;
+}
+
+.rcard__answer {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--c-line-2);
+}
+
+.rcard__back {
+  font-size: 14.5px;
+  line-height: 1.85;
+  color: var(--c-ink);
+  white-space: pre-wrap;
+}
+
+.rcard__note {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--c-ink-2);
+  background: var(--c-surface-2);
+  border-radius: var(--r-sm);
+  padding: 7px 10px;
+}
+
+.rcard__meta {
+  margin-top: 9px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--c-ink-3);
+}
+
+/* 卡片正面在手机上也够看清：缩一点字号与留白，别撑出横向滚动 */
+@media (max-width: 560px) {
+  .rcard {
+    padding: 12px 12px 10px 14px;
+  }
+  .rcard__front {
+    font-size: 14.5px;
+  }
+}
+
 /* --------------------------------- 诗词 --------------------------------- */
 .poem-sheet {
   padding: 26px 20px;
@@ -3476,3 +3614,295 @@ button.mm-label:hover {
   }
 }
 
+
+/* ------------------------------------------------------------------ */
+/* 物理：图解、理解过程、公式、应用、过关清单                            */
+/* ------------------------------------------------------------------ */
+
+/* 图解：内联 SVG 画布。宽度吃满容器，高度按 viewBox 比例自适应 */
+.fig {
+  margin: 12px 0;
+  padding: 10px 12px 8px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+}
+.fig__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 320px;
+}
+.fig__cap {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fig__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-ink);
+}
+.fig__desc {
+  font-size: 12.5px;
+  color: #6b7684;
+  line-height: 1.6;
+}
+
+/* 详情页头部：要解决的问题 → 理解的关键 → 过关进度 */
+.physics-head__q,
+.physics-head__idea {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+.physics-head__badge {
+  flex: none;
+  font-size: 11.5px;
+  padding: 2px 7px;
+  border-radius: var(--r-full);
+  background: var(--c-primary-soft);
+  color: var(--c-primary-ink);
+}
+.physics-head__text {
+  font-size: 15px;
+  line-height: 1.8;
+}
+.physics-head__meter {
+  margin-top: 12px;
+}
+.physics-head__meterRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.physics-head__bar {
+  height: 8px;
+  border-radius: var(--r-full);
+  background: var(--c-line);
+  overflow: hidden;
+}
+.physics-head__fill {
+  display: block;
+  height: 100%;
+  background: var(--c-jade);
+  border-radius: var(--r-full);
+  transition: width 0.25s ease;
+}
+
+/* 理解过程：编号步骤，图穿插在文字下面 */
+.physics-stepsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.physics-step {
+  border-left: 3px solid var(--c-primary-soft);
+  padding-left: 12px;
+}
+.physics-step__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.physics-step__no {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--c-primary);
+  color: #fff;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.physics-step__title {
+  font-weight: 600;
+  font-size: 14.5px;
+}
+.physics-step__body {
+  font-size: 14.5px;
+  line-height: 1.85;
+}
+.physics-step__note {
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: var(--c-gold-soft);
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* 公式卡：公式 + 单位 + 适用条件 */
+.physics-formulas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+.physics-formula {
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  background: var(--c-surface);
+}
+.physics-formula__name {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+.physics-formula__tex {
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+.physics-formula__units {
+  font-size: 12.5px;
+  color: #6b7684;
+  margin-bottom: 6px;
+}
+.physics-formula__usage {
+  font-size: 13px;
+  line-height: 1.7;
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+.physics-formula__usageTag {
+  flex: none;
+  font-size: 11.5px;
+  padding: 1px 6px;
+  border-radius: var(--r-full);
+  background: var(--c-jade-soft);
+  color: var(--c-jade);
+}
+
+/* 应用例题：情境 → 模型 → 步骤 → 结论 */
+.physics-apps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.physics-app {
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  padding: 12px;
+}
+.physics-app__title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.physics-app__scene {
+  font-size: 14px;
+  line-height: 1.8;
+  margin-bottom: 8px;
+}
+.physics-app__model,
+.physics-app__result {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  background: var(--c-primary-soft);
+  font-size: 13.5px;
+  line-height: 1.75;
+  margin: 8px 0;
+}
+.physics-app__result {
+  background: var(--c-jade-soft);
+}
+.physics-app__tag {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--c-primary-ink);
+}
+.physics-app__result .physics-app__tag {
+  color: var(--c-jade);
+}
+.physics-app__steps {
+  margin: 0;
+  padding-left: 22px;
+  font-size: 14px;
+  line-height: 1.85;
+}
+.physics-steps {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--c-bg);
+  border-radius: var(--r-sm);
+}
+.physics-steps__title {
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.physics-steps ol {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13.5px;
+  line-height: 1.8;
+}
+
+/* 过关清单：全部题目都过关才算掌握，这里逐题标出过没过 */
+.physics-quizList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.physics-quizItem {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 7px 10px;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+.physics-quizItem--ok {
+  border-color: var(--c-jade-soft);
+  background: var(--c-jade-soft);
+}
+.physics-quizItem__mark {
+  flex: none;
+  width: 14px;
+  color: var(--c-jade);
+}
+.physics-quizItem:not(.physics-quizItem--ok) .physics-quizItem__mark {
+  color: #b9c0c8;
+}
+.physics-quizItem__no {
+  flex: none;
+  color: #6b7684;
+  min-width: 18px;
+}
+.physics-quizItem__stem {
+  flex: 1;
+}
+.physics-quizItem__meta {
+  flex: none;
+  font-size: 12px;
+  color: #6b7684;
+}
+
+/* 题目里的配图与参考答案图 */
+.physics-quizFig {
+  margin-top: 8px;
+}
+.physics-answerFig {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px dashed var(--c-jade);
+  border-radius: var(--r-sm);
+  background: var(--c-jade-soft);
+}

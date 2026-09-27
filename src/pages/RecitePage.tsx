@@ -1,276 +1,271 @@
 /**
- * 今日背诵（科目子页面）：按间隔重复安排，列出今天该复习的篇目，并可直接就地训练。
- * 「背完不是终点，到点复习才是」——这个页面就是解决「背完就忘」的。
+ * 今日背诵（科目子页面）：**按知识点**背诵，而不是按篇目。
  *
- * 目前只有语文有必背篇目（古诗词），因此它是 `/s/chinese/recite` 的实现；
- * 其他科目进来会看到「本科背诵清单还在准备中」的说明，而不是空白页。
+ * ## 为什么改成知识点
+ *
+ * 原来的「今日背诵」只列古诗词篇目，学生点进去还得自己判断「这一篇我到底记住哪几句」。
+ * 现在每一句默写、每一个历史时间点、每一条材料大题踩分点都是一张卡片：
+ * 背一张，打卡一次（1 次、2 次…），按遗忘曲线排下一次复习，
+ * **连续背对三次（跨三天）即标熟 = 完全掌握**，在学习进度里单独统计。
+ *
+ * 于是「学过」与「掌握」被彻底分开：`已学内容` 是打开过多少条，
+ * `已标熟知识点` 是真正背下来的有多少——学习不是看了就等于学了。
+ *
+ * 卡片本身不落库（见 `lib/reciteCards.ts`），页面按科目加载本科模块后现场派生。
  */
 
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { contentStats } from '../data';
-import { allPoems } from '../data/chinese';
+import { entriesOfModule, moduleIdsOfSubject } from '../data';
 import { getSubject } from '../data/subjects';
 import { useStudy } from '../store/StudyContext';
-import type { Poem } from '../types';
-import { GRADES, cn, gradeShort } from '../lib/utils';
-import { daysUntilDue, isDue, levelLabel } from '../lib/recite';
+import type { ModuleId, ReciteCard } from '../types';
+import { cn, pct } from '../lib/utils';
+import { isMastered } from '../lib/recite';
+import { cardStatsOf, reciteCardsOf } from '../lib/reciteCards';
 import { useDataScope, DataLoading } from '../lib/useData';
 import { EmptyState, PageHeader, ProgressBar, SectionTitle, Stat, Tag } from '../components/common';
-import { ReciteTrainer } from '../components/ReciteTrainer';
+import { ReciteCardGroup } from '../components/ReciteCards';
+
+/** 状态筛选：全部 / 今天该复习 / 没背过 / 还没标熟 / 已标熟 */
+type StatusKey = 'all' | 'due' | 'fresh' | 'learning' | 'mastered';
+
+const STATUSES: { key: StatusKey; label: string }[] = [
+  { key: 'due', label: '今天该复习' },
+  { key: 'fresh', label: '没背过' },
+  { key: 'learning', label: '还没标熟' },
+  { key: 'mastered', label: '已标熟' },
+  { key: 'all', label: '全部' },
+];
 
 export default function RecitePage() {
   const { subjectId = 'chinese' } = useParams();
   const subject = getSubject(subjectId);
-  const { state, grade } = useStudy();
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [gradeFilter, setGradeFilter] = useState<string>(grade);
-  // 背诵页只需要古诗词这一块数据
-  const ready = useDataScope(['poems']);
+  const { state } = useStudy();
 
-  const recite = state.recite ?? {};
+  const [moduleFilter, setModuleFilter] = useState<ModuleId | 'all'>('all');
+  const [status, setStatus] = useState<StatusKey>('due');
 
-  /** 分三类：今天该复习 / 从未练过 / 已排期 */
-  const buckets = useMemo(() => {
-    const inGrade = allPoems.filter(
-      (p) => gradeFilter === 'all' || p.grade === gradeFilter,
+  /** 本科已上线模块（待开发模块没有内容，声明了也加载不到东西） */
+  const moduleIds = useMemo(
+    () => (subject ? subject.modules.filter((m) => m.available).map((m) => m.id as ModuleId) : []),
+    [subject],
+  );
+  const ready = useDataScope(moduleIds);
+
+  /** 本科全部知识点卡片（数据就绪后派生一次；ready 进依赖，避免刷新页面时算成空） */
+  const cards = useMemo(() => {
+    if (!ready) return [];
+    const out: ReciteCard[] = [];
+    for (const m of moduleIds) for (const e of entriesOfModule(m)) out.push(...reciteCardsOf(e));
+    return out;
+  }, [moduleIds, ready]);
+
+  const records = state.cards;
+  const stats = useMemo(() => cardStatsOf(cards, records), [cards, records]);
+
+  const shown = useMemo(() => {
+    const out = cards.filter((c) => {
+      if (moduleFilter !== 'all' && c.moduleId !== moduleFilter) return false;
+      const rec = records?.[c.id];
+      if (status === 'all') return true;
+      if (status === 'fresh') return !rec || rec.times === 0;
+      if (status === 'mastered') return isMastered(rec);
+      if (status === 'learning') return Boolean(rec && rec.times > 0) && !isMastered(rec);
+      // due：没背过的也算「今天该背」，到点未复习的排前面
+      return !rec || rec.times === 0 || rec.dueAt <= Date.now();
+    });
+    // 越早到期越靠前（没背过的 dueAt 视为 0，排最前）
+    return out.sort((a, b) => (records?.[a.id]?.dueAt ?? 0) - (records?.[b.id]?.dueAt ?? 0));
+  }, [cards, records, moduleFilter, status]);
+
+  /** 按模块分组（模块筛选为「全部」时分组展示，避免几千张卡混在一起） */
+  const groups = useMemo(() => {
+    const order = new Map<ModuleId, number>(moduleIds.map((m, i) => [m, i]));
+    const byModule = new Map<ModuleId, ReciteCard[]>();
+    for (const c of shown) byModule.set(c.moduleId, [...(byModule.get(c.moduleId) ?? []), c]);
+    return [...byModule.entries()].sort((a, b) => (order.get(a[0]) ?? 0) - (order.get(b[0]) ?? 0));
+  }, [shown, moduleIds]);
+
+  const crumbs = [
+    { label: '首页', to: '/' },
+    ...(subject ? [{ label: subject.name, to: `/s/${subject.id}` }] : []),
+    { label: '背诵' },
+  ];
+
+  /* 没有这个学科 */
+  if (!subject) {
+    return (
+      <div className="stack stack--lg">
+        <PageHeader crumbs={[{ label: '首页', to: '/' }, { label: '背诵' }]} title="🧠 知识点背诵" />
+        <EmptyState icon="🧭" title="没有这个学科" desc="检查一下地址，或回首页从学科入口进。" />
+      </div>
     );
-    const due: Poem[] = [];
-    const fresh: Poem[] = [];
-    const scheduled: Poem[] = [];
+  }
 
-    for (const p of inGrade) {
-      const rec = recite[p.id];
-      if (!rec || rec.times === 0) fresh.push(p);
-      else if (isDue(rec)) due.push(p);
-      else scheduled.push(p);
-    }
+  if (!ready) return <DataLoading label="正在整理本科知识点…" />;
 
-    due.sort((a, b) => (recite[a.id]?.dueAt ?? 0) - (recite[b.id]?.dueAt ?? 0));
-    scheduled.sort((a, b) => (recite[a.id]?.dueAt ?? 0) - (recite[b.id]?.dueAt ?? 0));
-    return { due, fresh, scheduled, total: inGrade.length };
-  }, [recite, gradeFilter, ready]);
-
-  const totalPracticed = buckets.due.length + buckets.scheduled.length;
-  const activePoem = activeId ? allPoems.find((p) => p.id === activeId) : undefined;
-
-  /** 其他科目：必背清单还没做，给出说明与同学科的其余入口，别让学生撞空白页 */
-  if (!subject || subject.id !== 'chinese') {
+  /* 本科没有可背诵的卡片：分两种情况说清楚，别让学生撞空白页 */
+  if (!cards.length) {
+    /**
+     * 模块已上线却没有卡片（物理：概念与计算为主，掌握按练习/考试的「逐题过关」统计），
+     * 与「整科都还没写」是两回事——用同一句「正在准备中」会误导学生一直等。
+     */
+    const hasContent = moduleIds.length > 0;
     return (
       <div className="stack stack--lg">
         <PageHeader
-          crumbs={[
-            { label: '首页', to: '/' },
-            ...(subject ? [{ label: subject.name, to: `/s/${subject.id}` }] : []),
-            { label: '背诵' },
-          ]}
-          title="📅 今日背诵"
+          crumbs={crumbs}
+          title="🧠 知识点背诵"
           desc={
-            subject
-              ? `${subject.name}的背诵清单还在准备中。`
-              : '没有这个学科。'
+            hasContent
+              ? `${subject.name}的掌握情况按练习与考试的「逐题过关」统计，不设背诵卡片。`
+              : `${subject.name}的知识点清单还在准备中。`
           }
           extra={
-            subject ? (
-              <Link className="btn btn--sm" to={`/s/${subject.id}`}>
-                ← 返回{subject.name}模块总览
-              </Link>
-            ) : null
+            <Link className="btn btn--sm" to={`/s/${subject.id}`}>
+              ← 返回{subject.name}模块总览
+            </Link>
           }
         />
         <EmptyState
-          icon="🚧"
-          title="本科目的背诵清单正在准备中"
-          desc="「今日背诵」按遗忘规律（1→2→4→7→15→30 天）安排复习。目前已上线的是语文必背古诗词；英语词汇、历史时间线等清单会随各科内容一起上线。"
+          icon={hasContent ? '🎯' : '🚧'}
+          title={hasContent ? `${subject.name}没有可背诵的知识点卡片` : `${subject.name}的知识点清单正在准备中`}
+          desc={
+            hasContent
+              ? '计算与实验为主的内容不适合「翻面背」，掌握与否看练习与整卷模拟里的逐题过关结果。'
+              : '知识点卡片由内容正文自动派生（默写句、历史时间点、材料题踩分点…），内容一上线，背诵清单就跟着有了。'
+          }
           action={
-            subject ? (
-              <Link className="btn btn--primary" to={`/s/${subject.id}`}>
-                去看{subject.name}的模块
-              </Link>
-            ) : undefined
+            <Link className="btn btn--primary" to={`/s/${subject.id}`}>
+              去看{subject.name}的模块
+            </Link>
           }
         />
       </div>
     );
   }
 
-  if (!ready) return <DataLoading label="正在准备背诵清单…" />;
-
   return (
     <div className="stack stack--lg">
       <PageHeader
-        crumbs={[
-          { label: '首页', to: '/' },
-          { label: subject.name, to: `/s/${subject.id}` },
-          { label: '今日背诵' },
-        ]}
-        title="📅 今日背诵"
-        desc="按遗忘规律安排复习：背下来后间隔逐步拉长（1→2→4→7→15→30 天），到点回来一次，比连背十遍更管用。"
+        crumbs={crumbs}
+        title="🧠 知识点背诵"
+        desc="每个知识点一张卡：先自己回忆，再翻面核对。背对三次（跨三天）即「标熟」，代表完全掌握——学习不是看了就等于学了。"
         extra={
-          <Link className="btn btn--sm" to="/s/chinese/poems">
-            去选篇目
+          <Link className="btn btn--sm" to={`/s/${subject.id}`}>
+            返回{subject.name}
           </Link>
         }
       />
 
       <section className="card card--pad stack stack--sm">
         <div className="grid grid--3">
-          <Stat value={buckets.due.length} label="今天该复习" tone="#d24f3d" />
-          <Stat value={totalPracticed} label={`已开始背诵 / ${buckets.total}`} tone="#1a9a6c" />
-          <Stat value={buckets.scheduled.length} label="已排期" tone="#2f66d6" />
+          <Stat value={stats.total} label={`${subject.name}知识点`} />
+          <Stat value={stats.mastered} label="已标熟（完全掌握）" tone="#1a9a6c" />
+          <Stat value={stats.due} label="今天该背 / 该复习" tone="#d24f3d" />
         </div>
-        <ProgressBar value={totalPracticed} max={Math.max(1, buckets.total)} thin />
+        <div className="row row--between small">
+          <span>
+            掌握率 {pct(stats.mastered, Math.max(1, stats.total))}%（已背过 {stats.practiced} 个）
+          </span>
+          <span className="muted">连续背对 3 次标熟 · 间隔 1→2→4→7→15→30 天</span>
+        </div>
+        <ProgressBar value={stats.mastered} max={Math.max(1, stats.total)} tone="jade" />
+      </section>
+
+      {/* 状态筛选：默认「今天该复习」，打开页面就是今天的任务清单 */}
+      <div className="stack stack--sm">
+        <div className="scroll-x">
+          {STATUSES.map((s) => (
+            <button
+              key={s.key}
+              className={cn('chip chip--sm', status === s.key && 'is-active')}
+              onClick={() => setStatus(s.key)}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        {/* 模块筛选：按学科注册表顺序，与首页/顶栏一致 */}
         <div className="scroll-x">
           <button
-            className={cn('chip chip--sm', gradeFilter === 'all' && 'is-active')}
-            onClick={() => setGradeFilter('all')}
+            className={cn('chip chip--sm', moduleFilter === 'all' && 'is-active')}
+            onClick={() => setModuleFilter('all')}
           >
-            全部学段（{allPoems.length}）
+            全部模块（{cards.length}）
           </button>
-          {GRADES.map((g) => {
-            const n = allPoems.filter((p) => p.grade === g.id).length;
-            return (
+          {subject.modules
+            .filter((m) => m.available)
+            .map((m) => (
               <button
-                key={g.id}
-                className={cn('chip chip--sm', gradeFilter === g.id && 'is-active')}
-                onClick={() => setGradeFilter(g.id)}
+                key={m.id}
+                className={cn('chip chip--sm', moduleFilter === m.id && 'is-active')}
+                onClick={() => setModuleFilter(m.id as ModuleId)}
               >
-                {g.short}（{n}）
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* 就地训练 */}
-      {activePoem ? (
-        <div className="stack stack--sm">
-          <div className="row row--between row--wrap">
-            <SectionTitle sub={`${activePoem.dynasty}·${activePoem.author} · ${gradeShort(activePoem.grade)}`}>
-              正在训练：《{activePoem.title}》
-            </SectionTitle>
-            <button className="btn btn--sm btn--ghost" onClick={() => setActiveId(null)}>
-              收起
-            </button>
-          </div>
-          <ReciteTrainer poem={activePoem} entryId={activePoem.id} />
-        </div>
-      ) : null}
-
-      {/* 今天该复习 */}
-      <section className="stack stack--sm">
-        <SectionTitle
-          sub={
-            buckets.due.length
-              ? '这些篇目已到复习时间，趁没忘先过一遍'
-              : '今天没有到期的篇目，可以去练没背过的'
-          }
-        >
-          🔔 今天该复习（{buckets.due.length}）
-        </SectionTitle>
-        {buckets.due.length === 0 ? (
-          <div className="card card--pad small muted">今天没有到期的复习任务。</div>
-        ) : (
-          <div className="card">
-            {buckets.due.map((p) => {
-              const rec = recite[p.id]!;
-              return (
-                <button
-                  key={p.id}
-                  className={cn('list-item', activeId === p.id && 'is-active')}
-                  onClick={() => setActiveId(activeId === p.id ? null : p.id)}
-                >
-                  <span className="list-item__index" style={{ background: '#fceeeb', color: '#d24f3d' }}>
-                    🔔
-                  </span>
-                  <span className="list-item__main">
-                    <span className="list-item__title">
-                      {p.title}
-                      <Tag tone="jade">{levelLabel(rec.level)}</Tag>
-                    </span>
-                    <span className="list-item__meta">
-                      <span>
-                        {p.dynasty}·{p.author}
-                      </span>
-                      <span>·</span>
-                      <span>{gradeShort(p.grade)}</span>
-                      <span>·</span>
-                      <span>已背 {rec.times} 次</span>
-                    </span>
-                  </span>
-                  <span className="list-item__right">开始 →</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* 还没背过 */}
-      <section className="stack stack--sm">
-        <SectionTitle sub={`本学段还有 ${buckets.fresh.length} 篇没开始背，挑一篇试试`}>
-          🌱 还没背过
-        </SectionTitle>
-        {buckets.fresh.length === 0 ? (
-          <div className="card card--pad small muted">本学段的篇目都已经开始背了。</div>
-        ) : (
-          <div className="card">
-            {buckets.fresh.slice(0, 12).map((p) => (
-              <button
-                key={p.id}
-                className={cn('list-item', activeId === p.id && 'is-active')}
-                onClick={() => setActiveId(activeId === p.id ? null : p.id)}
-              >
-                <span className="list-item__index">{gradeShort(p.grade)}</span>
-                <span className="list-item__main">
-                  <span className="list-item__title">{p.title}</span>
-                  <span className="list-item__meta">
-                    <span>
-                      {p.dynasty}·{p.author}
-                    </span>
-                    <span>·</span>
-                    <span>{p.genre}</span>
-                    <span>·</span>
-                    <span>{p.lines.length} 句</span>
-                  </span>
-                </span>
-                <span className="list-item__right">开始 →</span>
+                {m.icon} {m.name}（{cards.filter((c) => c.moduleId === m.id).length}）
               </button>
             ))}
-            {buckets.fresh.length > 12 ? (
-              <div className="card__body small muted center">
-                还有 {buckets.fresh.length - 12} 篇，去
-                <Link to="/s/chinese/poems" style={{ color: 'var(--c-primary)' }}>
-                  「古诗词背诵与默写」
-                </Link>
-                里挑
-              </div>
-            ) : null}
-          </div>
-        )}
+        </div>
+      </div>
+
+      {shown.length === 0 ? (
+        <div className="card card--pad small muted">
+          {status === 'due'
+            ? '今天没有到期的复习任务，切到「没背过」继续背新的。'
+            : '这个筛选下没有卡片。'}
+        </div>
+      ) : moduleFilter === 'all' ? (
+        groups.map(([mid, list]) => {
+          const meta = subject.modules.find((m) => m.id === mid);
+          const gs = cardStatsOf(list, records);
+          return (
+            <section className="stack stack--sm" key={mid}>
+              <SectionTitle
+                sub={`共 ${gs.total} 个知识点 · 已标熟 ${gs.mastered} 个`}
+                extra={
+                  <Link className="btn btn--sm btn--ghost" to={`/s/${subject.id}/${mid}`}>
+                    看这部分内容 →
+                  </Link>
+                }
+              >
+                {meta?.icon} {meta?.name}
+              </SectionTitle>
+              <ReciteCardGroup cards={list} showSource limit={12} />
+            </section>
+          );
+        })
+      ) : (
+        <section className="stack stack--sm">
+          <SectionTitle sub={`共 ${shown.length} 张卡片`}>
+            {STATUSES.find((s) => s.key === status)?.label}
+          </SectionTitle>
+          <ReciteCardGroup cards={shown} showSource limit={60} />
+        </section>
+      )}
+
+      <section className="card card--pad small muted">
+        知识点卡片由内容正文自动派生：古诗文逐句默写、文言文注释与语法、历史时间点与材料大题踩分点、
+        道法必背金句、英语词汇与语法规则、数学概念与公式……共 {stats.total} 个。
+        想看正文与讲解，从
+        <Link to={`/s/${subject.id}`} style={{ color: 'var(--c-primary)' }}>
+          本科模块
+        </Link>
+        进入；想按篇目整篇训练，用
+        <Link to="/s/chinese/poems" style={{ color: 'var(--c-primary)' }}>
+          古诗词专门的遮罩训练
+        </Link>
+        。
       </section>
 
-      {/* 已排期 */}
-      {buckets.scheduled.length ? (
-        <section className="stack stack--sm">
-          <SectionTitle sub="这些还没到复习时间，不用现在花力气">⏳ 已排期（{buckets.scheduled.length}）</SectionTitle>
-          <div className="card card--pad">
-            <div className="row row--wrap">
-              {buckets.scheduled.slice(0, 20).map((p) => (
-                <Tag key={p.id} tone="blue">
-                  {p.title} · {daysUntilDue(recite[p.id])} 天后
-                </Tag>
-              ))}
-              {buckets.scheduled.length > 20 ? (
-                <Tag>… 另有 {buckets.scheduled.length - 20} 篇</Tag>
-              ) : null}
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      {allPoems.length === 0 ? (
-        <EmptyState icon="📭" title="还没有可背诵的篇目" desc={`当前题库共 ${contentStats.entries} 条内容。`} />
+      {stats.mastered > 0 ? (
+        <div className="row row--wrap">
+          <Tag tone="jade">✅ 已标熟 {stats.mastered} 个知识点</Tag>
+          <Link className="btn btn--sm" to="/stats">
+            在学习报告里看掌握情况 →
+          </Link>
+        </div>
       ) : null}
     </div>
   );

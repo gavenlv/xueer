@@ -208,6 +208,48 @@ export function searchTextOf(entry: Entry): string {
       ]);
       break;
     }
+    case 'phy-light':
+    case 'phy-heat':
+    case 'phy-mech':
+    case 'phy-work':
+    case 'phy-electric':
+    case 'phy-magnet':
+    case 'phy-experiment':
+    case 'phy-exam': {
+      // phy-exam 同道法：既有整卷（有 sections），也有题型专题知识条目
+      if ('sections' in entry.data) {
+        const p = entry.data;
+        text = join([
+          p.title,
+          p.basis,
+          p.questions.map((q) => `${q.stem}${(q.options ?? []).join('')}${q.figure?.alt ?? ''}`),
+          (p.materials ?? []).map((m) => `${m.material}${m.questions.map((q) => q.stem).join('')}`),
+        ]);
+        break;
+      }
+      /**
+       * 物理的检索文本刻意把**图的 alt** 也拼进去：
+       * 学生常按图找内容（「凸透镜成像」「电路短路」「s-t 图像」），
+       * 这些词往往只出现在图的描述里，不进索引就搜不到。
+       */
+      const t = entry.data;
+      const figAlt = (f?: { alt?: string; title?: string }) => (f ? `${f.title ?? ''}${f.alt ?? ''}` : '');
+      text = join([
+        t.title,
+        t.unit,
+        t.question,
+        t.keyIdea,
+        t.steps.map((s) => `${s.heading}${s.body}${s.note ?? ''}${figAlt(s.figure)}`),
+        t.apps.map((a) => `${a.title}${a.scene}${a.model}${a.steps.join('')}${a.result}${figAlt(a.figure)}`),
+        t.formulas?.map((f) => `${f.name}${f.text ?? ''}${f.tex ?? ''}${f.units ?? ''}${f.usage}`),
+        t.confusions?.map((c) => `${c.wrong}${c.right}${c.why}`),
+        t.compares?.map((c) => `${c.title}${c.aspect}${c.rows.map((r) => `${r.item}${r.left}${r.right}`).join('')}`),
+        t.examAngles?.map((a) => `${a.angle}${a.detail}`),
+        t.materials?.map((m) => `${m.material}${m.questions.map((q) => q.stem).join('')}`),
+        t.questions.map((q) => `${q.stem}${(q.options ?? []).join('')}${figAlt(q.figure)}${figAlt(q.answerFigure)}`),
+      ]);
+      break;
+    }
     default: {
       // 数学：${...}$ 公式源码也进检索文本，学生可以按符号找知识点
       const m = entry.data as {

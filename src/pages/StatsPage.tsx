@@ -11,6 +11,8 @@ import { useStreak, useStudy } from '../store/StudyContext';
 import { useAuth } from '../auth/AuthContext';
 import { isCloudConfigured } from '../lib/supabase';
 import { dateKey, formatDuration, pct, shiftDate } from '../lib/utils';
+import { isMastered } from '../lib/recite';
+import { entryIdOfCard } from '../lib/reciteCards';
 import { useDataScope, DataLoading } from '../lib/useData';
 import { EmptyState, PageHeader, ProgressBar, SectionTitle, Stat, Tag } from '../components/common';
 
@@ -36,14 +38,52 @@ export default function StatsPage() {
 
   /* summary 骨架索引 */
   const metaById = useMemo(() => new Map(ENTRY_META.map((e) => [e.id, e])), []);
+  /** 条目 id -> 模块 id（把知识点卡片的 id 还原到模块，用于分模块掌握率） */
+  const moduleByEntry = useMemo(
+    () => new Map(ENTRY_META.map((e) => [e.id, e.moduleId as ModuleId])),
+    [],
+  );
   const grandTotals = useMemo(
     () => ({
       questions: MODULE_TOTALS.reduce((n, m) => n + m.questions, 0),
       mindMaps: MODULE_TOTALS.reduce((n, m) => n + m.mindMaps, 0),
       extensions: MODULE_TOTALS.reduce((n, m) => n + m.extensions, 0),
+      cards: MODULE_TOTALS.reduce((n, m) => n + m.cards, 0),
     }),
     [],
   );
+
+  /**
+   * 知识点卡片的掌握情况（**不加载任何正文**）。
+   *
+   * 卡片记录是稀疏的（只存背过的），卡片 id 形如 `entryId#类型#序号`，
+   * 因此只要按 id 反查清单里的模块，就能算出每科、每模块「背熟了多少知识点」。
+   * 这是「已学 ≠ 掌握」里「掌握」那一半的数字来源。
+   */
+  const cardTotals = useMemo(() => {
+    const cards = state.cards ?? {};
+    const byModule = new Map<string, { practiced: number; mastered: number }>();
+    let practiced = 0;
+    let mastered = 0;
+    for (const [id, rec] of Object.entries(cards)) {
+      if (!rec || rec.times === 0) continue;
+      practiced += 1;
+      const mid = moduleByEntry.get(entryIdOfCard(id));
+      if (mid) {
+        const s = byModule.get(mid) ?? { practiced: 0, mastered: 0 };
+        s.practiced += 1;
+        if (isMastered(rec)) {
+          s.mastered += 1;
+          mastered += 1;
+        }
+        byModule.set(mid, s);
+      } else if (isMastered(rec)) {
+        // 条目已下线（清单里查不到）时，掌握数仍然算进总数，别凭空少掉
+        mastered += 1;
+      }
+    }
+    return { practiced, mastered, byModule };
+  }, [state.cards, moduleByEntry]);
 
   /* 累计统计 */
   const totals = useMemo(() => {
@@ -98,10 +138,18 @@ export default function StatsPage() {
       subject,
       rows: subject.modules.map((m) => {
         const t = MODULE_TOTALS.find((x) => x.id === m.id);
-        return { id: m.id, meta: m, total: t?.entries ?? 0, studied: studiedByModule.get(m.id) ?? 0 };
+        const cards = cardTotals.byModule.get(m.id) ?? { practiced: 0, mastered: 0 };
+        return {
+          id: m.id,
+          meta: m,
+          total: t?.entries ?? 0,
+          studied: studiedByModule.get(m.id) ?? 0,
+          cardTotal: t?.cards ?? 0,
+          cardMastered: cards.mastered,
+        };
       }),
     }));
-  }, [state.progress]);
+  }, [state.progress, cardTotals]);
 
   /* 薄弱知识点：错题标签聚合（错题所属模块的数据已按需加载，findQuestion 可查到题目） */
   const weakTags = useMemo(() => {
@@ -127,7 +175,7 @@ export default function StatsPage() {
     [state.progress, metaById],
   );
 
-  const hasData = totals.answered > 0 || totals.studied > 0;
+  const hasData = totals.answered > 0 || totals.studied > 0 || cardTotals.practiced > 0;
 
   if (!ready) return <DataLoading label="正在汇总学习数据…" />;
 
@@ -188,11 +236,39 @@ export default function StatsPage() {
                 label="总正确率"
                 tone="#1a9a6c"
               />
+              {/* 「学过」与「掌握」并排：打开过多少条 ≠ 记住了多少知识点 */}
               <Stat value={totals.studied} label={`已学内容 / ${ENTRY_META.length}`} />
-              <Stat value={totals.recited} label="背诵打卡" tone="#7355cf" />
+              <Stat
+                value={cardTotals.mastered}
+                label={`已标熟知识点 / ${grandTotals.cards}`}
+                tone="#1a9a6c"
+              />
               <Stat value={totals.wrong} label="当前错题" tone="#d24f3d" />
             </div>
-            <div className="card card--pad">
+            <div className="card card--pad stack stack--sm">
+              <div className="row row--between small">
+                <span>已学内容（看过）</span>
+                <span className="bold">
+                  {totals.studied} / {ENTRY_META.length} 条
+                </span>
+              </div>
+              <ProgressBar value={totals.studied} max={Math.max(1, ENTRY_META.length)} thin />
+              <div className="row row--between small">
+                <span>已标熟知识点（完全掌握）</span>
+                <span className="bold">
+                  {cardTotals.mastered} / {grandTotals.cards} 个
+                </span>
+              </div>
+              <ProgressBar
+                value={cardTotals.mastered}
+                max={Math.max(1, grandTotals.cards)}
+                tone="jade"
+                thin
+              />
+              <div className="small muted">
+                学习不是看了就等于学了：知识点卡片连续背对 3 次（跨三天）才算标熟，
+                另有 {cardTotals.practiced} 个已背过但还没标熟。
+              </div>
               <div className="row row--between small">
                 <span>总学习时长</span>
                 <span className="bold">{formatDuration(state.totalSeconds)}</span>
@@ -259,21 +335,28 @@ export default function StatsPage() {
 
           {/* 模块进度 */}
           <section className="card card--pad stack stack--sm">
-            <SectionTitle sub="按内容条目统计已学习比例">各模块进度</SectionTitle>
-            {moduleRows.map((group) => (
-              <div className="stack stack--sm" key={group.subject.id} style={{ marginTop: 4 }}>
-                <div className="row small" style={{ gap: 8 }}>
-                  <span className="bold">
-                    {group.subject.icon} {group.subject.name}
-                  </span>
-                  <span className="muted">
-                    {group.rows.reduce((n, r) => n + r.studied, 0)} /{' '}
-                    {group.rows.reduce((n, r) => n + r.total, 0)} 条
-                  </span>
-                </div>
-                {group.rows.map((row) => {
-                  const done = row.studied === row.total && row.total > 0;
-                  return (
+            <SectionTitle sub="蓝条＝看过多少内容，绿条＝背熟多少知识点（看过 ≠ 掌握）">
+              各模块进度
+            </SectionTitle>
+            {moduleRows.map((group) => {
+              const studiedSum = group.rows.reduce((n, r) => n + r.studied, 0);
+              const entriesSum = group.rows.reduce((n, r) => n + r.total, 0);
+              const masteredSum = group.rows.reduce((n, r) => n + r.cardMastered, 0);
+              const cardSum = group.rows.reduce((n, r) => n + r.cardTotal, 0);
+              return (
+                <div className="stack stack--sm" key={group.subject.id} style={{ marginTop: 4 }}>
+                  <div className="row small row--wrap" style={{ gap: 8 }}>
+                    <span className="bold">
+                      {group.subject.icon} {group.subject.name}
+                    </span>
+                    <span className="muted">
+                      已学 {studiedSum} / {entriesSum} 条
+                    </span>
+                    <span className="muted">
+                      已标熟 {masteredSum} / {cardSum} 个知识点
+                    </span>
+                  </div>
+                  {group.rows.map((row) => (
                     <Link
                       key={row.id}
                       to={`/s/${group.subject.id}/${row.id}`}
@@ -285,23 +368,39 @@ export default function StatsPage() {
                           {row.meta.icon} {row.meta.name}
                         </span>
                         <span className="muted">
-                          {row.studied} / {row.total}（{pct(row.studied, Math.max(1, row.total))}%）
+                          已学 {row.studied}/{row.total}（{pct(row.studied, Math.max(1, row.total))}%）
+                          {row.cardTotal > 0 ? (
+                            <>
+                              {' '}
+                              · 掌握 {row.cardMastered}/{row.cardTotal}（
+                              {pct(row.cardMastered, Math.max(1, row.cardTotal))}%）
+                            </>
+                          ) : null}
                         </span>
                       </div>
                       <ProgressBar
                         value={row.studied}
                         max={Math.max(1, row.total)}
-                        tone={done ? 'jade' : 'blue'}
+                        tone={row.studied === row.total && row.total > 0 ? 'jade' : 'blue'}
                         thin
                       />
+                      {row.cardTotal > 0 ? (
+                        <ProgressBar
+                          value={row.cardMastered}
+                          max={Math.max(1, row.cardTotal)}
+                          tone="jade"
+                          thin
+                        />
+                      ) : null}
                     </Link>
-                  );
-                })}
-              </div>
-            ))}
+                  ))}
+                </div>
+              );
+            })}
             <div className="small muted" style={{ marginTop: 6 }}>
               题库共 {grandTotals.questions} 道练习题 · {ENTRY_META.length} 条学习内容 ·{' '}
-              {grandTotals.mindMaps} 张导图 · {grandTotals.extensions} 篇拓展
+              {grandTotals.mindMaps} 张导图 · {grandTotals.extensions} 篇拓展 ·{' '}
+              {grandTotals.cards} 个知识点
             </div>
           </section>
 

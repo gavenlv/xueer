@@ -13,10 +13,12 @@ import { ExtensionList } from '../../components/ExtensionList';
 import { RelatedList } from '../../components/RelatedList';
 import { SupplementList } from '../../components/SupplementList';
 import { SpeechBar } from '../../components/SpeechBar';
+import { ReciteCardGroup } from '../../components/ReciteCards';
 import { extensions, extensionsOfEntry, mindMapsOfEntry, mindMapsOfModule } from '../../data';
 import { getSubject } from '../../data/subjects';
 import { lessonMindMap } from '../../lib/lessonMaps';
 import { speechSegmentsOf } from '../../lib/entrySpeech';
+import { cardStatsOf, reciteCardsOf } from '../../lib/reciteCards';
 
 /**
  * 可折叠的卡片：标题行始终显示（图标 + 名称 + 数量 + 一句话说明），点开才渲染正文。
@@ -154,6 +156,42 @@ function ExtraSections({ entry, subjectId }: { entry: Entry; subjectId: string }
   );
 }
 
+/**
+ * 这一课的**知识点背诵**：把正文里的必背项（默写句、时间点、踩分点、必背结论…）
+ * 抽成一张张卡片，先回忆再翻面，背对三次标熟。
+ *
+ * 挂在详情页里而不是单独做页面，是因为「学」与「背」本来就在同一课里：
+ * 学生读完主线与考点，往下划一屏就能立刻开始背，不用再去别的页面找同一个知识点。
+ * 折叠卡片头部给出「已标熟 y / N」，一眼看出这一课掌握到什么程度。
+ */
+function ReciteSection({ entry }: { entry: Entry }) {
+  const { state } = useStudy();
+  const cards = useMemo(() => reciteCardsOf(entry), [entry]);
+  const stats = cardStatsOf(cards, state.cards);
+
+  if (!cards.length) return null;
+
+  return (
+    <CollapseCard
+      icon="🧠"
+      title="知识点背诵"
+      summary="先自己回忆，再翻面核对；连续背对 3 次即标熟（完全掌握）"
+      badge={
+        stats.mastered > 0 ? (
+          <Tag tone="jade">
+            已标熟 {stats.mastered} / {stats.total}
+          </Tag>
+        ) : (
+          <Tag>{stats.total} 个知识点</Tag>
+        )
+      }
+      hint={stats.due > 0 ? `${stats.due} 个待背/待复习` : '今天没有到期的'}
+    >
+      <ReciteCardGroup cards={cards} />
+    </CollapseCard>
+  );
+}
+
 export function DetailShell({
   entry,
   subjectId = 'chinese',
@@ -234,6 +272,9 @@ export function DetailShell({
       <SpeechBar segments={segments} title={`朗读《${entry.title}》`} />
 
       {children}
+
+      {/* 知识点背诵：把这一课的必背项做成卡片（默认收起，与导图/拓展同一套折叠样式） */}
+      <ReciteSection entry={entry} />
 
       <ExtraSections entry={entry} subjectId={subjectId} />
 

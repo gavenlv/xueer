@@ -15,8 +15,8 @@ import {
 import type { ReactNode } from 'react';
 import type { GradeId, ItemProgress, StudyState, WrongRecord } from '../types';
 import { dateKey } from '../lib/utils';
-import { applyAnswerToProgress } from '../lib/progress';
-import { applyRecite } from '../lib/recite';
+import { applyAnswerToProgress, applyPassed } from '../lib/progress';
+import { applyCardRecite, applyRecite } from '../lib/recite';
 import { normalizeStudyState } from '../lib/sync';
 
 const STORAGE_KEY = 'xueer.study.state.v1';
@@ -31,6 +31,7 @@ function emptyState(): StudyState {
     grade: '7a',
     totalSeconds: 0,
     recite: {},
+    cards: {},
   };
 }
 
@@ -84,6 +85,11 @@ interface StudyContextValue {
   recordRecite: (itemId: string) => void;
   /** 记录一次背诵训练结果（含间隔重复排期） */
   recordReciteResult: (itemId: string, ok: boolean) => void;
+  /**
+   * 记录一次知识点卡片背诵。
+   * 连续背对到 `RECITE_MASTER_STREAK` 次即「标熟」（完全掌握）。
+   */
+  recordCardRecite: (cardId: string, ok: boolean) => void;
   /** 切换收藏 */
   toggleStar: (itemId: string) => void;
   /** 记录一次答题 */
@@ -186,6 +192,20 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     [patchProgress],
   );
 
+  /**
+   * 记录一次知识点卡片背诵：按遗忘曲线排下一次复习，连续背对达标即「标熟」。
+   *
+   * 这里**不动** `progress`：卡片的掌握情况与「条目是否打开过」是两件事，
+   * 混在一起会让「已学内容」这个数字失去意义（学习不是看了就等于学了）。
+   */
+  const recordCardRecite = useCallback((cardId: string, ok: boolean) => {
+    const now = Date.now();
+    setState((s) => ({
+      ...s,
+      cards: { ...(s.cards ?? {}), [cardId]: applyCardRecite(s.cards?.[cardId], ok, now) },
+    }));
+  }, []);
+
   const toggleStar = useCallback(
     (itemId: string) => {
       patchProgress(itemId, (p) => ({ ...p, starred: !p.starred }));
@@ -232,12 +252,22 @@ export function StudyProvider({ children }: { children: ReactNode }) {
         progress = { ...s.progress, [sourceId]: applyAnswerToProgress(prev, correct) };
       }
 
+      /**
+       * 逐题记「过关」（首次答对）。
+       *
+       * 理科的掌握判定是「这个知识点的每一道题都答对过」，聚合的 correct/total 回答不了
+       * 「还剩哪几题没对过」，所以必须逐题留痕。写的是**首次**答对时间，单调递增，
+       * 云端取并集即可，不需要墓碑。
+       */
+      const passed = applyPassed(s.passed, questionId, correct, now);
+
       const day = s.daily[today] ?? { answered: 0, correct: 0, minutes: 0 };
       return {
         ...s,
         wrong: nextWrong,
         wrongRemoved: nextRemoved,
         progress,
+        passed,
         daily: {
           ...s.daily,
           [today]: {
@@ -312,6 +342,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
       recordStudy,
       recordRecite,
       recordReciteResult,
+      recordCardRecite,
       toggleStar,
       recordAnswer,
       checkin,
@@ -329,6 +360,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
       recordStudy,
       recordRecite,
       recordReciteResult,
+      recordCardRecite,
       toggleStar,
       recordAnswer,
       checkin,

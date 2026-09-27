@@ -9,6 +9,7 @@ import type { GradeId, ModuleId } from '../types';
 import { GRADES, cn, pct, timeAgo } from '../lib/utils';
 import { useDataScope, DataLoading } from '../lib/useData';
 import { matchesKeyword } from '../lib/searchText';
+import { isMastered, masteryPolicyOf, passedCount } from '../lib/progress';
 import {
   EmptyState,
   PageHeader,
@@ -276,6 +277,22 @@ export default function ModulePage() {
             const p = state.progress[e.id];
             const starred = Boolean(p?.starred);
             const accuracy = p && p.total > 0 ? `${Math.round((p.correct / p.total) * 100)}%` : null;
+            /**
+             * 掌握判定按学科分两套（见 lib/progress.ts）：
+             * 理科（物理）是「这个知识点的每一道题都过关」，所以列表上要显示**过关 x/y**，
+             * 而不是一个百分数——学生一眼就知道还差几题。
+             */
+            const qIds = e.questions.map((q) => q.id);
+            const mastered = isMastered({
+              moduleId: e.moduleId,
+              progress: p,
+              passed: state.passed,
+              questionIds: qIds,
+            });
+            const passLabel =
+              masteryPolicyOf(e.moduleId) === 'all-questions' && qIds.length
+                ? `过关 ${passedCount(qIds, state.passed)}/${qIds.length}`
+                : null;
             return (
               <div className="list-item" key={e.id}>
                 <span
@@ -288,7 +305,7 @@ export default function ModulePage() {
                   <span className="list-item__title">
                     {e.title}
                     {starred ? <span title="已收藏">⭐</span> : null}
-                    {p?.mastered ? <Tag tone="jade">已掌握</Tag> : null}
+                    {mastered ? <Tag tone="jade">已掌握</Tag> : null}
                   </span>
                   <span className="list-item__meta">
                     <span>{e.subtitle}</span>
@@ -308,6 +325,12 @@ export default function ModulePage() {
                       <>
                         <span>·</span>
                         <span>正确率 {accuracy}</span>
+                      </>
+                    ) : null}
+                    {passLabel ? (
+                      <>
+                        <span>·</span>
+                        <span>{passLabel}</span>
                       </>
                     ) : null}
                     {e.questions.length > 0 ? (

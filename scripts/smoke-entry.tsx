@@ -17,6 +17,9 @@ import { QuizLearnLinks } from '../src/components/QuizLearnLinks';
 import { supplementsOf } from '../src/lib/relations';
 import { relOfEntry, relPool } from '../src/lib/relNode';
 import { makeReciteQuestions } from '../src/lib/quiz';
+import { reciteCardsOf } from '../src/lib/reciteCards';
+import { PhysicsFigureView } from '../src/components/PhysicsFigure';
+import type { PhysicsFigure } from '../src/types';
 
 /**
  * 内容数据改为按需加载后，页面会先看「本页需要的模块是否已就绪」。
@@ -74,14 +77,22 @@ const routes: string[] = [
   '/practice/literature?type=choice&grade=all',
   // 科目子页面：背诵 / 错题本 / 考点 / 知识拓展，内容都按本科过滤
   '/s/chinese/recite',
-  // 未开发背诵的科目也要进得去，且渲染出「正在准备中」而不是空白
+  // 知识点卡片覆盖全学科：文科（语文/历史/道法/英语）与数学都该背出东西来
+  '/s/history/recite',
+  '/s/politics/recite',
+  '/s/english/recite',
   '/s/math/recite',
+  // 已上线但不产卡片的科目（物理的掌握走「逐题过关」）
+  // 与待开发科目（化学）：都要进得去，且渲染出说明而不是空白
+  '/s/physics/recite',
+  '/s/chemistry/recite',
   '/s/chinese/wrong',
   '/s/math/wrong',
   '/s/english/wrong',
   '/s/history/wrong',
-  // 待开发科目的错题本：没有本科错题可查，但页面必须能渲染
+  // 本科无错题可查：页面必须能渲染出空态而不是空白
   '/s/physics/wrong',
+  '/s/chemistry/wrong',
   '/s/chinese/exam',
   '/s/math/exam',
   '/s/english/exam',
@@ -174,6 +185,15 @@ const progressTarget = allEntries.find(
   (e) => e.moduleId === 'vocab' && (e.grade === '7a' || e.grade === 'all'),
 );
 
+/**
+ * 用于验证「已标熟」能流到界面的卡片。
+ * 从真实数据里派生，不写死 id——内容一改，这条断言不该跟着失效。
+ */
+const cardTarget = (() => {
+  const e = allEntries.find((x) => x.moduleId === 'poems' && reciteCardsOf(x).length > 0);
+  return e ? reciteCardsOf(e)[0] : undefined;
+})();
+
 if (!progressTarget) {
   console.log('\n❌ 接线检查：找不到用于验证的词条');
   failed += 1;
@@ -196,6 +216,18 @@ if (!progressTarget) {
             daily: {},
             grade: '7a',
             totalSeconds: 0,
+            // 一张已经「背对 3 次」的卡：标熟必须能出现在首页/学习报告上
+            cards: cardTarget
+              ? {
+                  [cardTarget.id]: {
+                    times: 3,
+                    streak: 3,
+                    lastAt: Date.now(),
+                    dueAt: Date.now() + 86400000,
+                    masteredAt: Date.now(),
+                  },
+                }
+              : {},
           })
         : null,
     setItem: () => {},
@@ -545,26 +577,35 @@ if (!progressTarget) {
       <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
-  /** 待开发科目的学科页：只应给「待开发」轮廓，不得出现本科工具入口 */
+  /**
+   * 待开发科目的样本**不能写死某个科目**：物理原本是待开发的，上线后这些断言就会假失败。
+   * 所以从注册表里挑一个当前仍待开发的科目来当样本。
+   */
+  const pendingSubject = SUBJECTS.find((s) => !s.available);
+  if (!pendingSubject) throw new Error('没有待开发科目可用于回归断言，请更新冒烟测试');
   const pendingSubjectHtml = renderToString(
-    <MemoryRouter initialEntries={['/s/physics']}>
+    <MemoryRouter initialEntries={[`/s/${pendingSubject.id}`]}>
       <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
+  const pendingModule = pendingSubject.modules[0];
   const pendingModuleHtml = renderToString(
-    <MemoryRouter initialEntries={['/s/physics/phy-electric']}>
+    <MemoryRouter initialEntries={[`/s/${pendingSubject.id}/${pendingModule.id}`]}>
       <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
   /** 本科错题本（待开发科目）：没有错题，但必须渲染出空态而不是空白 */
   const pendingWrongHtml = renderToString(
-    <MemoryRouter initialEntries={['/s/physics/wrong']}>
+    <MemoryRouter initialEntries={[`/s/${pendingSubject.id}/wrong`]}>
       <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
-  /** 未开发背诵的科目：给出「正在准备中」并指回本科 */
-  const mathReciteHtml = renderToString(
-    <MemoryRouter initialEntries={['/s/math/recite']}>
+  /**
+   * 已上线但**不产知识点卡片**的科目（物理：掌握按「逐题过关」统计）：
+   * 背诵页必须给出说明并指回本科，而不是空白页。
+   */
+  const noCardReciteHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/physics/recite']}>
       <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
@@ -622,12 +663,13 @@ if (!progressTarget) {
     // 待开发科目的错题本：空态 + 指回本科
     [
       '待开发科目错题本渲染空态',
-      pendingWrongHtml.includes('物理') && pendingWrongHtml.includes('href="/s/physics"'),
+      pendingWrongHtml.includes(pendingSubject.name) && pendingWrongHtml.includes(`href="/s/${pendingSubject.id}"`),
     ],
-    // 未开发背诵的科目：说清楚「正在准备中」，不是空白页
+    // 没有知识点卡片的科目：说清楚为什么没有，不是空白页
     [
-      '未开发背诵的科目给出说明',
-      mathReciteHtml.includes('背诵') && mathReciteHtml.includes('href="/s/math"'),
+      '无知识点卡片的科目给出说明',
+      noCardReciteHtml.includes('没有可背诵的知识点卡片') &&
+        noCardReciteHtml.includes('href="/s/physics"'),
     ],
     // 学科页（语文）：本科工具 + 模块网格
     ['学科页列出本科模块', chineseSubjectHtml.split('module-card').length - 1 >= 3],
@@ -635,7 +677,7 @@ if (!progressTarget) {
     ['考点页按科目取数（数学）', mathExamHtml.includes('数学') && !mathExamHtml.includes('古诗词背诵与默写')],
     // 首页：模块网格 + 快捷入口直达科目子页面
     ['首页模块网格（默认学科）', homeHtml.split('module-card').length - 1 >= 3],
-    ['首页快捷入口：今日背诵', homeHtml.includes('今日背诵') && homeHtml.includes('/s/chinese/recite')],
+    ['首页快捷入口：知识点背诵', homeHtml.includes('知识点背诵') && homeHtml.includes('/s/chinese/recite')],
     ['首页快捷入口：整卷模拟考试', homeHtml.includes('整卷模拟考试') && homeHtml.includes('/s/history/hist-exam')],
     ['首页快捷入口：历史考点与考情', homeHtml.includes('历史考点与考情') && homeHtml.includes('/s/history/exam')],
     ['首页快捷入口：语文考点', homeHtml.includes('语文考点') && homeHtml.includes('/s/chinese/exam')],
@@ -661,20 +703,19 @@ if (!progressTarget) {
         return board.indexOf('数学') >= 0 && board.indexOf('数学') < board.indexOf('语文');
       })(),
     ],
-    ['待开发科目出现在首页（物理/化学/体育）', homeHtml.includes('待开发') && homeHtml.includes('物理') && homeHtml.includes('体育与健康')],
+    ['待开发科目出现在首页（化学/体育）', homeHtml.includes('待开发') && homeHtml.includes(pendingSubject.name) && homeHtml.includes('体育与健康')],
     // 待开发页面：轮廓与说明必须渲染出来
     [
       '待开发科目页渲染模块轮廓',
       pendingSubjectHtml.includes('待开发') &&
         pendingSubjectHtml.includes('内容正在准备中') &&
-        pendingSubjectHtml.includes('电学') &&
-        pendingSubjectHtml.includes('力学基础'),
+        pendingSubject.modules.every((m) => pendingSubjectHtml.includes(m.name)),
     ],
     [
       '待开发模块页渲染规划与返回入口',
       pendingModuleHtml.includes('待开发') &&
         pendingModuleHtml.includes('内容正在准备中') &&
-        pendingModuleHtml.includes('/s/physics"'),
+        pendingModuleHtml.includes(`/s/${pendingSubject.id}"`),
     ],
   ];
   const navOk = navChecks.every(([, ok]) => ok);
@@ -685,6 +726,70 @@ if (!progressTarget) {
       .join('、') || `${navChecks.length} 项断言全通过`}）`,
   );
   if (!navOk) failed += 1;
+
+  /* ------------- 接线检查：知识点背诵（卡片派生 / 标熟 / 学过的 ≠ 掌握的） ------------- */
+
+  /**
+   * 背诵页与详情页的「知识点背诵」区都是**派生**出来的（见 lib/reciteCards.ts）：
+   * 抽取器漏一个字段，页面照样渲染得很好看，只是历史时间点或材料题踩分点一张卡都没有——
+   * 学生以为背完了，其实最该背的东西从没进过清单。所以按类型点名断言。
+   */
+  const chineseReciteHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/chinese/recite']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+  const histReciteHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/history/recite']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+
+  const reciteChecks: [string, boolean][] = [
+    ['语文背诵页渲染出卡片', chineseReciteHtml.includes('rcard') && chineseReciteHtml.includes('看答案')],
+    ['语文背诵页给出标熟口径', chineseReciteHtml.includes('知识点背诵') && chineseReciteHtml.includes('标熟')],
+    ['历史背诵页含「历史时间点」卡片', histReciteHtml.includes('历史时间点')],
+    ['历史背诵页含「材料大题踩分点」卡片', histReciteHtml.includes('材料大题踩分点')],
+    ['历史背诵页含分层考点卡片', histReciteHtml.includes('考点·重点')],
+    // 详情页的知识点背诵区默认收起，但标题与待背数在首屏
+    ['详情页挂上了「知识点背诵」区', histHtml.includes('知识点背诵') && histHtml.includes('个待背/待复习')],
+    // 已标熟必须真的流到首页（只看 localStorage 里那张 streak=3 的卡）
+    ['首页显示「已标熟知识点」', homeHtml.includes('已标熟知识点')],
+    ['首页进度区分「已学内容」与「已标熟」', homeHtml.includes('已学内容') && homeHtml.includes('看过 ≠ 掌握')],
+  ];
+  const reciteOk = reciteChecks.every(([, ok]) => ok);
+  console.log(
+    `  ${reciteOk ? '✅' : '❌'} 接线检查：知识点背诵与标熟（${reciteChecks
+      .filter(([, ok]) => !ok)
+      .map(([n]) => n)
+      .join('、') || `${reciteChecks.length} 项断言全通过`}）`,
+  );
+  if (!reciteOk) failed += 1;
+
+  /* ---- 接线检查：学习报告上「已学」与「已标熟」是两个数字 ---- */
+
+  /**
+   * 注入的 localStorage 里有一张标熟卡片，学习报告必须把它算进「已标熟知识点」，
+   * 而条目级进度（studied）另算——这正是「学习不是看了就等于学了」的落点。
+   */
+  const statsHtml = renderToString(
+    <MemoryRouter initialEntries={['/stats']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+  const statsChecks: [string, boolean][] = [
+    ['学习报告有「已标熟知识点」', statsHtml.includes('已标熟知识点')],
+    ['学习报告并列「已学内容（看过）」', statsHtml.includes('已学内容（看过）')],
+    ['两个数字分开说明', statsHtml.includes('看过 ≠ 掌握') || statsHtml.includes('完全掌握')],
+  ];
+  const statsOk = statsChecks.every(([, ok]) => ok);
+  console.log(
+    `  ${statsOk ? '✅' : '❌'} 接线检查：学习报告的双指标（${statsChecks
+      .filter(([, ok]) => !ok)
+      .map(([n]) => n)
+      .join('、') || '已学 / 已标熟 分列'}）`,
+  );
+  if (!statsOk) failed += 1;
 
   /* ------------- 接线检查：作文范文（多篇全文 + 亮点句 + 分项点评） ------------- */
 
@@ -843,6 +948,95 @@ if (!progressTarget) {
       .join('、') || '九类断言全通过'}）`,
   );
   if (!polOk) failed += 1;
+
+  /* ------------- 接线检查：物理（理科取向 + 图文并茂 + 全题过关才掌握） ------------- */
+
+  /**
+   * 物理这一科的接线有三件事最容易被「渲染没报错」掩盖：
+   *   ① 图解是数据画的，若渲染器没接上，页面照样出现、只是图全空；
+   *   ② 「全部题目过关才算掌握」的进度条与过关清单，接错了也看不出来；
+   *   ③ phy-exam 里整卷与题型专题共用模块 id，分流错就会把卷子渲染成知识页。
+   */
+  const phyTopic = allEntries.find(
+    (e) => e.moduleId === 'phy-mech' && !('sections' in e.data),
+  );
+  const phyPaper = allEntries.find((e) => e.moduleId === 'phy-exam' && 'sections' in e.data);
+  const renderPhy = (id: string) => {
+    const mod = allEntries.find((x) => x.id === id)?.moduleId ?? 'phy-mech';
+    return renderToString(
+      <MemoryRouter initialEntries={[`/s/physics/${mod}/${id}`]}>
+        <AppWithProviders />
+      </MemoryRouter>,
+    ).replace(/<!--[\s\S]*?-->/g, '');
+  };
+  const phyHtml = phyTopic ? renderPhy(phyTopic.id) : '';
+  const phyPaperHtml = phyPaper ? renderPhy(phyPaper.id) : '';
+  const phyModuleHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/physics/phy-mech']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+  const phyPracticeHtml = renderToString(
+    <MemoryRouter initialEntries={['/practice/phy-mech']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+
+  /**
+   * 图解图元的**自测**：直接渲染一个含 `arc` 与 `coil` 的图，检查画出来的 SVG。
+   *
+   * 为什么值得单独立一条断言：`arc` 的 large-arc / sweep 两个 flag 曾经写错
+   * （用度数去和 Math.PI 比），结果跨度超过约 3° 的弧全部画成反向大弧——
+   * 两个内容作者都踩到了，只好绕开 `arc` 改用 `curve`。这类错误页面不会报错、
+   * 只是图悄悄画反，只有把 SVG 文本抓出来比 flag 才抓得住。
+   */
+  const probeFigure: PhysicsFigure = {
+    id: 'fig-probe',
+    title: '图元自测',
+    alt: '自测图：一段 90 度圆弧与一个通电螺线管',
+    prims: [
+      // 90°（小于半圆）：large-arc 必须是 0，方向为逆时针（to > from）故 sweep = 0
+      { t: 'arc', cx: 50, cy: 50, r: 20, from: 0, to: 90, arrow: true },
+      // 270°（大于半圆）：large-arc 必须是 1
+      { t: 'arc', cx: 50, cy: 50, r: 10, from: 0, to: 270 },
+      { t: 'angle', x: 20, y: 80, from: 0, to: 60, label: '60°' },
+      { t: 'coil', x: 50, y: 20, turns: 4 },
+      { t: 'coil', x: 50, y: 34, turns: 4, frontCurrent: 'down' },
+    ],
+  };
+  const probeSvg = renderToString(<PhysicsFigureView figure={probeFigure} />);
+  /** 抓出两条 arc 的 d 属性，检查 large-arc 与 sweep 两个 flag */
+  const arcPaths = [...probeSvg.matchAll(/d="M [^"]*?A [\d.]+ [\d.]+ 0 (\d) (\d)/g)].map((m) => `${m[1]}${m[2]}`);
+  const coilLabels = [...probeSvg.matchAll(/>([NS])</g)].map((m) => m[1]).join('');
+
+  const phyChecks: [string, boolean][] = [
+    ['问题与理解的关键', phyHtml.includes('要解决的问题') && phyHtml.includes('理解的关键')],
+    ['理解过程（分步讲解）', phyHtml.includes('理解过程') && /physics-step__title/.test(phyHtml)],
+    ['图解渲染成 SVG', /<svg[^>]*class="fig__svg"/.test(phyHtml) && phyHtml.includes('fig__title')],
+    ['公式带适用条件', phyHtml.includes('公式与适用条件') && phyHtml.includes('适用条件')],
+    ['应用：情境到物理模型', phyHtml.includes('物理模型') && phyHtml.includes('结论')],
+    ['综合题与踩分点入口', phyHtml.includes('看参考答案与踩分点')],
+    [
+      '过关清单（全题过关才掌握）',
+      phyHtml.includes('过关清单') && phyHtml.includes('全部题目都过关才算掌握') && /physics-quizItem/.test(phyHtml),
+    ],
+    ['模拟卷结构表（选择 10 题 + 非选择 6 题）', phyPaperHtml.includes('试卷结构') && phyPaperHtml.includes('非选择题')],
+    ['模块页有物理条目', phyModuleHtml.includes('物理') && /list-item__title/.test(phyModuleHtml)],
+    ['练习页可用', phyPracticeHtml.includes('phy-') || phyPracticeHtml.includes('1 / ')],
+    // 图元自测：90° 弧 = (large 0, sweep 0)；270° 弧 = (large 1, sweep 0)。
+    // 注意 `angle` 图元也画 <path A>，所以断言取前两条而不是要求总数为 2。
+    ['图元自测：arc 的 large-arc / sweep', arcPaths.length >= 2 && arcPaths[0] === '00' && arcPaths[1] === '10'],
+    // 螺线管极性由正面电流方向推出：向上 N 在左、向下 N 在右 → 「N」出现在两组不同位置
+    ['图元自测：coil 极性随电流方向', coilLabels === 'NS' + 'SN' || /NS[\s\S]*SN/.test(probeSvg)],
+  ];
+  const phyOk = phyChecks.every(([, ok]) => ok);
+  console.log(
+    `  ${phyOk ? '✅' : '❌'} 接线检查：物理（${phyChecks
+      .filter(([, ok]) => !ok)
+      .map(([n]) => n)
+      .join('、') || '十二类断言全通过'}）`,
+  );
+  if (!phyOk) failed += 1;
 }
 
 if (failed) {

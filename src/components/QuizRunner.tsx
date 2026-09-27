@@ -18,8 +18,11 @@ import {
   shuffle,
 } from '../lib/utils';
 import { permuteOptions } from '../lib/quiz';
+import { masteryPolicyOf, passedCount } from '../lib/progress';
+import { findEntryById } from '../data';
 import { ProgressBar, Tag } from './common';
 import { RichText } from './RichText';
+import { PhysicsFigureView } from './PhysicsFigure';
 import { QuizLearnLinks } from './QuizLearnLinks';
 
 interface Record0 {
@@ -47,7 +50,23 @@ export function QuizRunner({
   onFinish,
 }: QuizRunnerProps) {
   const navigate = useNavigate();
-  const { recordAnswer, addSeconds } = useStudy();
+  const { state, recordAnswer, addSeconds } = useStudy();
+
+  /**
+   * 理科的掌握进度：把本轮涉及的**知识点**的全部题目取出来，
+   * 对照「过关」记录算出还差几题（见 lib/progress.ts 的 all-questions 策略）。
+   * 结果页要顺着这个标准给反馈，光给正确率学生判断不了离掌握还有多远。
+   */
+  const passed = state.passed;
+  const knowledgeIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const it of items) {
+      const entry = findEntryById(it.sourceId);
+      if (entry) for (const q of entry.questions) ids.add(q.id);
+    }
+    return [...ids];
+  }, [items]);
+  const unpassedCount = knowledgeIds.filter((id) => !passed?.[id]).length;
 
   const [session, setSession] = useState<QuizItem[]>(() =>
     shuffle(items).map((q) => ({ ...q, ...permuteOptions(q) })),
@@ -208,6 +227,15 @@ export function QuizRunner({
               <span className="timer-pill">❌ 答错 {score.total - score.correct} 题</span>
               <span className="timer-pill">⏱ 用时 {formatClock(elapsed)}</span>
             </div>
+            {/* 理科（物理）的掌握标准是「这个知识点的每一道题都过关」，
+                所以结果页要顺着这个标准给一句进度：练完这一组还剩几题没过。
+                只显示正确率的话，学生无法判断「离掌握还有多远」。 */}
+            {masteryPolicyOf(moduleId) === 'all-questions' && knowledgeIds.length ? (
+              <div className="small muted" style={{ textAlign: 'center', marginTop: 12 }}>
+                本轮涉及的知识点：过关 {passedCount(knowledgeIds, passed)}/{knowledgeIds.length} 题
+                {unpassedCount ? ` · 还差 ${unpassedCount} 题（每题都答对过才算掌握）` : ' · 🎉 全部过关，已掌握'}
+              </div>
+            ) : null}
           </div>
 
           <div className="divider" />
@@ -346,6 +374,8 @@ export function QuizRunner({
         <div className="quiz__stem" style={{ whiteSpace: 'pre-line' }}>
           <RichText text={current.stem} />
         </div>
+        {/* 理科的题大量依赖图（受力、光路、电路、图像），题干图必须跟着题走 */}
+        {current.figure ? <PhysicsFigureView figure={current.figure} className="physics-quizFig" /> : null}
         <div className="quiz__prompt">
           {current.type === 'choice'
             ? '选出最恰当的一项'
@@ -436,9 +466,29 @@ export function QuizRunner({
         {isShort && answered ? (
           <div className="explain fade-in">
             <div className="explain__title">📖 参考答案</div>
+            {/* 作图题的标准作图：学生先自己画，再展开对照（题干里绝不出现答案图） */}
+            {current.answerFigure ? (
+              <div className="physics-answerFig">
+                <PhysicsFigureView figure={current.answerFigure} />
+              </div>
+            ) : null}
             <div style={{ lineHeight: 1.9, whiteSpace: 'pre-line' }}>
               <RichText text={current.answer} />
             </div>
+
+            {/* 计算题的规范解题步骤（分步给分，与「为什么」分开写） */}
+            {current.answerSteps?.length ? (
+              <div className="physics-steps">
+                <div className="physics-steps__title">规范解题步骤</div>
+                <ol>
+                  {current.answerSteps.map((s, i) => (
+                    <li key={i}>
+                      <RichText text={s} />
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ) : null}
 
             {current.rubric?.length ? (
               <div className="rubric">

@@ -2,7 +2,7 @@
  * 云端同步：状态规范化、双向合并与上传。
  *
  * 合并原则（全部幂等：同一对状态无论合并多少次结果一致，可放心双向同步）：
- * - progress / recite：逐条按 lastAt 取较新；收藏取并集（布尔标记无时间戳）
+ * - progress / recite / cards：逐条按 lastAt 取较新；收藏取并集（布尔标记无时间戳）
  * - wrong：逐条按 lastAt 取较新，并结合墓碑（wrongRemoved）让「答对消错」也能跨设备同步
  * - checkins：日期并集
  * - daily：每个计数取较大值（避免双向同步把同一天重复累加）
@@ -18,6 +18,7 @@ export function normalizeStudyState(parsed: unknown): StudyState {
   const p = (parsed ?? {}) as Partial<StudyState>;
   return {
     progress: p.progress ?? {},
+    passed: p.passed ?? {},
     wrong: p.wrong ?? {},
     wrongRemoved: p.wrongRemoved ?? {},
     checkins: Array.isArray(p.checkins) ? p.checkins : [],
@@ -25,6 +26,7 @@ export function normalizeStudyState(parsed: unknown): StudyState {
     grade: (p.grade as GradeId | undefined) ?? '7a',
     totalSeconds: typeof p.totalSeconds === 'number' && p.totalSeconds > 0 ? p.totalSeconds : 0,
     recite: p.recite ?? {},
+    cards: p.cards ?? {},
   };
 }
 
@@ -66,6 +68,14 @@ export function mergeStates(local: StudyState, remote: StudyState): StudyState {
     if (!l || r.lastAt > l.lastAt) recite[id] = r;
   }
 
+  // 知识点卡片记录：同样 lastAt 新者胜
+  // （熟练度与「标熟」都由 streak 推导，不另存，因此合并时不会出现两个字段互相矛盾）
+  const cards: NonNullable<StudyState['cards']> = { ...(local.cards ?? {}) };
+  for (const [id, r] of Object.entries(remote.cards ?? {})) {
+    const l = cards[id];
+    if (!l || r.lastAt > l.lastAt) cards[id] = r;
+  }
+
   // 打卡日期并集
   const checkins = Array.from(new Set([...local.checkins, ...remote.checkins])).sort();
 
@@ -82,8 +92,20 @@ export function mergeStates(local: StudyState, remote: StudyState): StudyState {
       : r;
   }
 
+  /**
+   * 过关记录：取并集，同一题两边都答对过就取**较早**的时间戳。
+   * 这组数据是单调的（答对过就不会变回没答对），所以合并永不丢信息、也不需要墓碑——
+   * 与错题那套「删除要留墓碑」的麻烦完全不同。
+   */
+  const passed: NonNullable<StudyState['passed']> = { ...(local.passed ?? {}) };
+  for (const [qid, at] of Object.entries(remote.passed ?? {})) {
+    const cur = passed[qid];
+    passed[qid] = cur ? Math.min(cur, at) : at;
+  }
+
   return {
     progress,
+    passed,
     wrong,
     wrongRemoved,
     checkins,
@@ -91,6 +113,7 @@ export function mergeStates(local: StudyState, remote: StudyState): StudyState {
     grade: local.grade !== '7a' ? local.grade : remote.grade,
     totalSeconds: Math.max(local.totalSeconds, remote.totalSeconds),
     recite,
+    cards,
   };
 }
 

@@ -20,6 +20,7 @@ import type {
   HistoryModuleId,
   MindMap,
   ModuleId,
+  PhysicsModuleId,
   Poem,
   PoliticsModuleId,
   QuizQuestion,
@@ -31,6 +32,7 @@ import { matchesKeyword } from '../lib/searchText';
 import * as chinese from './chinese';
 import * as history from './history';
 import * as english from './english';
+import * as physics from './physics';
 import * as politics from './politics';
 import * as math from './math';
 
@@ -62,6 +64,7 @@ function syncSubjectContainers(): void {
     ...history.allEntries,
     ...english.allEntries,
     ...politics.allEntries,
+    ...physics.allEntries,
     ...math.allEntries,
   ]) {
     if (!entryIndex.has(e.id)) {
@@ -85,6 +88,8 @@ const HISTORY_MODULE_IDS = new Set<string>(history.MODULE_IDS);
 const ENGLISH_MODULE_IDS = new Set<string>(english.MODULE_IDS);
 /** 道法模块 id（六块：成长/道德/法治/国情 + 时政专题 + 整卷模拟） */
 const POLITICS_MODULE_IDS = new Set<string>(politics.MODULE_IDS);
+/** 物理模块 id（八块：声光热/力学/功与机械能/电学/电与磁 + 实验操作 + 中考专题） */
+const PHYSICS_MODULE_IDS = new Set<string>(physics.MODULE_IDS);
 /** 语文模块 id —— 也是 splitScope 的兜底分支，必须显式判断，见下 */
 const CHINESE_MODULE_IDS = new Set<string>(chinese.MODULE_IDS);
 
@@ -102,6 +107,7 @@ export function isScopeReady(scope: DataScope[]): boolean {
     history.isScopeReady(request.history) &&
     english.isScopeReady(request.english) &&
     politics.isScopeReady(request.politics) &&
+    physics.isScopeReady(request.physics) &&
     (request.math.length ? math.isLoaded() : true)
   );
 }
@@ -114,6 +120,7 @@ export async function ensureModules(scope: DataScope[]): Promise<void> {
     history.loadModules(request.history),
     english.loadModules(request.english),
     politics.loadModules(request.politics),
+    physics.loadModules(request.physics),
   ]);
   if (request.math.length) await math.load();
   syncSubjectContainers();
@@ -125,6 +132,7 @@ function splitScope(scope: DataScope[]): {
   history: HistoryModuleId[];
   english: EnglishModuleId[];
   politics: PoliticsModuleId[];
+  physics: PhysicsModuleId[];
   math: ModuleId[];
 } {
   const out = {
@@ -132,6 +140,7 @@ function splitScope(scope: DataScope[]): {
     history: [] as HistoryModuleId[],
     english: [] as EnglishModuleId[],
     politics: [] as PoliticsModuleId[],
+    physics: [] as PhysicsModuleId[],
     math: [] as ModuleId[],
   };
   for (const s of scope) {
@@ -140,6 +149,7 @@ function splitScope(scope: DataScope[]): {
     else if (HISTORY_MODULE_IDS.has(s)) out.history.push(s as HistoryModuleId);
     else if (ENGLISH_MODULE_IDS.has(s)) out.english.push(s as EnglishModuleId);
     else if (POLITICS_MODULE_IDS.has(s)) out.politics.push(s as PoliticsModuleId);
+    else if (PHYSICS_MODULE_IDS.has(s)) out.physics.push(s as PhysicsModuleId);
     else if (CHINESE_MODULE_IDS.has(s)) out.chinese.push(s as chinese.ChineseModuleId);
     // 其余模块 id 属于「待开发」科目的占位模块：没有内容可加载，直接忽略，
     // 由页面渲染「内容正在准备中」。兜底到语文会拿未知 id 去查加载器，反而出错。
@@ -149,7 +159,13 @@ function splitScope(scope: DataScope[]): {
 
 /** 加载全部学科的全部模块（校验脚本与跨模块聚合页面用） */
 export async function ensureAll(): Promise<void> {
-  await Promise.all([chinese.loadAll(), history.loadAll(), english.loadAll(), politics.loadAll()]);
+  await Promise.all([
+    chinese.loadAll(),
+    history.loadAll(),
+    english.loadAll(),
+    politics.loadAll(),
+    physics.loadAll(),
+  ]);
   await math.load();
   syncSubjectContainers();
 }
@@ -236,6 +252,22 @@ export function examPaperOf(id: string): ExamPaper | undefined {
       sections: pol.sections,
       materials: pol.materials,
       questions: pol.questions,
+    };
+  }
+
+  const phy = physics.allPapers.find((p) => p.id === id);
+  if (phy) {
+    return {
+      id: phy.id,
+      subjectId: 'physics',
+      moduleId: 'phy-exam',
+      title: phy.title,
+      basis: phy.basis,
+      duration: phy.duration,
+      totalScore: phy.totalScore,
+      sections: phy.sections,
+      materials: phy.materials,
+      questions: phy.questions,
     };
   }
 

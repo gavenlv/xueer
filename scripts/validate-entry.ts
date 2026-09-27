@@ -24,6 +24,7 @@ import { allTopics, allPapers } from '../src/data/history';
 // allTopics 含 pol-exam 的「题型专题」（与整卷共用 pol-exam），allPapers 只含卷子：
 // 校验卷面结构必须从 allPapers 取，不能按 moduleId === 'pol-exam' 从条目里筛。
 import { allPapers as polPapers, allTopics as polTopics } from '../src/data/politics';
+import { validatePhysics } from './validate-physics';
 import type { EnglishKnowledge, EnglishPaper, PoliticsPaper } from '../src/types';
 import { BOOK_EXAM_POINT_TAGS } from '../src/lib/bookExams';
 import { DAILY_LINES, ENTRY_META, MODULE_TOTALS } from '../src/data/summary';
@@ -41,10 +42,16 @@ import { answerModeFor, checkFill } from '../src/lib/utils';
 import { applyAnswerToProgress } from '../src/lib/progress';
 import {
   RECITE_INTERVALS,
+  RECITE_MASTER_STREAK,
+  applyCardRecite,
   applyRecite,
+  cardLevelLabel,
   daysUntilDue,
   isDue,
+  isMastered,
+  toMastery,
 } from '../src/lib/recite';
+import { reciteCardsOf } from '../src/lib/reciteCards';
 import type { Entry, MindNode, ModuleId, QuizQuestion, WritingLesson } from '../src/types';
 
 /**
@@ -557,6 +564,106 @@ if (authorsWithoutEntry.size) {
   );
 }
 
+/* --------------- 知识点卡片：覆盖情况（供轻量清单比对与总览统计用） --------------- */
+
+/**
+ * 卡片覆盖：**文科（语文/历史/道法/英语）与数学的每个内容条目都必须派生出卡片**。
+ *
+ * 这条断言直接对应「每个知识点都包含在内」——比如历史条目里的时间点、
+ * 材料大题的踩分点，只要数据里有，就必须能在背诵页看到，不能悄悄漏掉。
+ * 只列**确定应该产卡片**的模块，整卷模拟（题目在考试页）与待开发模块不在其中。
+ */
+const CARD_MODULES = new Set<string>([
+  'poems',
+  'vocab',
+  'classical',
+  'reading',
+  'writing',
+  'literature',
+  'hist-7a',
+  'hist-7b',
+  'hist-8a',
+  'hist-8b',
+  'hist-9a',
+  'hist-9b',
+  'hist-topics',
+  'pol-growth',
+  'pol-moral',
+  'pol-law',
+  'pol-nation',
+  'pol-current',
+  'eng-vocab',
+  'eng-grammar',
+  'eng-reading',
+  'eng-listening',
+  'eng-writing',
+  'eng-topics',
+  'math-number',
+  'math-geometry',
+  'math-stats',
+  'math-formula',
+  'math-model',
+]);
+
+let cardTotal = 0;
+const cardCountByEntry = new Map<string, number>();
+for (const e of allEntries) {
+  const n = reciteCardsOf(e).length;
+  cardCountByEntry.set(e.id, n);
+  cardTotal += n;
+  if (n === 0 && CARD_MODULES.has(e.moduleId)) {
+    err(`[知识点卡片] ${e.moduleId}/${e.id}（${e.title}）派生不出任何卡片，知识点会漏在背诵页之外`);
+  }
+}
+// 卡片 id 必须能反查回条目，否则「按学科/模块统计掌握数」会错位
+for (const e of allEntries) {
+  for (const c of reciteCardsOf(e)) {
+    if (!c.id.startsWith(`${e.id}#`) || c.entryId !== e.id || c.moduleId !== e.moduleId) {
+      err(`[知识点卡片] 卡片 ${c.id} 归属信息与实际条目 ${e.id} 不一致`);
+      break;
+    }
+  }
+}
+// 同一模块内卡片 id 不得重复（id 冲突会让两条内容共享一条背诵记录）
+const seenCardIds = new Set<string>();
+for (const e of allEntries) {
+  for (const c of reciteCardsOf(e)) {
+    if (seenCardIds.has(c.id)) {
+      err(`[知识点卡片] 卡片 id 重复：${c.id}`);
+      break;
+    }
+    seenCardIds.add(c.id);
+  }
+}
+
+/**
+ * 关键卡片类型必须真的存在。
+ *
+ * 「每个知识点都包含在内」这句话最容易在这里落空：抽取器写漏一个字段，
+ * 页面照样渲染、总数也照样很大，只是**历史时间点**或**材料大题踩分点**这类
+ * 学生最需要背的东西一张都没有。所以按类型点名核对数量。
+ */
+const kindCount = new Map<string, number>();
+for (const e of allEntries) {
+  for (const c of reciteCardsOf(e)) kindCount.set(c.kind, (kindCount.get(c.kind) ?? 0) + 1);
+}
+const REQUIRED_KINDS: [kind: string, min: number, why: string][] = [
+  ['默写', 500, '古诗文逐句默写（语文最核心的背诵任务）'],
+  ['历史时间点', 300, '历史时间轴的每个时间点'],
+  ['材料大题踩分点', 120, '历史/道法材料大题的踩分点'],
+  ['必背结论', 150, '历史必背结论'],
+  ['考点·重点', 300, '分层考点里的重点条目'],
+  ['必背金句', 120, '道法必背金句'],
+  ['概念', 250, '数学概念'],
+  ['公式定理', 250, '数学公式定理'],
+];
+for (const [kind, min, why] of REQUIRED_KINDS) {
+  const n = kindCount.get(kind) ?? 0;
+  if (n < min) {
+    err(`[知识点卡片] 类型「${kind}」只有 ${n} 张（期望 ≥ ${min}）——${why} 可能漏抽了`);
+  }
+}
+
 /* --------------- 按需加载：轻量清单是否过期 / 页面是否声明了数据范围 --------------- */
 
 /**
@@ -584,6 +691,14 @@ if (authorsWithoutEntry.size) {
         `[轻量清单] 条目 ${e.id} 的题量 ${m.questions} 与实际 ${e.questions.length} 不符 → 请运行 pnpm gen`,
       );
     }
+    // 卡片张数：首页/学习报告的「已标熟 N / 总数 M」全靠清单里的这个数字，
+    // 清单一旦过期，掌握率就会算错（分母与实际卡片对不上）
+    const cards = cardCountByEntry.get(e.id) ?? 0;
+    if (m.cards !== cards) {
+      err(
+        `[轻量清单] 条目 ${e.id} 的卡片张数 ${m.cards} 与实际 ${cards} 不符 → 请运行 pnpm gen`,
+      );
+    }
   }
 
   const totalsById = new Map(MODULE_TOTALS.map((m) => [m.id, m]));
@@ -598,10 +713,11 @@ if (authorsWithoutEntry.size) {
       }
       const list = allEntries.filter((e) => e.moduleId === mod.id);
       const qs = list.reduce((n, e) => n + e.questions.length, 0);
-      if (t.entries !== list.length || t.questions !== qs) {
+      const cs = list.reduce((n, e) => n + (cardCountByEntry.get(e.id) ?? 0), 0);
+      if (t.entries !== list.length || t.questions !== qs || t.cards !== cs) {
         err(
-          `[轻量清单] 模块 ${mod.id} 汇总为 ${t.entries} 条 / ${t.questions} 题，` +
-            `实际 ${list.length} 条 / ${qs} 题 → 请运行 pnpm gen 重新生成`,
+          `[轻量清单] 模块 ${mod.id} 汇总为 ${t.entries} 条 / ${t.questions} 题 / ${t.cards} 张卡片，` +
+            `实际 ${list.length} 条 / ${qs} 题 / ${cs} 张 → 请运行 pnpm gen 重新生成`,
         );
       }
     }
@@ -975,6 +1091,67 @@ const reciteCases: [string, boolean, string][] = [
 ];
 
 const reciteFailures = reciteCases.filter(([, ok]) => !ok);
+
+/* ------------------------ 知识点卡片（标熟）规则自测 ------------------------ */
+
+// 「标熟 = 完全掌握」是学习进度的判定依据，规则一旦写错，进度数字就会骗人，
+// 所以这里把遗忘曲线、同日不叠加、掉出标熟这几条都钉死。
+
+let cc = applyCardRecite(undefined, true, T0);
+const cc1 = { ...cc };
+// 同一天又点了一次「背了」：只加打卡次数，熟练度与排期都不动
+cc = applyCardRecite(cc, true, T0 + 60_000);
+const ccSameDay = { ...cc };
+// 第二天背对 → 熟练度 2
+cc = applyCardRecite(cc, true, T0 + DAY_MS);
+const cc2 = { ...cc };
+// 第三天背对 → 达到标熟
+cc = applyCardRecite(cc, true, T0 + 3 * DAY_MS);
+const ccMastered = { ...cc };
+// 标熟之后又背错 → 掉出标熟，明天重来
+cc = applyCardRecite(cc, false, T0 + 4 * DAY_MS);
+const ccFall = { ...cc };
+
+const cardCases: [string, boolean, string][] = [
+  [
+    '首次背对 → 熟练度 1，1 天后复习',
+    cc1.streak === 1 && cc1.times === 1 && cc1.dueAt === T0 + RECITE_INTERVALS[0] * DAY_MS,
+    JSON.stringify(cc1),
+  ],
+  [
+    '同一天重复「背了」只加次数、不加熟练度（防连点刷熟）',
+    ccSameDay.times === 2 &&
+      ccSameDay.streak === 1 &&
+      ccSameDay.dueAt === cc1.dueAt &&
+      !isMastered(ccSameDay),
+    JSON.stringify(ccSameDay),
+  ],
+  [
+    '隔天背对 → 熟练度 2，按 2 天档排期',
+    cc2.streak === 2 &&
+      cc2.times === 3 &&
+      cc2.dueAt === T0 + DAY_MS + RECITE_INTERVALS[1] * DAY_MS,
+    JSON.stringify(cc2),
+  ],
+  [
+    `连背 ${RECITE_MASTER_STREAK} 天 → 标熟（= 完全掌握）`,
+    isMastered(ccMastered) && ccMastered.masteredAt === T0 + 3 * DAY_MS,
+    JSON.stringify(ccMastered),
+  ],
+  ['标熟后「还差几次」归零', toMastery(ccMastered) === 0, String(toMastery(ccMastered))],
+  ['标熟标签文案正确', cardLevelLabel(ccMastered) === '已标熟', cardLevelLabel(ccMastered)],
+  [
+    '背错 → 掉出标熟，1 天后重来',
+    !isMastered(ccFall) &&
+      ccFall.streak === 0 &&
+      ccFall.dueAt === T0 + 4 * DAY_MS + RECITE_INTERVALS[0] * DAY_MS,
+    JSON.stringify(ccFall),
+  ],
+  ['未背过的卡片显示「还没背过」', cardLevelLabel(undefined) === '还没背过', cardLevelLabel(undefined)],
+];
+
+const cardFailures = cardCases.filter(([, ok]) => !ok);
+
 
 /* ------------------------ 判分逻辑自测 ------------------------ */
 
@@ -1872,6 +2049,12 @@ console.log(
   `      材料大题           ${polMaterialGroups} 组 / ${polAsks} 问（参考答案与踩分点齐全）`,
 );
 
+/**
+ * 物理：卷面结构 + 理科内容的硬性要求 + 图解规范。
+ * 规则多且专，单独放在 `scripts/validate-physics.ts`，这里只调用一次并打印报告。
+ */
+validatePhysics({ err, allEntries });
+
 /* ------------------------ 汇总报告 ------------------------ */
 
 const perModule = ALL_MODULE_IDS.map((id) => {
@@ -1907,6 +2090,7 @@ console.log(`  可练习题总计      ${String(totalQuestions + reciteTotal).pa
 console.log(`  索引条目          ${String(entryIndex.size).padStart(4)}`);
 console.log(`  思维导图          ${String(mindMaps.length).padStart(4)} 张 / ${mapNodeCount} 节点（带 note ${mapNoteCount}）`);
 console.log(`  拓展阅读          ${String(extensions.length).padStart(4)} 篇 / 约 ${Math.round(extChars / 1000)} 千字`);
+console.log(`  知识点卡片        ${String(cardTotal).padStart(4)} 张（背诵页与掌握率的分母）`);
 
 const perGrade = new Map<string, number>();
 for (const e of allEntries) perGrade.set(e.grade, (perGrade.get(e.grade) ?? 0) + 1);
@@ -1941,6 +2125,13 @@ console.log(
   `  背诵排期规则      ${reciteCases.length - reciteFailures.length} / ${reciteCases.length} 通过`,
 );
 for (const [note, , detail] of reciteFailures) {
+  console.log(`    ❌ ${note}  实际 ${detail}`);
+}
+
+console.log(
+  `  知识点卡片标熟    ${cardCases.length - cardFailures.length} / ${cardCases.length} 通过`,
+);
+for (const [note, , detail] of cardFailures) {
   console.log(`    ❌ ${note}  实际 ${detail}`);
 }
 
@@ -2096,7 +2287,8 @@ if (
   errors.length ||
   gradeBad > 0 ||
   progressFailures.length > 0 ||
-  reciteFailures.length > 0
+  reciteFailures.length > 0 ||
+  cardFailures.length > 0
 ) {
   if (errors.length) {
     console.log(`\n❌ 数据错误 ${errors.length} 条：`);
@@ -2111,6 +2303,9 @@ if (
   }
   if (reciteFailures.length > 0) {
     console.log(`\n❌ 背诵排期规则自测失败 ${reciteFailures.length} 条`);
+  }
+  if (cardFailures.length > 0) {
+    console.log(`\n❌ 知识点卡片标熟规则自测失败 ${cardFailures.length} 条`);
   }
   process.exitCode = 1;
 } else {

@@ -94,6 +94,24 @@ export interface QuizQuestion {
   tags?: string[];
   /** 仅 short 使用：踩分点，逐条列出，供学生自评 */
   rubric?: string[];
+  /**
+   * 题干配图（物理、化学等理科用）。
+   *
+   * 理科题目大量依赖图：受力分析、光路、电路、坐标图像、装置图。
+   * 图由**数据描述**、渲染器画成内联 SVG，因此离线可用、可检索、可朗读，
+   * 也不需要在发布包里放图片文件。
+   */
+  figure?: PhysicsFigure;
+  /**
+   * 作图题的参考答案图：学生自己画完再展开对照。
+   * 与 `figure` 分开，是因为作图题**不能**在题干里就把答案画出来。
+   */
+  answerFigure?: PhysicsFigure;
+  /**
+   * 计算题/解答题的规范解题步骤（分步给分）。
+   * 与 `explanation` 的分工：`explanation` 讲「为什么」，这里给「怎么写」。
+   */
+  answerSteps?: string[];
 }
 
 /** 一组带标题的题目，用于按篇目/主题组织 */
@@ -377,6 +395,17 @@ export interface WrongRecord {
 export interface StudyState {
   /** 内容 id -> 进度 */
   progress: Record<string, ItemProgress>;
+  /**
+   * 题目 id -> 首次答对时间戳（「过关」记录）。
+   *
+   * 为什么需要它：理科的掌握判定不是「答对率够高」而是「**这个知识点的每一道题都过关**」
+   * （用户明确要求：所有的习题都过关了才算是掌握）。聚合的 correct/total 无法回答
+   * 「还剩哪几题没对过」，所以必须逐题记一笔。
+   *
+   * 为什么记的是**首次**答对时间而不是「当前是否答对」：单调递增的数据才能安全合并——
+   * 两台设备各自答对不同的题，取并集即可，不需要墓碑、也不会互相覆盖。
+   */
+  passed?: Record<string, number>;
   /** 题目 id -> 错题记录 */
   wrong: Record<string, WrongRecord>;
   /**
@@ -396,6 +425,13 @@ export interface StudyState {
   totalSeconds: number;
   /** 背诵安排：内容 id -> 背诵记录（间隔重复） */
   recite?: Record<string, ReciteRecord>;
+  /**
+   * 知识点卡片背诵记录：卡片 id -> 记录。
+   *
+   * **稀疏存储**：只在学生真的背过某张卡时才写入一条。全库知识点有数千张，
+   * 给每张卡都留一条空记录会把 localStorage 撑到几 MB，同步上传也会变慢。
+   */
+  cards?: Record<string, CardRecord>;
 }
 
 /* ------------------------------ 背诵与复习 ------------------------------ */
@@ -415,6 +451,57 @@ export interface ReciteRecord {
   level: number;
   /** 连续背对次数（背错则清零） */
   streak: number;
+}
+
+/**
+ * 一张「必背知识点卡片」。
+ *
+ * 与 `ReciteRecord`（整篇古诗词的四级遮罩训练）不同，卡片是**知识点的最小单位**：
+ * 一句默写、一个历史时间点、一条材料大题的踩分点，各是一张卡。
+ * 卡片由内容数据**自动派生**（见 `lib/reciteCards.ts`），不单独维护一份数据，
+ * 因此每新增一条内容，它的知识点就自动进了背诵清单。
+ */
+export interface ReciteCard {
+  /** 稳定 id：`${entryId}#${kind}#${序号}`，可从中反查所属条目与模块 */
+  id: string;
+  /** 归属内容条目 id */
+  entryId: string;
+  /** 归属模块 id（统计分模块掌握率用） */
+  moduleId: ModuleId;
+  /** 来源条目标题，如「观沧海」，跨条目的清单里要标明出处 */
+  title: string;
+  /** 知识点类型，如「默写」「时间点」「材料大题踩分点」 */
+  kind: string;
+  /** 卡片正面：提示（挖空、上句、设问、词条…） */
+  front: string;
+  /** 卡片背面：要记住的内容 */
+  back: string;
+  /** 补充说明：易错、意义、用法、为什么好 */
+  note?: string;
+  /** 逐条踩分点（材料大题／主观题用，逐条展示） */
+  points?: string[];
+  /** 是否是本科目划定的「重点」（历史/道法考点分层带过来的标记） */
+  key?: boolean;
+}
+
+/**
+ * 一张知识点卡片的背诵记录。
+ *
+ * `streak` 是「连续背对次数」，也是熟练度与「标熟」的唯一依据；
+ * 级别的 `level` 不落库，需要时由 streak 推导——**能推导的就不存**，
+ * 免得同步合并时两个字段互相打架。
+ */
+export interface CardRecord {
+  /** 累计背诵次数（每点一次「背了」都算，学生会看到 1 次、2 次…） */
+  times: number;
+  /** 连续背对次数（同一天重复点不叠加，背错清零） */
+  streak: number;
+  /** 最近一次背诵时间戳 */
+  lastAt: number;
+  /** 下次应复习的时间戳（按遗忘曲线推出） */
+  dueAt: number;
+  /** 首次达到「标熟」的时间戳；掉出标熟后清空 */
+  masteredAt?: number;
 }
 
 /* ------------------------------------------------------------------ */
@@ -614,7 +701,20 @@ export interface HistoryMaterialGroup {
   id: string;
   material: string;
   /** 设问与参考答案、踩分点 */
-  questions: { id: string; stem: string; answer: string; rubric?: string[]; tags?: string[] }[];
+  questions: {
+    id: string;
+    stem: string;
+    answer: string;
+    rubric?: string[];
+    tags?: string[];
+    /**
+     * 规范解题步骤（可选）。
+     *
+     * 物理与数学这类**计算/解答题**要用它：`answer` 给的是「答案与思路」，
+     * 这里给的是「卷面上该按什么步骤写」，理科按步骤给分，两者不能混为一谈。
+     */
+    answerSteps?: string[];
+  }[];
 }
 
 /** 命题角度：这一考点在历年中考里怎么被考（考情研判） */
@@ -954,6 +1054,270 @@ export interface PoliticsPaperEntry extends EntryBase {
 
 export type PoliticsEntry = PoliticsTopicEntry | PoliticsPaperEntry;
 
+/* ------------------------------------------------------------------ */
+/* 物理                                                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 图解的画布色调。只描述**语义**（重点 / 辅助线 / 警示 / 正确），
+ * 具体颜色由渲染器从设计系统的 CSS 变量里取，数据不写颜色值。
+ */
+export type FigureTone = 'main' | 'accent' | 'muted' | 'danger' | 'ok';
+
+/** 角标记（光学入射角、斜面倾角、力的夹角都用它） */
+export interface FigureAngleMark {
+  /** 顶点 */
+  x: number;
+  y: number;
+  /** 起始角（度，0 = 正右，逆时针为正） */
+  from: number;
+  /** 结束角（度） */
+  to: number;
+  /** 半径，默认 6 */
+  r?: number;
+  /** 弧上的标注，如「30°」「i」「r」 */
+  label?: string;
+  tone?: FigureTone;
+  /** 直角用方框标记而不是圆弧 */
+  right?: boolean;
+}
+
+/**
+ * 图解里的一个图元。
+ *
+ * 坐标用 **0—100 的画布单位**（左上角为原点、y 向下），渲染器按 viewBox 等比缩放，
+ * 因此同一张图在手机与桌面上比例一致，作者也不需要算像素。
+ *
+ * 设计取舍：**先有通用图元，再有物理符号图元**。通用图元能画任何示意图；
+ * 物理符号图元（电源、灯泡、凸透镜、磁体、滑轮…）按教材标准画法画，
+ * 保证「画错就没分」的电路符号不会因作者手绘而走样。
+ */
+export type FigurePrim =
+  /* ---------------- 通用图元 ---------------- */
+  | { t: 'line'; x1: number; y1: number; x2: number; y2: number; dashed?: boolean; tone?: FigureTone; width?: number }
+  | {
+      t: 'arrow';
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+      /** 双向箭头（拉伸、形变示意） */
+      both?: boolean;
+      dashed?: boolean;
+      tone?: FigureTone;
+      width?: number;
+      label?: string;
+      /** 标注相对中点的偏移（画布单位），默认贴线外侧 */
+      labelDx?: number;
+      labelDy?: number;
+    }
+  | {
+      t: 'rect';
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      tone?: FigureTone;
+      fill?: boolean;
+      dashed?: boolean;
+      rx?: number;
+      label?: string;
+    }
+  | {
+      t: 'circle';
+      cx: number;
+      cy: number;
+      r: number;
+      tone?: FigureTone;
+      fill?: boolean;
+      dashed?: boolean;
+      label?: string;
+      labelDx?: number;
+      labelDy?: number;
+    }
+  | { t: 'poly'; points: [number, number][]; closed?: boolean; tone?: FigureTone; fill?: boolean; dashed?: boolean }
+  | { t: 'arc'; cx: number; cy: number; r: number; from: number; to: number; tone?: FigureTone; dashed?: boolean; arrow?: boolean }
+  | { t: 'text'; x: number; y: number; text: string; anchor?: 'start' | 'middle' | 'end'; size?: number; tone?: FigureTone }
+  | ({ t: 'angle' } & FigureAngleMark)
+  /**
+   * 坐标图像。理科的「图像法」全靠它：s-t、v-t、m-V、U-I、I-U、熔化曲线。
+   * 只画轴与刻度，数据曲线用 `curve` 图元叠上去。
+   */
+  | {
+      t: 'axis';
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      xLabel: string;
+      yLabel: string;
+      xTicks?: { at: number; label: string }[];
+      yTicks?: { at: number; label: string }[];
+      /** 画网格（读数题用） */
+      grid?: boolean;
+      /** 原点是否标 0 */
+      origin?: boolean;
+    }
+  /** 折线/曲线（函数图像、光路、运动轨迹） */
+  | { t: 'curve'; points: [number, number][]; tone?: FigureTone; dashed?: boolean; width?: number; arrow?: boolean }
+  /** 斜线阴影（地面、墙面、不透光区域） */
+  | { t: 'hatch'; x: number; y: number; w: number; h: number; tone?: FigureTone; gap?: number }
+
+  /* ---------------- 电学符号（教材标准画法） ---------------- */
+  /** 电源：长线是正极、短线是负极 */
+  | { t: 'battery'; x: number; y: number; vertical?: boolean; label?: string; cells?: number }
+  | { t: 'switch'; x: number; y: number; closed?: boolean; vertical?: boolean; label?: string }
+  /** 灯泡（圆圈内画叉） */
+  | { t: 'bulb'; x: number; y: number; label?: string }
+  /** 定值电阻（矩形） */
+  | { t: 'resistor'; x: number; y: number; vertical?: boolean; label?: string; w?: number; h?: number }
+  /** 滑动变阻器（矩形 + 滑片箭头） */
+  | { t: 'rheostat'; x: number; y: number; vertical?: boolean; label?: string }
+  /** 电流表（A）/ 电压表（V）：圆圈内写字母 */
+  | { t: 'meter'; x: number; y: number; kind: 'A' | 'V'; label?: string }
+  /** 导线结点（实心圆点） */
+  | { t: 'junction'; x: number; y: number }
+
+  /* ---------------- 光学元件 ---------------- */
+  /** 凸/凹透镜 */
+  | { t: 'lens'; x: number; y: number; kind: 'convex' | 'concave'; h?: number; label?: string }
+  /** 平面镜（背面带斜线） */
+  | { t: 'mirror'; x: number; y: number; len?: number; angle?: number; label?: string }
+  /** 界面（水面、玻璃砖表面） */
+  | { t: 'surface'; x1: number; y1: number; x2: number; y2: number; kind: 'water' | 'glass'; label?: string }
+
+  /* ---------------- 力学元件 ---------------- */
+  | { t: 'pulley'; x: number; y: number; r?: number; kind?: 'fixed' | 'moving'; label?: string }
+  /** 杠杆：两端点 + 支点位置 0—1 */
+  | { t: 'lever'; x1: number; y1: number; x2: number; y2: number; pivot: number; label?: string }
+  /** 斜面：自动画直角三角形与倾角标记 */
+  | { t: 'incline'; x: number; y: number; w: number; deg: number; label?: string }
+  | { t: 'spring'; x1: number; y1: number; x2: number; y2: number; coils?: number; label?: string }
+  /** 容器（烧杯/水槽），`fill` 为水位 0—1 */
+  | { t: 'beaker'; x: number; y: number; w: number; h: number; fill?: number; label?: string }
+
+  /* ---------------- 热学与磁 ---------------- */
+  /** 温度计，`value` 为液柱高度 0—1 */
+  | { t: 'thermometer'; x: number; y: number; h: number; value?: number; label?: string }
+  /** 条形磁体（左 N 右 S） */
+  | { t: 'magnet'; x: number; y: number; w?: number; h?: number; label?: string }
+  /**
+   * 通电螺线管（带电流方向与 N/S）。
+   *
+   * `frontCurrent` 是**正面（朝向读者的那一面）导线的电流方向**，默认 `'up'`。
+   * N/S 由它按安培定则算出来，不由作者填写——极性写反就是教错：
+   * 正面电流向上时磁矩指向 −x，故 N 在左、S 在右；向下则反过来。
+   */
+  | { t: 'coil'; x: number; y: number; turns?: number; w?: number; label?: string; frontCurrent?: 'up' | 'down' }
+  /** 小磁针，`deg` 为北极指向 */
+  | { t: 'compass'; x: number; y: number; deg?: number; label?: string };
+
+/**
+ * 一张图解。
+ *
+ * `alt` 不是装饰：整页朗读靠它把图读出来，检索也靠它把「凸透镜成像规律」这类
+ * 问题搜到图上——所以校验器要求每张图都必须有 `alt`。
+ */
+export interface PhysicsFigure {
+  id: string;
+  /** 图题（画在图下方） */
+  title: string;
+  /** 一句话点出这张图要看什么 */
+  caption?: string;
+  /** 画布比例，默认 wide（16:10） */
+  view?: 'wide' | 'square' | 'tall';
+  prims: FigurePrim[];
+  /** 无障碍与朗读用的文字描述（必填） */
+  alt: string;
+}
+
+/** 理解过程的一步：理科讲解按「先看现象 → 再建立概念 → 再看它会怎么变」排 */
+export interface PhysicsStep {
+  heading: string;
+  body: string;
+  figure?: PhysicsFigure;
+  /** 规范表述提醒 / 常见错误 */
+  note?: string;
+}
+
+/**
+ * 应用/例题：把知识点落到情境上。
+ * 与 `materials` 的分工：`apps` 是课堂例题式的应用（解答紧跟其后）；
+ * `materials` 是中考非选择题形态（材料 + 设问 + 踩分点），供自测。
+ */
+export interface PhysicsApp {
+  title: string;
+  scene: string;
+  /** 物理模型：从情境里抓出哪些量、用哪条规律 */
+  model: string;
+  /** 规范解答步骤 */
+  steps: string[];
+  result: string;
+  figure?: PhysicsFigure;
+}
+
+/** 公式与单位。理科要「会用」公式，所以每个公式必须写适用条件 */
+export interface PhysicsFormula {
+  name: string;
+  /** KaTeX 源码，如 `p = \\frac{F}{S}` */
+  tex?: string;
+  text?: string;
+  /** 各物理量的单位（如「p：帕斯卡 Pa」） */
+  units?: string;
+  /** 适用条件与变形用法——背公式没用，知道什么时候能用才有用 */
+  usage: string;
+}
+
+/** 一个知识点（物理的最小学习单元） */
+export interface PhysicsTopic {
+  id: string;
+  /** 教材章节归属，如「人教版八下 · 第 7 章 力」 */
+  unit: string;
+  grade: GradeOrAll;
+  title: string;
+  /** 这个知识点要回答的问题（从问题切入，不从定义切入） */
+  question: string;
+  /** 理解的关键在哪（一句话） */
+  keyIdea: string;
+  /** 理解：分步讲解，每步尽量配图 */
+  steps: PhysicsStep[];
+  /** 应用：典型例题与生活/工程应用 */
+  apps: PhysicsApp[];
+  formulas?: PhysicsFormula[];
+  confusions?: { wrong: string; right: string; why: string }[];
+  compares?: HistoryCompare[];
+  examAngles?: HistoryExamAngle[];
+  /** 中考非选择题形态的综合题（解答与计算 / 探究与实验 / 阅读与理解） */
+  materials?: HistoryMaterialGroup[];
+  /** 练习：每个知识点不少于 8 道，且**全部过关才算掌握**（见 lib/progress.ts） */
+  questions: QuizQuestion[];
+}
+
+/** 物理整卷模拟（按广州中考卷面结构命题） */
+export interface PhysicsPaper {
+  id: string;
+  grade: GradeOrAll;
+  title: string;
+  basis: string;
+  duration: number;
+  totalScore: number;
+  sections: { name: string; kind: 'choice' | 'material'; count: number; score: number }[];
+  materials: HistoryMaterialGroup[];
+  questions: QuizQuestion[];
+}
+
+export interface PhysicsTopicEntry extends EntryBase {
+  /** 知识条目可落在任意物理模块（`phy-exam` 里除整卷外还有题型专题） */
+  moduleId: PhysicsModuleId;
+  data: PhysicsTopic;
+}
+export interface PhysicsPaperEntry extends EntryBase {
+  moduleId: 'phy-exam';
+  data: PhysicsPaper;
+}
+
+export type PhysicsEntry = PhysicsTopicEntry | PhysicsPaperEntry;
+
 /* ------------------------------ 数学 ------------------------------ */
 
 /** 公式 / 定理 */
@@ -1017,6 +1381,7 @@ export type Entry =
   | HistoryEntry
   | EnglishEntry
   | PoliticsEntry
+  | PhysicsEntry
   | MathEntry;
 
 /** 练习会话中的一道题（带来源信息） */
