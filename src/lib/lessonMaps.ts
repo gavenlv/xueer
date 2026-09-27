@@ -672,8 +672,9 @@ export function lessonMindMap(entry: Entry): MindMap | null {
       kids = englishMap(entry);
       summary = '这一个知识点考什么、怎么判断、怎么用，一张图串起来';
       break;
-    // 道德与法治（成长/道德/法治/国情/时政）：与历史那张图同一骨架
+    // 道德与法治（七上/七下/八上/八下/九上/九下/时政）：与历史那张图同一骨架
     case 'pol-growth':
+    case 'pol-youth':
     case 'pol-moral':
     case 'pol-law':
     case 'pol-nation':

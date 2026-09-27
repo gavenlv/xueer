@@ -34,6 +34,7 @@ const LEVEL_DESC: Record<HistoryLevel, string> = {
 
 const MODULE_SCOPE = [
   'pol-growth',
+  'pol-youth',
   'pol-moral',
   'pol-law',
   'pol-nation',

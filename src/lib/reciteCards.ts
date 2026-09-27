@@ -490,6 +490,7 @@ export function reciteCardsOf(entry: Entry): ReciteCard[] {
       fromHistoryTopic(b, entry.data);
       break;
     case 'pol-growth':
+    case 'pol-youth':
     case 'pol-moral':
     case 'pol-law':
     case 'pol-nation':

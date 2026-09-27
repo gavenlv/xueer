@@ -174,6 +174,7 @@ export function searchTextOf(entry: Entry): string {
      * 只有把这些规范表述全进索引，才搜得到对应单元。
      */
     case 'pol-growth':
+    case 'pol-youth':
     case 'pol-moral':
     case 'pol-law':
     case 'pol-nation':

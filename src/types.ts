@@ -587,6 +587,7 @@ export type ChemistryModuleId =
 
 export type PoliticsModuleId =
   | 'pol-growth'
+  | 'pol-youth'
   | 'pol-moral'
   | 'pol-law'
   | 'pol-nation'

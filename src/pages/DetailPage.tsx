@@ -131,6 +131,7 @@ export default function DetailPage() {
           <PoliticsDetail entry={entry as PoliticsTopicEntry} moduleName={meta?.module.name ?? '道德与法治'} />
         );
       case 'pol-growth':
+      case 'pol-youth':
       case 'pol-moral':
       case 'pol-law':
       case 'pol-nation':

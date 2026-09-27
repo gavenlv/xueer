@@ -589,6 +589,7 @@ const CARD_MODULES = new Set<string>([
   'hist-9b',
   'hist-topics',
   'pol-growth',
+  'pol-youth',
   'pol-moral',
   'pol-law',
   'pol-nation',
@@ -1965,7 +1966,7 @@ const POLITICS_STRUCTURE = {
 };
 
 const politicsTopics = polTopics;
-const POLITICS_TEXTBOOK_MODULES = ['pol-growth', 'pol-moral', 'pol-law', 'pol-nation', 'pol-world'];
+const POLITICS_TEXTBOOK_MODULES = ['pol-growth', 'pol-youth', 'pol-moral', 'pol-law', 'pol-nation', 'pol-world'];
 let polBad = 0;
 let polPoints = 0;
 let polKeySentences = 0;
