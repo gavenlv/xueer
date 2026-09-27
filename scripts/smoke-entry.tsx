@@ -18,6 +18,8 @@ import { supplementsOf } from '../src/lib/relations';
 import { relOfEntry, relPool } from '../src/lib/relNode';
 import { makeReciteQuestions } from '../src/lib/quiz';
 import { reciteCardsOf } from '../src/lib/reciteCards';
+import { ReciteCardGroup } from '../src/components/ReciteCards';
+import type { ReciteCard } from '../src/types';
 import { PhysicsFigureView } from '../src/components/PhysicsFigure';
 import type { PhysicsFigure } from '../src/types';
 
@@ -790,6 +792,66 @@ if (!progressTarget) {
       .join('、') || '已学 / 已标熟 分列'}）`,
   );
   if (!statsOk) failed += 1;
+
+  /* ------- 接线检查：卡片底部的「已背 N 次 / 还差 N 次标熟」文案 ------- */
+
+  /**
+   * 学生点完「✅ 背了」必须**当场**看到「已背 N 次 · 还差 N 次标熟 · N 天后复习」。
+   * 这行字由 `ReciteCardItem` 现拼，拼错、或者把「同一天重复打卡」也算成一次熟练度，
+   * 页面都照样渲染得很正常——所以直接喂两条记录来锁死文案：
+   * A 卡＝今天第一次背对（次数 1、熟练度 1）；B 卡＝同一天又点了一次（次数 2、熟练度仍是 1）。
+   */
+  const DAY_MS = 86400000;
+  const metaNow = Date.now();
+  const metaIds = ['meta-a#默写#0', 'meta-b#默写#0'];
+  (globalThis as unknown as { localStorage: unknown }).localStorage = {
+    getItem: (k: string) =>
+      k.includes('xueer')
+        ? JSON.stringify({
+            cards: {
+              [metaIds[0]]: { times: 1, streak: 1, lastAt: metaNow, dueAt: metaNow + DAY_MS },
+              [metaIds[1]]: { times: 2, streak: 1, lastAt: metaNow, dueAt: metaNow + DAY_MS },
+            },
+          })
+        : null,
+    setItem: () => {},
+    removeItem: () => {},
+  } as unknown;
+
+  const metaCards = metaIds.map(
+    (id, i): ReciteCard => ({
+      id,
+      entryId: `meta-${i}`,
+      moduleId: 'poems',
+      title: '接线检查用卡片',
+      kind: '默写',
+      front: `上句：接线检查${i + 1}`,
+      back: '下句',
+    }),
+  );
+  const metaHtml = renderToString(
+    <StudyProvider>
+      <ReciteCardGroup cards={metaCards} limit={10} />
+    </StudyProvider>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+
+  const cardMetaChecks: [string, boolean][] = [
+    ['首次背对显示「已背 1 次」', metaHtml.includes('已背 1 次')],
+    ['首次背对显示「还差 2 次标熟」', metaHtml.includes('还差 2 次标熟')],
+    ['首次背对显示「1 天后复习」', metaHtml.includes('1 天后复习')],
+    ['同一天第二次背显示「已背 2 次」', metaHtml.includes('已背 2 次')],
+    // 同一天重复点不该推进熟练度：两张卡的 streak 都还是 1
+    ['同一天重复打卡不推进熟练度', !metaHtml.includes('还差 1 次标熟')],
+    ['熟练度圆点各亮 1 个（共 2 个亮）', (metaHtml.match(/rcard__dot is-on/g) ?? []).length === 2],
+  ];
+  const cardMetaOk = cardMetaChecks.every(([, ok]) => ok);
+  console.log(
+    `  ${cardMetaOk ? '✅' : '❌'} 接线检查：卡片打卡文案（${cardMetaChecks
+      .filter(([, ok]) => !ok)
+      .map(([n]) => n)
+      .join('、') || '已背 N 次 / 还差 N 次标熟 / 复习时间'}）`,
+  );
+  if (!cardMetaOk) failed += 1;
 
   /* ------------- 接线检查：作文范文（多篇全文 + 亮点句 + 分项点评） ------------- */
 

@@ -64,7 +64,19 @@ export default function RecitePage() {
   const records = state.cards;
   const stats = useMemo(() => cardStatsOf(cards, records), [cards, records]);
 
-  const shown = useMemo(() => {
+  /**
+   * 本次筛选下的**背诵队列**。
+   *
+   * 关键是「队列在筛选变化时定好，作答过程中不重排、也不移除」：
+   * 一张卡点过「✅ 背了」之后 `dueAt` 会被推到明天，若按 `dueAt` 实时过滤，
+   * 学生刚点完就看到卡片当场消失，「已背 1 次 · 还差 2 次标熟」一眼都看不到，
+   * 也就无从判断这次到底记下没有。队列冻结后卡片原地留着，底部小字实时更新，
+   * 学生可以接着点第 2 次、第 3 次——这正是「不背单词」那种一张张过的手感。
+   *
+   * 依赖里**刻意不含 `records`**：作答只该更新卡片自己的状态与顶部的统计数字，
+   * 不该重建队列。想重新排队，切一下状态或模块筛选即可。
+   */
+  const queue = useMemo(() => {
     const out = cards.filter((c) => {
       if (moduleFilter !== 'all' && c.moduleId !== moduleFilter) return false;
       const rec = records?.[c.id];
@@ -77,15 +89,15 @@ export default function RecitePage() {
     });
     // 越早到期越靠前（没背过的 dueAt 视为 0，排最前）
     return out.sort((a, b) => (records?.[a.id]?.dueAt ?? 0) - (records?.[b.id]?.dueAt ?? 0));
-  }, [cards, records, moduleFilter, status]);
+  }, [cards, moduleFilter, status]);
 
   /** 按模块分组（模块筛选为「全部」时分组展示，避免几千张卡混在一起） */
   const groups = useMemo(() => {
     const order = new Map<ModuleId, number>(moduleIds.map((m, i) => [m, i]));
     const byModule = new Map<ModuleId, ReciteCard[]>();
-    for (const c of shown) byModule.set(c.moduleId, [...(byModule.get(c.moduleId) ?? []), c]);
+    for (const c of queue) byModule.set(c.moduleId, [...(byModule.get(c.moduleId) ?? []), c]);
     return [...byModule.entries()].sort((a, b) => (order.get(a[0]) ?? 0) - (order.get(b[0]) ?? 0));
-  }, [shown, moduleIds]);
+  }, [queue, moduleIds]);
 
   const crumbs = [
     { label: '首页', to: '/' },
@@ -210,7 +222,7 @@ export default function RecitePage() {
         </div>
       </div>
 
-      {shown.length === 0 ? (
+      {queue.length === 0 ? (
         <div className="card card--pad small muted">
           {status === 'due'
             ? '今天没有到期的复习任务，切到「没背过」继续背新的。'
@@ -238,10 +250,10 @@ export default function RecitePage() {
         })
       ) : (
         <section className="stack stack--sm">
-          <SectionTitle sub={`共 ${shown.length} 张卡片`}>
+          <SectionTitle sub={`共 ${queue.length} 张卡片`}>
             {STATUSES.find((s) => s.key === status)?.label}
           </SectionTitle>
-          <ReciteCardGroup cards={shown} showSource limit={60} />
+          <ReciteCardGroup cards={queue} showSource limit={60} />
         </section>
       )}
 
