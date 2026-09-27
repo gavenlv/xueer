@@ -237,13 +237,16 @@ function buildLiteratureEntries(
 const buildZhExamEntries = (items: ChineseExamTopic[]): ChineseExamTopicEntry[] =>
   items.map((t) => {
     const qs = dedupeQuestions(t.questions);
+    const secs = t.sections?.length ?? 0;
     return {
       id: t.id,
       moduleId: 'zh-topics',
       title: t.title,
-      // 副标题 = 卷面定位 + 这一专题的规模：模块页一眼能看到「多少分、多少题、几组训练」，
-      // 「大量训练」这件事不该只写在说明里。
-      subtitle: `${t.paper} · ${qs.length} 题 · ${t.drills.length} 组训练`,
+      // 副标题 = 卷面定位 + 这一专题的规模：模块页一眼能看到「多少分、几节章节、多少题」，
+      // 「每个类目都拆开讲透、都有配套练习」这件事不该只写在说明里。
+      subtitle: secs
+        ? `${t.paper} · ${secs} 节逐类讲透 · ${qs.length} 题`
+        : `${t.paper} · ${qs.length} 题 · ${t.drills.length} 组训练`,
       grade: t.grade,
       tags: [t.title, '中考专题'],
       questions: qs,

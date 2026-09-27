@@ -3,26 +3,35 @@
  *
  * 为什么单独做一个渲染器：`zh-topics` 与前面六个教材模块的内容形状完全不同——
  * 它不是「一篇课文 + 若干题」，而是「近五年考情 + 专门讲解 + 专项训练」三件套，
- * 落到的字段（`trends` / `trendSummary` / `angles` / `steps` / `templates` /
- * `scoring` / `pitfalls` / `drills`）在其它详情页里都没有对应位置，
+ * 落到的字段（`trends` / `trendSummary` / `angles` / `steps` / `sections` /
+ * `templates` / `scoring` / `pitfalls` / `drills`）在其它详情页里都没有对应位置，
  * 因此不能复用 `PoemDetail` 那一套骨架。
  *
  * 页面按**学生的使用顺序**排布，每一块的用途都不一样：
  *
  *   ① 攻破标准        —— 本专题每一道题都答对过才算攻破（全题过关策略），并把进度摆在最上面
+ *   ①′ 章节索引       —— 节数够多（≥6）时在最上面给一份可点击的目录，直接跳到要补的那一节
  *   ② 一句话拿分逻辑   —— 这个专题考什么、分丢在哪，决定复习时间怎么分配
  *   ③ 近五年考情      —— 逐年形态（最新一年置顶并标出），末尾单列趋势结论
  *   ④ 命题角度        —— 复习时对号入座：这几年反复从哪几个角度考
  *   ⑤ 分步讲解        —— 考场上的动作序列，`demo` 以「示范」引用块呈现
- *   ⑥ 答题模板        —— 可以直接背下来套用的成套句式
- *   ⑦ 评分点／踩分点   —— 写成「写到什么才给分」，做完题逐条对照
- *   ⑧ 易错与失分      —— 三行写法：错在哪 / 应该怎么做 / 为什么容易错
- *   ⑨ 专项训练分组     —— 每组一个「刷这一组」入口，组名即题目标签
- *   ⑩ 题库总览        —— 只列题干摘要与题型，作答一律走练习页
- *   ⑪ 底部行动条      —— 「从头练这个专题（全部 N 题）」，另给「只练没过关的」
+ *   ⑥ 逐类讲透        —— 类目之下的每个子类各一节：判定要点 + 正误对照例子 + 当节练习
+ *   ⑦ 答题模板        —— 可以直接背下来套用的成套句式
+ *   ⑧ 评分点／踩分点   —— 写成「写到什么才给分」，做完题逐条对照
+ *   ⑨ 易错与失分      —— 三行写法：错在哪 / 应该怎么做 / 为什么容易错
+ *   ⑩ 专项训练分组     —— 每组一个「刷这一组」入口，组名即题目标签
+ *   ⑪ 题库总览        —— 只列题干摘要与题型，作答一律走练习页
+ *   ⑫ 底部行动条      —— 「从头练这个专题（全部 N 题）」，另给「只练没过关的」
+ *
+ * 「先给整体方法（分步讲解），再逐类拆开（逐类讲透），最后给可背的模板」是刻意的顺序：
+ * 专题粒度太粗（「积累与运用」不是一个能直接下手的单位），真正能被学生吃下去的是
+ * 子类一节一节地过——每节都有判断方法、正误例子与当节练习，学完立刻练，练完再走下一节。
+ * `sections` 还没写到的专题整个区块不渲染，其余部分照旧（优雅降级）。
  *
  * 分组刷题走 `/practice/zh-topics/<条目 id>?tag=<组名>`：组名本身就是题目上的
  * 标签（见 `data/chinese/zh-topics/CONTENT-SPEC.md`），因此不需要另建一套组的 id。
+ * `sections[].name` 与 `drills[].name` 是**同一个字符串**，所以每一节的「刷这一节」
+ * 就是那一组的组卷链接。
  *
  * 底部「知识点背诵 / 本课思维导图 / 拓展阅读 / 关联学习 / 学一补多」由 `DetailShell`
  * 统一接上，与其它详情页完全一致，这里不再重复实现。
@@ -68,6 +77,24 @@ function Emph({ text }: { text: string }) {
 function summarize(stem: string, limit = STEM_LIMIT): string {
   const one = stem.replace(/\s+/g, ' ').trim();
   return one.length > limit ? `${one.slice(0, limit)}…` : one;
+}
+
+/** 章节数达到这个数才给顶部索引：两三节的专题一眼看完，再加目录反而是噪音 */
+const SECTION_NAV_MIN = 6;
+
+/** 章节卡片的 DOM id（顶部索引按它跳转） */
+const sectionAnchorId = (no: number) => `zht-sec-${no}`;
+
+/**
+ * 跳到某一节。
+ *
+ * **必须是 JS 滚动，不能写成 `<a href="#zht-sec-3">`**：本站用的是 `HashRouter`
+ * （`src/main.tsx`），地址栏里的 `#` 就是路由本身——点一个 `href="#zht-sec-3"`
+ * 会把路由改成 `/zht-sec-3` 并渲染「页面不存在」，而不是滚动。只有导航与滚动分离
+ * （`scrollIntoView`）才既跳得对又不改路由。
+ */
+function jumpToSection(no: number) {
+  document.getElementById(sectionAnchorId(no))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 export default function ChineseExamTopicDetail({
@@ -116,6 +143,25 @@ export default function ChineseExamTopicDetail({
     [t.drills, questions],
   );
 
+  /**
+   * 章节（逐类讲透）：每节带上**本节题量**，与训练分组同一口径（节名 = 组名 = 题目标签）。
+   * `sections` 是后补字段，没写的专题拿到的是 undefined，区块与索引都自动消失。
+   */
+  const sections = useMemo(
+    () =>
+      (t.sections ?? []).map((s) => ({
+        ...s,
+        count: questions.filter((q) => (q.tags ?? []).includes(s.name)).length,
+      })),
+    [t.sections, questions],
+  );
+
+  /** 汇总用的例子总数（标题旁给「共 N 节 · M 个例子」） */
+  const exampleCount = useMemo(
+    () => sections.reduce((n, s) => n + (s.examples?.length ?? 0), 0),
+    [sections],
+  );
+
   const preview = questions.slice(0, PREVIEW_LIMIT);
 
   return (
@@ -150,6 +196,34 @@ export default function ChineseExamTopicDetail({
           不必从头再来一遍。因此这一块的进度只增不减，凑够 {total} / {total} 就是把这个专题拿下。
         </div>
       </section>
+
+      {/*
+        ①′ 章节索引：专题粒度太粗，「逐类讲透」可能有十几节，先给一份能点的目录，
+        学生直接跳到「我今天就要补的那一节」。少于 6 节时不给（页面本来就不长，目录成噪音）。
+      */}
+      {sections.length >= SECTION_NAV_MIN ? (
+        <section className="card card--pad zht-secnav">
+          <div className="row row--between row--wrap" style={{ gap: 8 }}>
+            <div className="zht-secnav__title">🧩 章节索引（{sections.length} 节）</div>
+            <span className="small muted">点一节跳到那一节：判定要点 + 正误例子 + 当节练习</span>
+          </div>
+          <div className="row row--wrap" style={{ marginTop: 10 }}>
+            {sections.map((s, i) => (
+              <button
+                className="zht-secnav__item"
+                key={s.name}
+                onClick={() => jumpToSection(i + 1)}
+                title={s.intro}
+              >
+                <span>
+                  {i + 1}. {s.name}
+                </span>
+                <span className="zht-secnav__count">{s.count} 题</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* ② 一句话拿分逻辑：试卷上这一块考什么、分丢在哪 */}
       <section className="card card--pad history-mainline">
@@ -257,7 +331,134 @@ export default function ChineseExamTopicDetail({
         </Section>
       ) : null}
 
-      {/* ⑥ 答题模板：可以直接背下来套用的成套句式 */}
+      {/*
+        ⑥ 逐类讲透：专题之下每个子类一节——判定要点（rules）+ 正误对照例子（examples）
+        + 本节易错（pitfalls）+ 当节练习入口。这是「讲透」真正落地的区块：
+        例子必须正误对照才学得会判断，所以 ok === true 走绿色 ✔、否则走红色 ✘，
+        有 fix 的直接把「改成什么」摆在错例下面。
+      */}
+      {sections.length ? (
+        <Section
+          title={`逐类讲透（${sections.length} 节 · ${exampleCount} 个例子）`}
+          icon="🧩"
+          extra={<span className="small muted">一节一节吃：看懂 → 刷这一节</span>}
+        >
+          <div className="small muted" style={{ marginBottom: 12, lineHeight: 1.85 }}>
+            一个专题（如「积累与运用」）不是一个能直接下手的单位，真正要练的是它下面的子类。
+            下面每一节都有判断方法、正误对照的例子和当节练习，看完一节立刻刷一节。
+          </div>
+
+          <div className="stack stack--lg">
+            {sections.map((s, i) => (
+              <section className="zht-sec" id={sectionAnchorId(i + 1)} key={s.name}>
+                <div className="zht-sec__head">
+                  <span className="zht-sec__no">{i + 1}</span>
+                  <span className="zht-sec__name">{s.name}</span>
+                  <span className="spacer" />
+                  <Tag tone={s.count ? 'jade' : 'default'}>{s.count} 题</Tag>
+                </div>
+
+                <div className="zht-sec__intro">
+                  <Emph text={s.intro} />
+                </div>
+
+                {/* 判定要点：写「怎么一眼看出来」，编号列出，与正文视觉分开 */}
+                {s.rules?.length ? (
+                  <div className="zht-rules">
+                    <div className="zht-rules__title">判定要点</div>
+                    <ol className="zht-rules__items">
+                      {s.rules.map((r, k) => (
+                        <li key={k}>
+                          <Emph text={r} />
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ) : null}
+
+                {/* 正误对照：最要紧的一块——错例要说清错在哪、改成什么 */}
+                {s.examples?.length ? (
+                  <div className="stack stack--sm" style={{ marginTop: 12 }}>
+                    <div className="zht-ex__caption">
+                      ✍️ 正误对照（{s.examples.length} 例 · ✔ 规范 ✘ 有问题）
+                    </div>
+                    {s.examples.map((ex, k) => {
+                      const ok = ex.ok === true;
+                      return (
+                        <div className={cn('zht-ex', ok ? 'is-ok' : 'is-bad')} key={k}>
+                          <div className="zht-ex__row">
+                            <span className="zht-ex__mark" aria-hidden>
+                              {ok ? '✔' : '✘'}
+                            </span>
+                            <span className="zht-ex__text">
+                              <Emph text={ex.text} />
+                            </span>
+                          </div>
+                          <div className="zht-ex__analysis">
+                            <span className="zht-ex__label">讲解：</span>
+                            <Emph text={ex.analysis} />
+                          </div>
+                          {ex.fix ? (
+                            <div className="zht-ex__fix">
+                              <span className="zht-ex__label">改：</span>
+                              <Emph text={ex.fix} />
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
+
+                {/* 本节易错：与专题级同一套三行写法（✘ 常犯 / ✔ 正确 / 为什么容易错） */}
+                {s.pitfalls?.length ? (
+                  <div className="zht-sec__traps">
+                    <div className="zht-sec__trapsTitle">本节易错（错在哪 → 怎么办）</div>
+                    <div className="stack stack--sm">
+                      {s.pitfalls.map((p, k) => (
+                        <div className="zht-sec__trap" key={k}>
+                          <span className="zht-sec__trapMark">◆</span>
+                          {typeof p === 'string' ? (
+                            <span>
+                              <Emph text={p} />
+                            </span>
+                          ) : (
+                            <span className="stack stack--sm">
+                              <span>
+                                <b>✘ 常犯：</b>
+                                <Emph text={p.wrong} />
+                              </span>
+                              <span>
+                                <b>✔ 正确：</b>
+                                <Emph text={p.right} />
+                              </span>
+                              <span className="small muted">
+                                为什么容易错：<Emph text={p.why} />
+                              </span>
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="zht-sec__foot">
+                  <Link
+                    className="btn btn--sm"
+                    to={`${practiceBase}?tag=${encodeURIComponent(s.name)}`}
+                  >
+                    ✍️ 刷这一节（本节 {s.count} 题）
+                  </Link>
+                  {s.count === 0 ? <span className="small muted">本节题目正在补充</span> : null}
+                </div>
+              </section>
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
+      {/* ⑦ 答题模板：可以直接背下来套用的成套句式 */}
       {t.templates?.length ? (
         <Section
           title={`答题模板（${t.templates.length} 套）`}
@@ -285,7 +486,7 @@ export default function ChineseExamTopicDetail({
         </Section>
       ) : null}
 
-      {/* ⑦ 评分点／踩分点：写成「写到什么才给分」，做完题逐条对照 */}
+      {/* ⑧ 评分点／踩分点：写成「写到什么才给分」，做完题逐条对照 */}
       {t.scoring?.length ? (
         <Section
           title={`评分点与踩分点（${t.scoring.length} 条）`}
@@ -309,7 +510,7 @@ export default function ChineseExamTopicDetail({
         </Section>
       ) : null}
 
-      {/* ⑧ 易错与失分：错在哪 → 应该怎么做 → 为什么容易错（三行） */}
+      {/* ⑨ 易错与失分：错在哪 → 应该怎么做 → 为什么容易错（三行） */}
       {t.pitfalls?.length ? (
         <Section
           title={`易错与失分（${t.pitfalls.length} 条）`}
@@ -334,7 +535,7 @@ export default function ChineseExamTopicDetail({
         </Section>
       ) : null}
 
-      {/* ⑨ 专项训练分组：组名即题目标签，一组一个入口，只出这一组的题 */}
+      {/* ⑩ 专项训练分组：组名即题目标签，一组一个入口，只出这一组的题 */}
       {drills.length ? (
         <Section
           title={`专项训练（${drills.length} 组 · ${total} 题）`}
@@ -381,7 +582,7 @@ export default function ChineseExamTopicDetail({
         </Section>
       ) : null}
 
-      {/* ⑩ 题库总览：只给题干摘要与题型，用来判断题量，作答一律走练习页 */}
+      {/* ⑪ 题库总览：只给题干摘要与题型，用来判断题量，作答一律走练习页 */}
       <Section
         title={`题库总览（共 ${total} 题）`}
         icon="📚"
@@ -419,7 +620,7 @@ export default function ChineseExamTopicDetail({
         )}
       </Section>
 
-      {/* ⑪ 底部行动条：从头练全部题；已经练过的，只练还没过关的那几题 */}
+      {/* ⑫ 底部行动条：从头练全部题；已经练过的，只练还没过关的那几题 */}
       <section className="card card--pad zht-cta">
         <div className="row row--between row--wrap" style={{ alignItems: 'center', gap: 12 }}>
           <div style={{ minWidth: 0 }}>

@@ -29,6 +29,11 @@ export const ZH_TOPIC_MIN_QUESTIONS = 45;
 /** 分步讲解步数下限，以及其中必须带示范的步数 */
 export const ZH_TOPIC_MIN_STEPS = 6;
 export const ZH_TOPIC_MIN_DEMOS = 3;
+/** 每个专题的章节（类目/子类）数量下限，以及每节的例子数与题目数下限 */
+export const ZH_TOPIC_MIN_SECTIONS = 6;
+export const ZH_SECTION_MIN_EXAMPLES = 3;
+export const ZH_SECTION_MIN_RULES = 3;
+export const ZH_SECTION_MIN_QUESTIONS = 4;
 /** 近五年考情：恰好 5 条，年份 2021—2025 */
 export const ZH_TOPIC_TREND_YEARS = ['2021', '2022', '2023', '2024', '2025'];
 
@@ -42,6 +47,9 @@ export interface ChineseTopicReport {
   scoring: number;
   pitfalls: number;
   angles: number;
+  /** 章节（类目/子类）总数与其中的例子总数 */
+  sections: number;
+  examples: number;
   bad: number;
 }
 
@@ -81,6 +89,8 @@ export function validateChineseTopics(opts: {
   let scoring = 0;
   let pitfalls = 0;
   let angles = 0;
+  let sections = 0;
+  let examples = 0;
 
   const topics = allEntries
     .filter((e) => e.moduleId === 'zh-topics')
@@ -156,8 +166,7 @@ export function validateChineseTopics(opts: {
     }
 
     // ③ 大量训练：题量 + 分组与标签必须对得上
-    const drillNames = (t.drills ?? []).map((d) => d.name);
-    need(drillNames.length >= 5, `训练分组不足 5 组（现有 ${drillNames.length}）`);
+    const drillNames = (t.drills ?? []).map((d) => d.name);    need(drillNames.length >= 5, `训练分组不足 5 组（现有 ${drillNames.length}）`);
     for (const d of t.drills ?? []) {
       need(Boolean(d.note?.trim()), `训练分组「${d.name}」缺少说明（note）`);
     }
@@ -204,6 +213,81 @@ export function validateChineseTopics(opts: {
       }
     }
 
+    /**
+     * ④ 章节（逐类讲透）—— 用户对这一块最在意的一件事：
+     * 「每个类别都要讲透，每一种类型都有独立的章节，有讲解、有例子、有练习」。
+     * 因此逐节检查：讲解字数、判定要点、**正误对照的例子 ≥3 条**、
+     * 以及「同名训练分组 ≥4 题」——讲完一节必须能马上练这一节。
+     */
+    const secs = t.sections ?? [];
+    need(secs.length >= ZH_TOPIC_MIN_SECTIONS, `章节不足 ${ZH_TOPIC_MIN_SECTIONS} 节（现有 ${secs.length}）——每个类目都要有自己的章节`);
+    const sectionNames = new Set<string>();
+    for (const s of secs) {
+      if (!s.name?.trim()) {
+        bad += 1;
+        err(`${at}: 有章节缺少 name`);
+        continue;
+      }
+      const sat = `${at}·${s.name}`;
+      if (sectionNames.has(s.name)) {
+        bad += 1;
+        err(`${sat}: 章节名重复`);
+      }
+      sectionNames.add(s.name);
+
+      need(
+        (s.intro?.trim().length ?? 0) >= 60,
+        `${s.name}: 讲解正文不足 60 字（现有 ${s.intro?.trim().length ?? 0} 字）——要讲清「怎么判断」`,
+      );
+      need((s.rules?.length ?? 0) >= ZH_SECTION_MIN_RULES, `${s.name}: 判定要点不足 ${ZH_SECTION_MIN_RULES} 条`);
+      const exs = s.examples ?? [];
+      need(exs.length >= ZH_SECTION_MIN_EXAMPLES, `${s.name}: 例子不足 ${ZH_SECTION_MIN_EXAMPLES} 条（现有 ${exs.length}）`);
+      for (const ex of exs) {
+        if (!ex.text?.trim() || !ex.analysis?.trim()) {
+          bad += 1;
+          err(`${s.name}: 有例子缺 text 或 analysis（例子必须逐句讲清为什么对／为什么错）`);
+          continue;
+        }
+        if (ex.ok !== true && !ex.fix?.trim()) {
+          bad += 1;
+          err(`${s.name}: 错例「${ex.text.slice(0, 14)}…」没给修改后的句子（fix）`);
+        }
+      }
+      need((s.pitfalls?.length ?? 0) >= 2, `${s.name}: 本节易错不足 2 条`);
+      for (const p of s.pitfalls ?? []) {
+        if (typeof p === 'string') {
+          need(p.trim().length >= 8, `${s.name}: 本节易错「${p.slice(0, 12)}…」太短，要写清「错在哪 → 怎么办」`);
+        } else {
+          need(
+            Boolean(p?.wrong?.trim()) && Boolean(p?.right?.trim()) && Boolean(p?.why?.trim()),
+            `${s.name}: 本节易错用三行对象时要写全 wrong / right / why`,
+          );
+        }
+      }
+
+      // 讲练一一对应：章节名 = 训练分组名 = 题目首个标签
+      if (!drillNames.includes(s.name)) {
+        bad += 1;
+        err(`${sat}: 章节名不在 drills 分组里（学生点「刷这一节」会落到空组）`);
+      } else {
+        const n = byTag.get(s.name) ?? 0;
+        if (n < ZH_SECTION_MIN_QUESTIONS) {
+          bad += 1;
+          err(`${sat}: 这一节只有 ${n} 道题（应 ≥${ZH_SECTION_MIN_QUESTIONS}）——「讲完就练」缺了练习那一半`);
+        }
+      }
+    }
+
+    // 反向检查：不许有「有分组、没章节」的组（讲练必须成对）
+    if (secs.length) {
+      for (const name of drillNames) {
+        if (!sectionNames.has(name)) {
+          bad += 1;
+          err(`${at}: 训练分组「${name}」没有对应章节（要么补一节讲透它，要么把这个分组去掉）`);
+        }
+      }
+    }
+
     questions += qs.length;
     drills += drillNames.length;
     steps += stepList.length;
@@ -212,6 +296,8 @@ export function validateChineseTopics(opts: {
     scoring += t.scoring?.length ?? 0;
     pitfalls += t.pitfalls?.length ?? 0;
     angles += t.angles?.length ?? 0;
+    sections += secs.length;
+    examples += secs.reduce((n, s) => n + (s.examples?.length ?? 0), 0);
   }
 
   const report: ChineseTopicReport = {
@@ -224,16 +310,21 @@ export function validateChineseTopics(opts: {
     scoring,
     pitfalls,
     angles,
+    sections,
+    examples,
     bad,
   };
 
   if (!opts.silent) {
-    console.log(`\n  语文中考专题      ${report.topics} 个专题 / ${report.questions} 道专项训练题（异常 ${report.bad} 处）`);
+    console.log(`\n  语文中考专题      ${report.topics} 个专题 / ${report.sections} 节章节 / ${report.questions} 道专项训练题（异常 ${report.bad} 处）`);
     console.log(
       `      讲解         分步 ${report.steps} 步（含示范 ${report.demos} 步）· 模板 ${report.templates} 组 · 评分点 ${report.scoring} 条 · 易错失分 ${report.pitfalls} 条 · 命题角度 ${report.angles} 条`,
     );
     console.log(
-      `      训练分组      ${report.drills} 组（组名 = 题目标签，点进分组即按标签组卷）· 掌握判定 = 全题过关`,
+      `      逐类讲透      ${report.sections} 节 · ${report.examples} 个正误对照例子（每节 ≥3 例、≥3 条要点、≥4 题）`,
+    );
+    console.log(
+      `      训练分组      ${report.drills} 组（组名 = 章节名 = 题目标签，点进分组即按标签组卷）· 掌握判定 = 全题过关`,
     );
   }
 

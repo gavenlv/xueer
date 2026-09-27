@@ -400,6 +400,54 @@ export interface ChineseExamTrend {
  * 也是按这几块分配时间的；「逐个攻破」的单位必须是题型，攻破才有可验证的终点。
  * 按知识点聚合的那套仍然由「考点」页（`/s/:subjectId/exam`）负责，两者互补。
  */
+/**
+ * 章节里的一个**例子讲解**。
+ *
+ * 为什么例子要带 `ok` 与 `analysis` 两件事：语文的题型讲解靠「正误对照」才讲得透——
+ * 只给一个正确例句，学生学不会判断；给一个错例 + 错在哪 + 怎么改，才会自己做判断。
+ * 因此 `ok: false`（默认）表示这是一句**有问题的例子**（`fix` 给修改后的句子），
+ * `ok: true` 表示规范的例句（通常用来和错例对照）。
+ */
+export interface ChineseExamExample {
+  /** 例句原文 */
+  text: string;
+  /** 是否是规范例句（省略即「有问题的例子」，需要靠 `analysis` 说清错在哪） */
+  ok?: boolean;
+  /** 讲解：这一句为什么对／为什么错，错在哪个成分、属于哪种类型 */
+  analysis: string;
+  /** 修改后的句子（错例建议都给） */
+  fix?: string;
+}
+
+/**
+ * 一个**章节**：专题之下的一个类目或子类（如「病句·搭配不当」）。
+ *
+ * 用户的要求是「每个类别都要讲透：每一种类型都有独立的章节，有讲解、有例子、有练习」。
+ * 所以章节是**讲练一体的最小单位**：
+ *   `intro` + `rules` 讲清判定方法 → `examples` 正误对照逐句分析 →
+ *   同名的训练分组（`drills`）让学生在**刚学完的这一节**上立刻练（≥4 题）。
+ *
+ * 因此 `name` 必须同时是：章节标题、`drills[].name`、以及该节题目的首个标签。
+ */
+export interface ChineseExamSection {
+  /** 章节名，如「病句·搭配不当」——同时是训练分组名与题目标签 */
+  name: string;
+  /** 这一节讲什么、怎么判断（讲解正文，可以是一段或多段） */
+  intro: string;
+  /** 判定要点／口诀，逐条（写「怎么一眼看出来」而不是复述定义） */
+  rules?: string[];
+  /** 例子讲解：正误对照 + 逐句分析（≥3 条） */
+  examples: ChineseExamExample[];
+  /**
+   * 本节易错。**两种写法都接受**，页面上分别渲染：
+   *   - 字符串：一句话写「错在哪 → 怎么办」（最省地方，适合只说一个坑）；
+   *   - 三行对象：与专题级 `pitfalls` 同一套 `{ wrong, right, why }`（信息更全，推荐）。
+   * 之所以容两种：章节数量多（80+ 节），一节一两个坑时硬套三行反而啰嗦；
+   * 但坑比较绕时，三行能把「常犯的样子 / 正确做法 / 为什么容易错」分开说清。
+   */
+  pitfalls?: (string | { wrong: string; right: string; why: string })[];
+}
+
 export interface ChineseExamTopic {
   id: string;
   /** 一律 `'all'`：专题是初三总复习内容，不归属某一册 */
@@ -424,6 +472,12 @@ export interface ChineseExamTopic {
   scoring?: string[];
   /** 易错与失分 */
   pitfalls?: { wrong: string; right: string; why: string }[];
+  /**
+   * **章节（逐类讲透）**：把本专题的类目与子类一个不漏地拆开讲——
+   * 每一节都要有判定要点、正误对照的例子（≥3 条）与同名训练分组（≥4 题），
+   * 学生「看完这一节就刷这一节」，一节一节把这一块吃下来。
+   */
+  sections?: ChineseExamSection[];
   /**
    * 专项训练分组。`name` **同时是题目上的标签**：分组刷题走
    * `/practice/zh-topics/<条目 id>?tag=<name>`，不再另建一套组的 id 与路由。
