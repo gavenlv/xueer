@@ -12,18 +12,25 @@
  *
  * | 模块 | 抽出的知识点 |
  * | --- | --- |
- * | 古诗词 | 逐句默写（给上句背下句，首句用题目提示） |
- * | 字词 | 词条（字音/字形/成语/词语/修辞）与近义辨析 |
- * | 文言文 | 重点注释、语法归类（通假字/古今异义/词类活用/特殊句式/一词多义）、段落翻译、主旨 |
+ * | 古诗词 | 逐句默写（给上句背下句，首句用题目提示）、**整篇译文**、**作品赏析与考点**、主题、千古名句、易错字词 |
+ * | 字词 | 词条（字音/字形/成语/词语/修辞）与近义辨析、主观题答题要点 |
+ * | 文言文 | 重点注释、语法归类（通假字/古今异义/词类活用/特殊句式/一词多义）、段落翻译、主旨、作者与出处、主观题答题要点 |
  * | 现代文 | 答题技巧、主观题答题要点 |
- * | 作文 | 写作素材、范文亮点句、训练提示、主观题 |
- * | 文学常识 | 必记要点、人物形象、经典情节、章节脉络、情节链、记忆口诀、艺术特色、主题 |
- * | 历史 | **时间点**、分层考点、必背结论、易错易混、对比表、命题角度、**材料大题踩分点** |
- * | 道德与法治 | 分层考点、必背金句、易错辨析、对比表、命题角度、时政热点答题角度、材料大题踩分点 |
- * | 英语 | 分类词表、词根词缀、近义辨析、高频搭配、语法规则、易错点、考点、应试策略、写作句型 |
+ * | 作文 | 每篇核心要点、写作素材、范文亮点句、**范文总评与分项点评**、训练提示、主观题 |
+ * | 文学常识 | 必记要点、作家作品（名著的作者与朝代）、人物形象、经典情节、章节脉络、情节链、记忆口诀、艺术特色、主题、**整本书阅读简答题** |
+ * | 历史 | 因果主线、**时间点**、分层考点、必背结论、易错易混、对比表、命题角度、**材料大题踩分点** |
+ * | 道德与法治 | 因果主线、分层考点、必背金句、易错辨析、对比表、命题角度、时政热点答题角度、材料大题踩分点 |
+ * | 英语 | 分类词表、词根词缀、近义辨析、高频搭配、语法规则、易错点、考点、应试策略、写作句型、**范文总评**、阅读语篇与听力任务的题、朗读提示 |
  * | 数学 | 概念、公式定理、易错点、解题方法 |
  *
  * 整卷模拟（`hist-exam` / `eng-exam` / 道法卷子）**不产卡片**：那是模考，题已经在考试页里。
+ *
+ * ## 什么**不**成卡
+ *
+ * 「每个知识点都包含在内」不等于「每段文字都做成卡」：卡片必须**正面能问、背面能答**，
+ * 所以阅读材料的正文（`reading.paragraphs`、`writing.content`、`scripts[].text`、
+ * 范文全文 `examples[].text`）不成卡——那是要读的材料，不是要背的答案。
+ * 但同一份数据里的**结论性内容**（译文、赏析、主旨、总评、分项点评、踩分点）一律成卡。
  *
  * ## 卡片 id 的稳定性
  *
@@ -39,6 +46,7 @@ import type {
   HistoryTopic,
   LiteratureItem,
   PoliticsTopic,
+  Poem,
   QuizQuestion,
   ReciteCard,
 } from '../types';
@@ -129,10 +137,29 @@ function addLevelPoints(
 /* 语文                                                                */
 /* ------------------------------------------------------------------ */
 
-function fromPoem(b: CardBuilder, d: { title: string; author: string; dynasty: string; lines: string[]; lineNotes?: string[] }): void {
+function fromPoem(b: CardBuilder, d: Poem): void {
   d.lines.forEach((line, i) => {
     const front = i === 0 ? `《${d.title}》首句（${d.dynasty}·${d.author}）：` : `上句：${d.lines[i - 1]}`;
     b.add('默写', front, line, { note: d.lineNotes?.[i] });
+  });
+  // 默写之外，一首诗在中考里还要考「读懂」：译文、赏析与考点、主题情感、名句、易错字。
+  // 这些是理解性默写与赏析题的落脚点，漏掉它们等于只背了字音字形。
+  if (d.translation?.trim()) {
+    b.add('译文', `《${d.title}》整篇译文（先用自己的话说一遍）`, d.translation);
+  }
+  if (d.appreciation?.trim()) {
+    b.add('赏析', `《${d.title}》的赏析与考点是？`, d.appreciation, {
+      note: d.tags?.length ? `主题标签：${d.tags.join('、')}` : undefined,
+    });
+  }
+  if (d.tags?.length) {
+    b.add('主题', `《${d.title}》的主题（情感）是？`, d.tags.join('、'));
+  }
+  (d.famousLines ?? []).forEach((line, i) => {
+    b.add('千古名句', `《${d.title}》千古名句 ${i + 1}／${d.famousLines?.length ?? 0}：${splitCue(line)}`, line);
+  });
+  (d.pitfalls ?? []).forEach((p, i) => {
+    b.add('易错字', `《${d.title}》易错字词 ${i + 1}：${splitCue(p)}`, p);
   });
 }
 
@@ -146,6 +173,7 @@ function fromVocab(
     example?: string;
     category: string;
     confusable?: { term: string; meaning: string }[];
+    questions?: QuizQuestion[];
   },
 ): void {
   b.add(d.category, `${d.term}${d.pinyin ? `（${d.pinyin}）` : ''}`, d.meaning, {
@@ -154,19 +182,28 @@ function fromVocab(
   for (const c of d.confusable ?? []) {
     b.add('近义辨析', `${d.term} ↔ ${c.term}`, c.meaning, { note: d.pitfall });
   }
+  addQuestionCards(b, d.questions ?? [], '答题要点');
 }
 
 function fromClassical(
   b: CardBuilder,
   d: {
     title: string;
+    author: string;
+    dynasty: string;
+    source?: string;
     paragraphs: string[];
     annotations: { word: string; explain: string }[];
     grammar: { type: string; items: { word: string; explain: string }[] }[];
     translation: string;
     theme: string;
+    questions?: QuizQuestion[];
   },
 ): void {
+  const meta = [d.dynasty, d.author].filter(Boolean).join('·');
+  if (meta || d.source) {
+    b.add('文学常识', `《${d.title}》的作者、朝代与出处？`, `${meta}${d.source ? `\n出处：${d.source}` : ''}`);
+  }
   for (const a of d.annotations) b.add('注释', a.word, a.explain);
   for (const g of d.grammar) {
     for (const it of g.items) b.add(`语法·${g.type}`, it.word, it.explain);
@@ -177,6 +214,7 @@ function fromClassical(
     d.paragraphs.forEach((p, i) => b.add('翻译', `原文：${p}`, trans[i]));
   }
   b.add('主旨', `《${d.title}》的主旨与写作特色是？`, d.theme);
+  addQuestionCards(b, d.questions ?? [], '答题要点');
 }
 
 function fromReading(
@@ -193,12 +231,23 @@ function fromWriting(
   b: CardBuilder,
   d: {
     title: string;
+    category: string;
+    summary: string;
     materials?: { theme: string; items: string[] }[];
-    examples?: { title: string; highlights?: { sentence: string; why: string }[] }[];
+    examples?: {
+      title: string;
+      comment?: string;
+      review?: { aspect: string; text: string }[];
+      highlights?: { sentence: string; why: string }[];
+    }[];
     exercise?: { prompt: string; tips: string[] };
     questions?: QuizQuestion[];
   },
 ): void {
+  // 写作方法课真正要学生带走的就是这句话；正文段落（content）是讲解材料，不成卡
+  if (d.summary?.trim()) {
+    b.add('要点', `【${d.category}】${d.title}——核心要点是？`, d.summary);
+  }
   for (const m of d.materials ?? []) {
     m.items.forEach((item, i) => {
       b.add('写作素材', `【${m.theme}】素材 ${i + 1}／${m.items.length}：${splitCue(item)}`, item);
@@ -208,6 +257,13 @@ function fromWriting(
     (ex.highlights ?? []).forEach((h) => {
       b.add('高分句', `《${ex.title}》亮点句——好在哪里：${h.why}`, h.sentence);
     });
+    // 总评与分项点评是最能被学走的部分：说清「好在哪、还差什么」
+    if (ex.comment?.trim()) {
+      b.add('范文点评', `《${ex.title}》这篇范文的得分点与不足是？`, ex.comment);
+    }
+    for (const r of ex.review ?? []) {
+      b.add(`分项点评·${r.aspect}`, `《${ex.title}》在「${r.aspect}」上写得怎么样？`, r.text);
+    }
   }
   (d.exercise?.tips ?? []).forEach((t, i) => {
     b.add('训练提示', `写作训练提示 ${i + 1}：${splitCue(t)}`, t);
@@ -215,28 +271,36 @@ function fromWriting(
   addQuestionCards(b, d.questions ?? [], '答题要点');
 }
 
-function fromLiterature(b: CardBuilder, d: LiteratureItem): void {
+function fromLiterature(b: CardBuilder, d: LiteratureItem, questions: QuizQuestion[]): void {
   d.keyPoints.forEach((p, i) => {
     b.add('必记要点', `《${d.title}》必记要点 ${i + 1}／${d.keyPoints.length}：${splitCue(p)}`, p);
   });
 
   const book = d.book;
-  if (!book) return;
+  if (book) {
+    // 作家作品：名著的作者与朝代是必考的文学常识
+    if (book.author) {
+      b.add('作家作品', `《${book.name}》的作者是？`, [book.dynasty, book.author].filter(Boolean).join('·'));
+    }
+    if (book.theme) b.add('主题', `《${book.name}》的主题思想是？`, book.theme);
 
-  if (book.theme) b.add('主题', `《${book.name}》的主题思想是？`, book.theme);
+    for (const c of book.characters ?? []) b.add('人物形象', `${c.name}（${book.name}）`, c.desc);
+    for (const p of book.plots ?? []) b.add('经典情节', `${p.title}`, p.desc);
+    for (const c of book.chapters ?? []) b.add('章节脉络', c.name, c.summary);
+    book.plotChain?.forEach((step, i) => {
+      b.add('情节链', `情节链第 ${i + 1} 环（共 ${book.plotChain?.length ?? 0} 环）`, step);
+    });
+    book.mnemonic?.forEach((m, i) => {
+      b.add('记忆口诀', `${book.name}记忆口诀 ${i + 1}`, m);
+    });
+    (book.features ?? []).forEach((f, i) => {
+      b.add('艺术特色', `《${book.name}》艺术特色 ${i + 1}：${splitCue(f)}`, f);
+    });
+  }
 
-  for (const c of book.characters ?? []) b.add('人物形象', `${c.name}（${book.name}）`, c.desc);
-  for (const p of book.plots ?? []) b.add('经典情节', `${p.title}`, p.desc);
-  for (const c of book.chapters ?? []) b.add('章节脉络', c.name, c.summary);
-  book.plotChain?.forEach((step, i) => {
-    b.add('情节链', `情节链第 ${i + 1} 环（共 ${book.plotChain?.length ?? 0} 环）`, step);
-  });
-  book.mnemonic?.forEach((m, i) => {
-    b.add('记忆口诀', `${book.name}记忆口诀 ${i + 1}`, m);
-  });
-  (book.features ?? []).forEach((f, i) => {
-    b.add('艺术特色', `《${book.name}》艺术特色 ${i + 1}：${splitCue(f)}`, f);
-  });
+  // 广州中考「整本书阅读」附加题只考简答，题目挂在**条目**上（含名著专项简答题），
+  // 与 data.questions 不是同一份——漏了它，名著最值钱的那部分就不在背诵清单里。
+  addQuestionCards(b, questions, '整本书阅读');
 }
 
 /* ------------------------------------------------------------------ */
@@ -244,6 +308,8 @@ function fromLiterature(b: CardBuilder, d: LiteratureItem): void {
 /* ------------------------------------------------------------------ */
 
 function fromHistoryTopic(b: CardBuilder, d: HistoryTopic): void {
+  // 因果主线：一段历史的「一句话因果」，大题开头的总起句靠它
+  if (d.mainline?.trim()) b.add('主线', `「${d.title}」这一段的因果主线是？`, d.mainline);
   for (const tp of d.timeline) {
     b.add('历史时间点', `${tp.event} —— 发生在什么时候？`, `${tp.time}　${tp.event}`, {
       note: tp.note,
@@ -270,6 +336,8 @@ function fromHistoryTopic(b: CardBuilder, d: HistoryTopic): void {
 }
 
 function fromPoliticsTopic(b: CardBuilder, d: PoliticsTopic): void {
+  // 单元主线：这一单元「在讲什么、为什么重要」，材料题的总起句
+  if (d.mainline?.trim()) b.add('主线', `「${d.title}」这一单元的主线是？`, d.mainline);
   addLevelPoints(b, d.points, '核心观点');
   (d.keySentences ?? []).forEach((s, i) => {
     b.add('必背金句', `必背金句 ${i + 1}：${splitCue(s)}`, s);
@@ -338,6 +406,17 @@ function fromEnglish(b: CardBuilder, d: EnglishKnowledge): void {
     for (const h of s.highlights ?? []) {
       b.add('高分句', `${s.level}亮点句——好在哪里：${h.why}`, h.sentence);
     }
+    if (s.comment?.trim()) {
+      b.add('范文点评', `【${s.level}】书面表达范文的得分点与不足是？`, s.comment);
+    }
+  }
+  // 阅读语篇与听说材料的题也挂在条目里：语篇正文是阅读材料不成卡，但题要做、要点要背
+  for (const p of d.passages ?? []) addQuestionCards(b, p.questions ?? [], '答题要点');
+  for (const s of d.scripts ?? []) {
+    (s.cues ?? []).forEach((c, i) => {
+      b.add('朗读提示', `${s.title}｜朗读提示 ${i + 1}：${splitCue(c)}`, c);
+    });
+    addQuestionCards(b, s.tasks ?? [], '听力任务');
   }
   addQuestionCards(b, d.questions);
 }
@@ -399,7 +478,7 @@ export function reciteCardsOf(entry: Entry): ReciteCard[] {
       fromWriting(b, entry.data);
       break;
     case 'literature':
-      fromLiterature(b, entry.data);
+      fromLiterature(b, entry.data, entry.questions);
       break;
     case 'hist-7a':
     case 'hist-7b':
@@ -414,6 +493,7 @@ export function reciteCardsOf(entry: Entry): ReciteCard[] {
     case 'pol-moral':
     case 'pol-law':
     case 'pol-nation':
+    case 'pol-world':
     case 'pol-current':
     case 'pol-exam':
       // pol-exam 上既可能是知识条目、也可能是整卷（后者已在上面按 `sections` 早退）

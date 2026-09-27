@@ -747,12 +747,27 @@ if (!progressTarget) {
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
 
+  /**
+   * 古诗词最容易被抽成「只剩逐句默写」——那样学生背完字音字形，遇上赏析题还是答不出。
+   * 这里直接看派生结果：赏析与考点、译文、名句、易错字、主题都得在，且赏析的背面得有实质内容。
+   */
+  const poemCards = allEntries.filter((e) => e.moduleId === 'poems').flatMap((e) => reciteCardsOf(e));
+  const poemKinds = new Set(poemCards.map((c) => c.kind));
+  const appreciationBack = poemCards.find((c) => c.kind === '赏析')?.back ?? '';
+  const litKinds = new Set(
+    allEntries.filter((e) => e.moduleId === 'literature').flatMap((e) => reciteCardsOf(e)).map((c) => c.kind),
+  );
+
   const reciteChecks: [string, boolean][] = [
     ['语文背诵页渲染出卡片', chineseReciteHtml.includes('rcard') && chineseReciteHtml.includes('看答案')],
     ['语文背诵页给出标熟口径', chineseReciteHtml.includes('知识点背诵') && chineseReciteHtml.includes('标熟')],
     ['历史背诵页含「历史时间点」卡片', histReciteHtml.includes('历史时间点')],
     ['历史背诵页含「材料大题踩分点」卡片', histReciteHtml.includes('材料大题踩分点')],
     ['历史背诵页含分层考点卡片', histReciteHtml.includes('考点·重点')],
+    // 古诗不能只有默写：赏析与考点必须有，且背面是成段的赏析而不是空串
+    ['古诗卡片含「赏析与考点」（理解性默写）', poemKinds.has('赏析') && appreciationBack.length > 20],
+    ['古诗卡片含译文 / 千古名句 / 易错字 / 主题', ['译文', '千古名句', '易错字', '主题'].every((k) => poemKinds.has(k))],
+    ['名著卡片含「整本书阅读」简答题', litKinds.has('整本书阅读')],
     // 详情页的知识点背诵区默认收起，但标题与待背数在首屏
     ['详情页挂上了「知识点背诵」区', histHtml.includes('知识点背诵') && histHtml.includes('个待背/待复习')],
     // 已标熟必须真的流到首页（只看 localStorage 里那张 streak=3 的卡）

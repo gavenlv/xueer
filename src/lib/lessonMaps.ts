@@ -677,6 +677,7 @@ export function lessonMindMap(entry: Entry): MindMap | null {
     case 'pol-moral':
     case 'pol-law':
     case 'pol-nation':
+    case 'pol-world':
     case 'pol-current':
       kids = politicsMap(entry);
       summary = '主线、核心观点、必背金句与考法，一张图先把该背的立起来';

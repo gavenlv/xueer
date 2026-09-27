@@ -592,6 +592,7 @@ const CARD_MODULES = new Set<string>([
   'pol-moral',
   'pol-law',
   'pol-nation',
+  'pol-world',
   'pol-current',
   'eng-vocab',
   'eng-grammar',
@@ -657,12 +658,33 @@ const REQUIRED_KINDS: [kind: string, min: number, why: string][] = [
   ['必背金句', 120, '道法必背金句'],
   ['概念', 250, '数学概念'],
   ['公式定理', 250, '数学公式定理'],
+  // ↓ 文科「理解性」知识点：只抽了能机械默写的（默写句、时间点）而漏掉这些，
+  //   学生背完字音字形却答不出赏析与考点——古诗赏析就是最典型的一项。
+  ['赏析', 100, '古诗词作品赏析与考点（理解性默写与赏析题的落脚点）'],
+  ['译文', 100, '古诗词整篇译文'],
+  ['千古名句', 150, '古诗词千古名句'],
+  ['易错字', 600, '古诗词易错字词与通假字'],
+  ['主题', 120, '古诗词主题情感 + 名著主题思想'],
+  ['文学常识', 20, '文言文作者、朝代与出处'],
+  ['主线', 65, '历史/道法的因果主线（大题总起句）'],
+  ['要点', 85, '写作方法课的核心要点'],
+  ['范文点评', 130, '范文总评（作文范文 + 英语书面表达）'],
+  ['整本书阅读', 160, '名著整本书阅读简答题（广州中考附加题风格）'],
+  ['朗读提示', 45, '英语听说朗读与听记提示'],
 ];
 for (const [kind, min, why] of REQUIRED_KINDS) {
   const n = kindCount.get(kind) ?? 0;
   if (n < min) {
     err(`[知识点卡片] 类型「${kind}」只有 ${n} 张（期望 ≥ ${min}）——${why} 可能漏抽了`);
   }
+}
+
+// 分项点评的类型名带维度（审题立意/结构布局/语言表达…），按前缀汇总
+const reviewKindTotal = [...kindCount.entries()]
+  .filter(([k]) => k.startsWith('分项点评·'))
+  .reduce((n, [, v]) => n + v, 0);
+if (reviewKindTotal < 250) {
+  err(`[知识点卡片] 分项点评只有 ${reviewKindTotal} 张（期望 ≥ 250）——范文的审题/结构/语言/素材点评可能漏抽了`);
 }
 
 /* --------------- 按需加载：轻量清单是否过期 / 页面是否声明了数据范围 --------------- */
@@ -1943,7 +1965,7 @@ const POLITICS_STRUCTURE = {
 };
 
 const politicsTopics = polTopics;
-const POLITICS_TEXTBOOK_MODULES = ['pol-growth', 'pol-moral', 'pol-law', 'pol-nation'];
+const POLITICS_TEXTBOOK_MODULES = ['pol-growth', 'pol-moral', 'pol-law', 'pol-nation', 'pol-world'];
 let polBad = 0;
 let polPoints = 0;
 let polKeySentences = 0;

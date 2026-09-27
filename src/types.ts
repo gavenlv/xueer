@@ -590,6 +590,7 @@ export type PoliticsModuleId =
   | 'pol-moral'
   | 'pol-law'
   | 'pol-nation'
+  | 'pol-world'
   | 'pol-current'
   | 'pol-exam';
 

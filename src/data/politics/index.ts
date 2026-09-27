@@ -1,14 +1,15 @@
 /**
- * 道德与法治内容索引：按**教材六块 + 时政专题 + 整卷模拟**装配，
+ * 道德与法治内容索引：**按教材册次六块 + 时政专题 + 整卷模拟**装配，
  * 与语文、历史、英语同一套按需加载模式（数据在 `modules/*.ts`，页面用 `useDataScope` 声明）。
  *
- * 模块划分沿用学科注册表里已排好的六个：
- *   pol-growth  七年级·成长与自我
- *   pol-moral   八年级·道德与交往
- *   pol-law     八年级·法治与规则
- *   pol-nation  九年级·国情与发展
- *   pol-current 时政热点专题
- *   pol-exam    中考专题与整卷模拟（按广州官方结构命题）
+ * 模块划分（2027 年中考使用的统编版新教材口径，详见 CONTENT-SPEC.md）：
+ *   pol-growth   七年级上册·成长与自我（另含七下「专题·青春与情绪」）
+ *   pol-moral    八年级上册·社会·道德·责任·国家利益（含上移来的自由平等与公平正义）
+ *   pol-law      八年级下册·宪法·权利义务·国家制度与机构·法治国家（含下移来的民主法治）
+ *   pol-nation   九年级上册·党的领导·新时代·新征程·中国梦
+ *   pol-world    九年级下册·我们共同的世界·中国担当·走向未来
+ *   pol-current  时政热点专题
+ *   pol-exam     中考专题与整卷模拟（按广州官方结构命题）
  */
 
 import type {
@@ -28,6 +29,7 @@ export const MODULE_IDS: PoliticsModuleId[] = [
   'pol-moral',
   'pol-law',
   'pol-nation',
+  'pol-world',
   'pol-current',
   'pol-exam',
 ];
@@ -38,6 +40,7 @@ export const TEXTBOOK_MODULE_IDS: PoliticsModuleId[] = [
   'pol-moral',
   'pol-law',
   'pol-nation',
+  'pol-world',
 ];
 
 /* ------------------------------------------------------------------ */
@@ -143,6 +146,11 @@ const LOADERS: Record<PoliticsModuleId, () => Promise<LoaderResult>> = {
     const m = await import('./modules/nation');
     allTopics.push(...m.topics);
     return { entries: buildTopicEntries('pol-nation', m.topics) };
+  },
+  'pol-world': async () => {
+    const m = await import('./modules/world');
+    allTopics.push(...m.topics);
+    return { entries: buildTopicEntries('pol-world', m.topics) };
   },
   'pol-current': async () => {
     const m = await import('./modules/current');

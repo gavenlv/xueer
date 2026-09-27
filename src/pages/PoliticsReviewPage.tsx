@@ -37,6 +37,7 @@ const MODULE_SCOPE = [
   'pol-moral',
   'pol-law',
   'pol-nation',
+  'pol-world',
   'pol-current',
   'pol-exam',
 ] as const;
@@ -70,7 +71,7 @@ export default function PoliticsReviewPage() {
       <PageHeader
         crumbs={[{ label: '首页', to: '/' }, { label: '道德与法治', to: '/s/politics' }, { label: '考点与考情' }]}
         title="📊 道法考点与考情总复习"
-        desc="把六块内容里的核心观点、必背金句、命题角度与材料大题摊开——道法非选择题占 36 分（一半以上），这一页就是为那 36 分准备的。"
+        desc="把五册教材（七上·八上·八下·九上·九下）与专题里的核心观点、必背金句、命题角度与材料大题摊开——道法非选择题占 36 分（一半以上），这一页就是为那 36 分准备的。"
         extra={
           <Link className="btn btn--sm" to="/s/politics/pol-exam">
             去做整卷模拟 →

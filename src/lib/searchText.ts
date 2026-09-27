@@ -177,6 +177,7 @@ export function searchTextOf(entry: Entry): string {
     case 'pol-moral':
     case 'pol-law':
     case 'pol-nation':
+    case 'pol-world':
     case 'pol-current':
     case 'pol-exam': {
       // pol-exam 里既有整卷模拟（有 sections），也有题型专题知识条目：

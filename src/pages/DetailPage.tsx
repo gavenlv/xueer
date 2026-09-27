@@ -134,6 +134,7 @@ export default function DetailPage() {
       case 'pol-moral':
       case 'pol-law':
       case 'pol-nation':
+      case 'pol-world':
       case 'pol-current':
         return <PoliticsDetail entry={entry} moduleName={meta?.module.name ?? '道德与法治'} />;
       // 化学：chem-exam 里同样既有整卷也有题型专题，按数据形状分流
