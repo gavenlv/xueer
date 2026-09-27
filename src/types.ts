@@ -1231,8 +1231,21 @@ export type FigurePrim =
    * `frontCurrent` 是**正面（朝向读者的那一面）导线的电流方向**，默认 `'up'`。
    * N/S 由它按安培定则算出来，不由作者填写——极性写反就是教错：
    * 正面电流向上时磁矩指向 −x，故 N 在左、S 在右；向下则反过来。
+   *
+   * `showCurrent` 默认 **false**：多数作者会在图上自己画电流箭头（往往还带 `I` 标注与说明文字），
+   * 如果图元也自动画一支，同一张图就会出现两支重复的箭头。需要图元代画时显式打开它。
    */
-  | { t: 'coil'; x: number; y: number; turns?: number; w?: number; label?: string; frontCurrent?: 'up' | 'down' }
+  | {
+      t: 'coil';
+      x: number;
+      y: number;
+      turns?: number;
+      w?: number;
+      label?: string;
+      frontCurrent?: 'up' | 'down';
+      /** 由图元代画正面电流方向箭头（默认不画，避免与作者自绘的箭头重复） */
+      showCurrent?: boolean;
+    }
   /** 小磁针，`deg` 为北极指向 */
   | { t: 'compass'; x: number; y: number; deg?: number; label?: string };
 

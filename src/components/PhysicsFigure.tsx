@@ -755,15 +755,23 @@ function renderPrim(p: FigurePrim, key: number) {
             return <ellipse key={i} cx={cx} cy={p.y} rx={w / turns / 2} ry={r} fill="none" stroke={toneOf('main')} strokeWidth={0.5} />;
           })}
           <line x1={x0} y1={p.y + r} x2={p.x + w / 2} y2={p.y + r} stroke={toneOf('main')} strokeWidth={0.6} />
-          {/* 正面电流方向箭头：与 N/S 出自同一份判断，学生一眼能对上安培定则 */}
-          <polygon
-            points={
-              frontUp
-                ? `${p.x},${p.y + r - 4} ${p.x - 1.6},${p.y + r - 1} ${p.x + 1.6},${p.y + r - 1}`
-                : `${p.x},${p.y + r + 4} ${p.x - 1.6},${p.y + r + 1} ${p.x + 1.6},${p.y + r + 1}`
-            }
-            fill={toneOf('accent')}
-          />
+          {/**
+           * 正面电流方向箭头：**默认不画**。
+           *
+           * 内容作者通常自己画电流箭头（往往还带 `I` 标注与说明文字），图元再自动画一支
+           * 就会在同一张图上出现两支重复箭头——`fig-magnet-righthand-1` 正是这种情况。
+           * 需要图元代画时用 `showCurrent: true`。
+           */}
+          {p.showCurrent ? (
+            <polygon
+              points={
+                frontUp
+                  ? `${p.x},${p.y + r - 4} ${p.x - 1.6},${p.y + r - 1} ${p.x + 1.6},${p.y + r - 1}`
+                  : `${p.x},${p.y + r + 4} ${p.x - 1.6},${p.y + r + 1} ${p.x + 1.6},${p.y + r + 1}`
+              }
+              fill={toneOf('accent')}
+            />
+          ) : null}
           <Label x={x0 - 4} y={p.y + r} text={left} size={4.4} />
           <Label x={p.x + w / 2 + 4} y={p.y + r} text={right} size={4.4} />
           {p.label ? <Label x={p.x} y={p.y - r - 4} text={p.label} /> : null}
