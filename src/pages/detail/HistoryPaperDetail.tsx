@@ -41,7 +41,7 @@ export function HistoryPaperDetail({
             {askCount} 问）
           </span>
           <span className="spacer" />
-          <Link className="btn btn--primary" to={`/exam-run/${p.id}`}>
+          <Link className="btn btn--primary" to={`/exam-run/${p.id}?start=1`}>
             ▶ 开始整卷考试
           </Link>
         </div>
@@ -118,7 +118,7 @@ export function HistoryPaperDetail({
           ))}
         </div>
         <div className="row row--wrap" style={{ marginTop: 14 }}>
-          <Link className="btn btn--primary" to={`/exam-run/${p.id}`}>
+          <Link className="btn btn--primary" to={`/exam-run/${p.id}?start=1`}>
             ▶ 开始整卷考试（{p.duration} 分钟）
           </Link>
           <Link className="btn" to={`/practice/${entry.moduleId}/${entry.id}`}>

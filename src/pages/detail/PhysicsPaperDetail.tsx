@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom';
 import type { PhysicsPaperEntry } from '../../types';
 import { Tag } from '../../components/common';
 import { RichText } from '../../components/RichText';
+import { PhysicsFigureView } from '../../components/PhysicsFigure';
 import { DetailShell, Section } from './DetailShell';
 
 export function PhysicsPaperDetail({ entry, moduleName }: { entry: PhysicsPaperEntry; moduleName: string }) {
@@ -34,7 +35,7 @@ export function PhysicsPaperDetail({ entry, moduleName }: { entry: PhysicsPaperE
             {askCount} 问）
           </span>
           <span className="spacer" />
-          <Link className="btn btn--primary" to={`/exam-run/${p.id}`}>
+          <Link className="btn btn--primary" to={`/exam-run/${p.id}?start=1`}>
             ▶ 开始整卷考试
           </Link>
         </div>
@@ -103,8 +104,15 @@ export function PhysicsPaperDetail({ entry, moduleName }: { entry: PhysicsPaperE
                 {g.questions.map((q) => (
                   <li key={q.id} className="history-ask">
                     <div className="history-ask__stem">{q.stem}</div>
+                    {q.figure ? <PhysicsFigureView figure={q.figure} className="physics-quizFig" /> : null}
                     <details className="history-ask__ref">
                       <summary>看参考答案与踩分点</summary>
+                      {/* 作图小题的标准作图：先自己画，再展开对照 */}
+                      {q.answerFigure ? (
+                        <div className="physics-answerFig">
+                          <PhysicsFigureView figure={q.answerFigure} />
+                        </div>
+                      ) : null}
                       <div className="history-ask__answer">
                         <RichText text={q.answer} />
                       </div>

@@ -981,6 +981,17 @@ if (!progressTarget) {
       <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
+  /**
+   * 整卷考试页也要能渲染物理的图。
+   * 这一条是**真实漏洞的回归保护**：考试页原先完全不渲染 `figure`，
+   * 物理卷里带图的选题在考试中会变成「无图题」，作图题的参考答案图也不显示——
+   * 页面不会报错，只是学生根本没法做题。
+   */
+  const phyExamHtml = renderToString(
+    <MemoryRouter initialEntries={['/exam-run/phy-paper-01?start=1']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
 
   /**
    * 图解图元的**自测**：直接渲染一个含 `arc` 与 `coil` 的图，检查画出来的 SVG。
@@ -1026,6 +1037,13 @@ if (!progressTarget) {
     // 图元自测：90° 弧 = (large 0, sweep 0)；270° 弧 = (large 1, sweep 0)。
     // 注意 `angle` 图元也画 <path A>，所以断言取前两条而不是要求总数为 2。
     ['图元自测：arc 的 large-arc / sweep', arcPaths.length >= 2 && arcPaths[0] === '00' && arcPaths[1] === '10'],
+    // 整卷考试页要渲染题干配图（物理卷的图题不给图就没法做）
+    ['整卷考试页渲染题干配图', /<svg[^>]*class="fig__svg"/.test(phyExamHtml)],
+    // 卷面标题不写死学科说法：物理应是「非选择题（解答与计算…）」而不是「阅读材料，回答问题」
+    [
+      '整卷卷面标题按科目',
+      phyExamHtml.includes('非选择题') && !phyExamHtml.includes('阅读材料，回答问题）'),
+    ],
     // 螺线管极性由正面电流方向推出：向上 N 在左、向下 N 在右 → 「N」出现在两组不同位置
     ['图元自测：coil 极性随电流方向', coilLabels === 'NS' + 'SN' || /NS[\s\S]*SN/.test(probeSvg)],
   ];
@@ -1034,7 +1052,7 @@ if (!progressTarget) {
     `  ${phyOk ? '✅' : '❌'} 接线检查：物理（${phyChecks
       .filter(([, ok]) => !ok)
       .map(([n]) => n)
-      .join('、') || '十二类断言全通过'}）`,
+      .join('、') || '十四类断言全通过'}）`,
   );
   if (!phyOk) failed += 1;
 }

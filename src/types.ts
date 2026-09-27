@@ -714,6 +714,10 @@ export interface HistoryMaterialGroup {
      * 这里给的是「卷面上该按什么步骤写」，理科按步骤给分，两者不能混为一谈。
      */
     answerSteps?: string[];
+    /** 设问配图（物理的探究与实验题常给装置图、数据表或图像） */
+    figure?: PhysicsFigure;
+    /** 设问的参考答案图（作图小题：学生自己画完再展开对照） */
+    answerFigure?: PhysicsFigure;
   }[];
 }
 

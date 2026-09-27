@@ -40,7 +40,7 @@ export function EnglishPaperDetail({
             {p.speakingScore ? ` · 听说 ${p.speakingScore} 分` : ''}
           </span>
           <span className="spacer" />
-          <Link className="btn btn--primary" to={`/exam-run/${p.id}`}>
+          <Link className="btn btn--primary" to={`/exam-run/${p.id}?start=1`}>
             ▶ 开始整卷考试
           </Link>
         </div>
@@ -147,7 +147,7 @@ export function EnglishPaperDetail({
             </div>
           ) : null}
           <div className="row row--wrap" style={{ marginTop: 14 }}>
-            <Link className="btn btn--primary" to={`/exam-run/${p.id}`}>
+            <Link className="btn btn--primary" to={`/exam-run/${p.id}?start=1`}>
               ▶ 开始整卷考试（含书面表达）
             </Link>
             <Link className="btn" to={`/practice/${entry.moduleId}/${entry.id}`}>

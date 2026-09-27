@@ -1,17 +1,21 @@
 /**
- * 整卷模拟考试：60 分钟、70 分，一口气做完再批改。
+ * 整卷模拟考试：按各科官方卷面计时、一口气做完再批改。
  *
  * 为什么单独做一个考试页，而不复用练习引擎（`QuizRunner`）：
  * 练习引擎的设计目标是「做完一题立刻看解析」，而考试的**考查对象正是时间分配与整卷节奏**——
  * 中途看到答案，这种能力就练不出来。所以这里：
  *   1. 顺序与题号固定（不给随机打乱），有**答题卡**可以跳题、回改；
  *   2. 全程只有倒计时，交卷前不给任何正误反馈；
- *   3. 时间到自动交卷；交卷后一次性批改：选择题自动判分，材料题给出参考答案与踩分点后**自评**；
- *   4. 成绩单给出「选择得分 / 材料题自评得分 / 用时」，逐题解析，错题照常进错题本。
+ *   3. 时间到自动交卷；交卷后一次性批改：选择题自动判分，非选择题给出参考答案与踩分点后**自评**；
+ *   4. 成绩单给出「选择得分 / 非选择题自评得分 / 用时」，逐题解析，错题照常进错题本。
+ *
+ * 跨学科注意：卷面标题、每题分值、答题提示都不能写死——历史/道法是「阅读材料，回答问题」、
+ * 每题 2 分，物理是「解答与计算 / 探究与实验 / 阅读与理解」、每题 3 分。这些一律从 `sections`
+ * 与题量算出来，否则换个学科就会显示成别的科目的说法。
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import type { QuizQuestion } from '../types';
 import { examPaperOf, type ExamPaper } from '../data';
 import { useDataScope, DataLoading } from '../lib/useData';
@@ -20,6 +24,7 @@ import { OPTION_KEYS, cn, formatClock, pct } from '../lib/utils';
 import { permuteOptions } from '../lib/quiz';
 import { EmptyState, ProgressBar, Tag } from '../components/common';
 import { RichText } from '../components/RichText';
+import { PhysicsFigureView } from '../components/PhysicsFigure';
 import { QuizLearnLinks } from '../components/QuizLearnLinks';
 
 /** 一道题在卷面上的位置信息 */
@@ -40,14 +45,16 @@ interface Slot {
 function scopeOfPaper(paperId: string): ModuleScope {
   if (paperId.startsWith('eng-')) return ['eng-exam'];
   if (paperId.startsWith('pol-')) return ['pol-exam'];
+  if (paperId.startsWith('phy-')) return ['phy-exam'];
   if (paperId.startsWith('paper-')) return ['hist-exam'];
-  return ['hist-exam', 'eng-exam', 'pol-exam'];
+  return ['hist-exam', 'eng-exam', 'pol-exam', 'phy-exam'];
 }
 
-type ModuleScope = ('hist-exam' | 'eng-exam' | 'pol-exam')[];
+type ModuleScope = ('hist-exam' | 'eng-exam' | 'pol-exam' | 'phy-exam')[];
 
 export default function ExamRunPage() {
   const { paperId = '' } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const ready = useDataScope(scopeOfPaper(paperId));
   const { recordAnswer, addSeconds } = useStudy();
@@ -61,6 +68,24 @@ export default function ExamRunPage() {
   const [submitted, setSubmitted] = useState(false);
   /** 第几次开考：每次重做都换一套选项顺序 */
   const [attempt, setAttempt] = useState(0);
+
+  /**
+   * 卷面的两节与两句提示都从数据算出来，不写死学科说法：
+   * 历史/道法是「阅读材料，回答问题」「每题 2 分」，
+   * 物理是「非选择题（解答与计算 / 探究与实验 / 阅读与理解）」「每题 3 分」。
+   */
+  const choiceSection = paper?.sections.find((s) => s.kind === 'choice');
+  const materialSection = paper?.sections.find((s) => s.kind === 'material');
+  const choiceCount = paper?.questions.filter((q) => q.type === 'choice').length ?? 0;
+  const choicePerScore =
+    choiceSection && choiceCount && choiceSection.score % choiceCount === 0
+      ? choiceSection.score / choiceCount
+      : 0;
+  const answerHint = paper
+    ? paper.sections.some((s) => s.kind === 'material' && /探究|计算|理解/.test(s.name))
+      ? '按分值分步作答：写清已知量、选用规律、代入过程与带单位的结果'
+      : '按分值分点作答（如：①……②……），注意使用学科规范术语'
+    : '';
 
   /**
    * 卷面题目：按「选择题 → 材料题设问 → 书面表达」排（顺序固定，模拟真实卷面）。
@@ -82,6 +107,8 @@ export default function ExamRunPage() {
     const scoreOf = (type: QuizQuestion['type']) => {
       const kind = type === 'choice' ? 'choice' : type === 'fill' ? 'blank' : 'short';
       const sec = paper.sections.find((s) => s.kind === kind);
+      // 卷面里没有这一节（如物理卷只分选择/非选择，但卷内还挂了一道作图练习题）：
+      // 这类题**不计分**，界面上标成「附加练习」，不能假装它有分值。
       if (!sec) return 0;
       const n = paper.questions.filter((q) => q.type === type).length || 1;
       return sec.score / n;
@@ -89,10 +116,11 @@ export default function ExamRunPage() {
 
     for (const q of paper.questions) {
       const permuted = q.type === 'choice' ? { ...q, ...permuteOptions(q) } : q;
+      // 图要跟着题走：物理卷的题干图（受力、光路、电路、图像）漏掉就等于出了一道无图题
       out.push({ q: permuted, no: out.length + 1, score: scoreOf(q.type), group: 0 });
     }
 
-    // 历史材料题：材料以分组形式呈现，设问依次进入卷面
+    // 非选择题：材料以分组形式呈现，设问依次进入卷面
     paper.materials.forEach((g, gi) => {
       const sec = paper.sections.find((s) => s.kind === 'material');
       const perGroup = sec && paper.materials.length ? sec.score / paper.materials.length : 0;
@@ -105,8 +133,11 @@ export default function ExamRunPage() {
             stem: mq.stem,
             answer: mq.answer,
             rubric: mq.rubric,
-            explanation: `【材料题 · 第 ${gi + 1} 题】材料见卷面材料${gi + 1}。答题要点：${(mq.rubric ?? []).join('；') || '见参考答案'}`,
+            // 材料设问也能配图（物理的探究与实验题常给装置图或数据表）
+            figure: mq.figure,
+            answerFigure: mq.answerFigure,
             tags: mq.tags ?? [],
+            explanation: `【非选择题 · 第 ${gi + 1} 题】材料见卷面材料${gi + 1}。答题要点：${(mq.rubric ?? []).join('；') || '见参考答案'}`,
           },
           no: out.length + 1,
           score: per,
@@ -143,7 +174,13 @@ export default function ExamRunPage() {
   /** 材料题自评结果：true=基本答到 */
   const [selfGraded, setSelfGraded] = useState<Record<string, boolean>>({});
   const [elapsed, setElapsed] = useState(0);
-  const [started, setStarted] = useState(false);
+  /**
+   * 是否已开考。
+   *
+   * `?start=1` 直接开考：试卷详情页的按钮写着「开始整卷考试」，点进来却还要再点一次「开始」
+   * 是多余的一步（也因此让冒烟测试看不到真实卷面——服务端渲染只会渲染这个引导页）。
+   */
+  const [started, setStarted] = useState(() => searchParams.get('start') === '1');
   const savedRef = useRef(false);
   const startRef = useRef(Date.now());
 
@@ -266,9 +303,16 @@ export default function ExamRunPage() {
 
   if (submitted) {
     const choiceSlots = slots.filter((s) => s.q.type === 'choice');
+    /**
+     * 非选择题 = 材料组设问 + 卷内附加的解答/作图练习。
+     * `score === 0` 的题（卷面 sections 里没有对应节，如物理卷多挂的作图练习）**不计入分母**，
+     * 否则「自评得分 / 总分」会永远差一点，看起来像算错了。
+     */
     const shortSlots = slots.filter((s) => s.q.type !== 'choice');
+    const scoredShort = shortSlots.filter((s) => s.score > 0);
+    const zeroScoreCount = shortSlots.length - scoredShort.length;
     const choiceGot = choiceSlots.filter((s) => answers[s.q.id] === s.q.answer).reduce((n, s) => n + s.score, 0);
-    const shortGot = shortSlots.filter((s) => selfGraded[s.q.id]).reduce((n, s) => n + s.score, 0);
+    const shortGot = scoredShort.filter((s) => selfGraded[s.q.id]).reduce((n, s) => n + s.score, 0);
     const got = choiceGot + shortGot;
     const rate = pct(Math.round(got), paper.totalScore);
     const usedMinutes = Math.floor(elapsed / 60);
@@ -286,7 +330,7 @@ export default function ExamRunPage() {
             </div>
             <div className="result-hero__desc">
               选择题 {Math.round(choiceGot)} / {choiceSlots.reduce((n, s) => n + s.score, 0)} 分 ·
-              材料题自评 {Math.round(shortGot)} / {shortSlots.reduce((n, s) => n + s.score, 0)} 分
+              非选择题自评 {Math.round(shortGot)} / {scoredShort.reduce((n, s) => n + s.score, 0)} 分
             </div>
             <div className="row" style={{ justifyContent: 'center', gap: 14, marginTop: 16, flexWrap: 'wrap' }}>
               <span className="timer-pill">⏱ 用时 {formatClock(elapsed)}</span>
@@ -296,9 +340,10 @@ export default function ExamRunPage() {
           </div>
 
           <div className="small muted" style={{ marginTop: 12, lineHeight: 1.85 }}>
-            材料题采用自评：请逐问对照参考答案与踩分点，诚实判断。考试时间 {totalMinutes} 分钟，
+            非选择题采用自评：请逐问对照参考答案与踩分点，诚实判断。考试时间 {totalMinutes} 分钟，
             你用了 {usedMinutes} 分钟
             {usedMinutes > totalMinutes ? '（超时，考场上要练「先易后难、按分值分配时间」）' : '——节奏正常，继续保持。'}
+            {zeroScoreCount ? `　（卷内另有 ${zeroScoreCount} 道附加练习不计分，可当额外练习做。）` : ''}
           </div>
 
           <div className="divider" />
@@ -341,12 +386,20 @@ export default function ExamRunPage() {
                       {s.no}. {correct ? '✔ 得分' : isChoice ? '✘ 答错' : '✘ 未答到'}
                     </Tag>
                     <span className="small muted">
-                      {isChoice ? '单项选择题' : `材料题第 ${s.group} 题`} · {s.score.toFixed(1)} 分
+                      {isChoice ? '单项选择题' : s.score === 0 ? '附加练习（不计分）' : `非选择题第 ${s.group} 题`} ·{' '}
+                      {s.score > 0 ? `${s.score.toFixed(1)} 分` : '不计分'}
                     </span>
                   </div>
                   <div style={{ fontWeight: 650, lineHeight: 1.75 }}>
                     <RichText text={s.q.stem} />
                   </div>
+                  {/* 交卷后逐题解析里也要给图：题干图 + 参考答案图（作图题靠它对照） */}
+                  {s.q.figure ? <PhysicsFigureView figure={s.q.figure} /> : null}
+                  {s.q.answerFigure ? (
+                    <div className="physics-answerFig">
+                      <PhysicsFigureView figure={s.q.answerFigure} />
+                    </div>
+                  ) : null}
                   {isChoice ? (
                     <div className="small" style={{ marginTop: 6 }}>
                       你的答案：<b>{mine || '（未作答）'}</b>
@@ -441,8 +494,10 @@ export default function ExamRunPage() {
       <section className="card card--pad">
         <h3 className="section-title">
           <span className="section-title__bar" />
-          一、单项选择题（{slots.filter((s) => s.q.type === 'choice').length} 题，每题 2 分，共{' '}
-          {paper.sections.find((s) => s.kind === 'choice')?.score ?? 40} 分）
+          一、{paper.sections.find((s) => s.kind === 'choice')?.name ?? '单项选择题'}（
+          {slots.filter((s) => s.q.type === 'choice').length} 题
+          {choicePerScore ? `，每题 ${choicePerScore} 分` : ''}，共{' '}
+          {paper.sections.find((s) => s.kind === 'choice')?.score ?? 0} 分）
         </h3>
         <div className="stack">
           {slots
@@ -453,6 +508,8 @@ export default function ExamRunPage() {
                   <span className="exam-q__no">{s.no}</span>
                   <RichText text={s.q.stem} />
                 </div>
+                {/* 题干配图：物理的图像题/电路图题不给图就没法做 */}
+                {s.q.figure ? <PhysicsFigureView figure={s.q.figure} className="physics-quizFig" /> : null}
                 <div className="options">
                   {(s.q.options ?? []).map((opt, i) => {
                     const key = OPTION_KEYS[i];
@@ -477,12 +534,11 @@ export default function ExamRunPage() {
         </div>
       </section>
 
-      {/* 材料题 */}
+      {/* 非选择题 */}
       <section className="card card--pad">
         <h3 className="section-title">
           <span className="section-title__bar" />
-          二、非选择题（阅读材料，回答问题）（{paper.materials.length} 题，共{' '}
-          {paper.sections.find((s) => s.kind === 'material')?.score ?? 30} 分）
+          二、{materialSection?.name ?? '非选择题'}（{paper.materials.length} 题，共 {materialSection?.score ?? 0} 分）
         </h3>
         <div className="stack stack--lg">
           {paper.materials.map((g, gi) => (
@@ -503,9 +559,10 @@ export default function ExamRunPage() {
                         <span className="exam-q__no">{s.no}</span>
                         <RichText text={s.q.stem} />
                       </div>
+                      {s.q.figure ? <PhysicsFigureView figure={s.q.figure} className="physics-quizFig" /> : null}
                       <textarea
                         className="input input--area"
-                        placeholder="按分值分点作答（如：①……②……），注意使用历史术语"
+                        placeholder={answerHint}
                         value={answers[s.q.id] ?? ''}
                         onChange={(e) => setAnswers((a) => ({ ...a, [s.q.id]: e.target.value }))}
                       />

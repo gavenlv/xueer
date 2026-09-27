@@ -21,6 +21,7 @@ import type {
   MindMap,
   ModuleId,
   PhysicsModuleId,
+  PhysicsFigure,
   Poem,
   PoliticsModuleId,
   QuizQuestion,
@@ -188,11 +189,22 @@ export interface ExamPaper {
   duration: number;
   totalScore: number;
   sections: { name: string; kind: string; count: number; score: number }[];
-  /** 材料题分组（历史用；英语为空） */
+  /** 非选择题分组（历史/道法/物理用；英语为空） */
   materials: {
     id: string;
     material: string;
-    questions: { id: string; stem: string; answer: string; rubric?: string[]; tags?: string[] }[];
+    questions: {
+      id: string;
+      stem: string;
+      answer: string;
+      rubric?: string[];
+      tags?: string[];
+      /** 规范解题步骤（理科计算/解答题分步给分用） */
+      answerSteps?: string[];
+      /** 设问配图与参考答案图（物理的装置图、数据表、作图小题） */
+      figure?: PhysicsFigure;
+      answerFigure?: PhysicsFigure;
+    }[];
   }[];
   questions: QuizQuestion[];
   /** 书面表达（英语用）：作为一道自评大题进入卷面 */
