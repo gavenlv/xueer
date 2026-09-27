@@ -315,20 +315,47 @@ img {
   font: inherit;
 }
 
-/* 连续打卡 / 今日答题数：原本挂在顶栏，现在收进用户菜单，把顶栏宽度让给科目 */
-.usermenu__stat {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+/**
+ * 「我的」里的个人数据小结（连续打卡 / 今日答题 / 已学内容 / 已标熟知识点）。
+ *
+ * 这些数字原本摊在首页与学科页上（今日概览、我的进度、本科学习进度三处重复），
+ * 现在统一收进「我的」：首页与学科页只负责导航，数据只在一个地方看。
+ * 2×2 网格在 280px 的下拉面板与全宽的底部面板里都放得下。
+ */
+.mystat {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
   margin-bottom: 10px;
-  padding: 9px 11px;
+}
+
+.mystat__cell {
+  padding: 8px 10px;
   border-radius: var(--r-md);
   background: var(--c-gold-soft);
   border: 1px solid #f0e2bd;
+}
+
+.mystat__num {
+  display: block;
+  font-size: 17px;
+  font-weight: 800;
   color: #8d6410;
-  font-size: 12.5px;
-  font-weight: 700;
+  line-height: 1.25;
+}
+
+.mystat__num i {
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.mystat__label {
+  display: block;
+  font-size: 11.5px;
+  color: #8d6410;
+  opacity: 0.85;
 }
 
 .usermenu__panel {
@@ -417,11 +444,23 @@ img {
   animation: fadeIn 0.2s ease;
 }
 
+/**
+ * 底部弹起面板（学科 / 我的）。
+ *
+ * 必须是**独立的滚动容器**：面板贴在视口底部（bottom: 0），一旦内容比屏幕高，
+ * 超出部分会跑到屏幕上方、而面板自身没有滚动条——手机上表现为「点开学科面板后
+ * 划不动，排在后面的科目/模块永远够不着」。所以这里卡住最大高度并自己滚动。
+ * overscroll-behavior 防止滚到尽头时把背后的页面一起带着滚。
+ */
 .moresheet__panel {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
+  max-height: min(86vh, 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background: var(--c-surface);
   border-radius: 18px 18px 0 0;
   box-shadow: 0 -8px 30px rgba(15, 20, 30, 0.12);
@@ -2649,30 +2688,6 @@ button.mm-label:hover {
   font-weight: 650;
 }
 
-/* 手机面板里的模块：整行大热区 */
-.sheet-modules {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  margin: 6px 0 0 44px;
-}
-
-.sheet-module {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 9px 10px;
-  border: 1px solid var(--c-line);
-  border-radius: var(--r-md);
-  font-size: 13px;
-  color: var(--c-ink-2);
-  line-height: 1.35;
-}
-
-.sheet-module:active {
-  background: var(--c-surface-2);
-}
-
 /* 「计分科目与分值」一览：一级菜单的信息骨架（首页与学科页共用） */
 .weight-row {
   padding: 7px 9px;
@@ -2748,65 +2763,7 @@ button.mm-label:hover {
   }
 }
 
-/* 首页学科切换：横向可滑的胶囊 */
-.subj-tabs {
-  display: flex;
-  gap: 8px;
-  padding-bottom: 4px;
-}
-
-.subj-tab {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  flex: 0 0 auto;
-  padding: 9px 14px 9px 10px;
-  border: 1.5px solid var(--c-line);
-  border-radius: var(--r-lg);
-  background: var(--c-surface);
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 0.16s, box-shadow 0.16s;
-}
-
-.subj-tab:hover {
-  box-shadow: var(--sh-1);
-}
-
-.subj-tab.is-active {
-  border-color: var(--c-primary);
-  box-shadow: var(--sh-2);
-}
-
-.subj-tab__icon {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--r-md);
-  display: grid;
-  place-items: center;
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
-.subj-tab__body {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.subj-tab__name {
-  font-weight: 700;
-  font-size: 14.5px;
-  color: var(--c-ink);
-}
-
-.subj-tab__meta {
-  font-size: 11.5px;
-  color: var(--c-ink-3);
-  white-space: nowrap;
-}
-
-/* 首页快捷入口：横向卡片 */
+/* 横向快捷卡片（学科页的「本科工具」等）：一行可横滑，手机上不换行挤压 */
 .quick-row {
   display: flex;
   gap: 10px;
@@ -2880,10 +2837,6 @@ button.mm-label:hover {
   .subjmenu__panel {
     left: auto;
     right: 0;
-  }
-
-  .sheet-modules {
-    margin-left: 0;
   }
 }
 
@@ -4214,5 +4167,267 @@ button.mm-label:hover {
 
   .zht-trend__year {
     width: 76px;
+  }
+}
+
+/* ---------------- 语文 · 中考专题 · 逐类讲透（章节） ---------------- */
+/* 顶部章节索引（可点击跳节）+ 每节一张卡：判定要点（紫）→ 正误对照（绿/红）→ 本节易错（金）→ 当节练习 */
+
+.zht-secnav {
+  background: var(--c-surface-2);
+  border-color: var(--c-line-2);
+}
+
+.zht-secnav__title {
+  font-size: 15px;
+  font-weight: 750;
+}
+
+/* 章节目录项：胶囊按钮（本站是 HashRouter，跳转靠 scrollIntoView，所以是 button 而不是 a） */
+.zht-secnav__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border: 1px solid var(--c-line-2);
+  border-radius: var(--r-full);
+  background: var(--c-surface);
+  color: var(--c-ink-2);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.6;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.zht-secnav__item:hover {
+  border-color: var(--c-primary);
+  background: var(--c-primary-soft);
+  color: var(--c-primary-ink);
+}
+
+.zht-secnav__count {
+  font-size: 11.5px;
+  color: var(--c-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 章节卡片：scroll-margin-top 让吸顶导航不盖住被跳到的标题 */
+.zht-sec {
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-lg);
+  background: var(--c-surface);
+  padding: 14px;
+  scroll-margin-top: 78px;
+}
+
+.zht-sec__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--c-line);
+}
+
+.zht-sec__no {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--c-primary-soft);
+  color: var(--c-primary-ink);
+  font-size: 12.5px;
+  font-weight: 750;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zht-sec__name {
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.6;
+}
+
+.zht-sec__intro {
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.95;
+}
+
+/* 判定要点：紫色小块，编号列出「怎么一眼看出来」 */
+.zht-rules {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(115, 85, 207, 0.22);
+  border-radius: var(--r-md);
+  background: var(--c-purple-soft);
+}
+
+.zht-rules__title {
+  margin-bottom: 5px;
+  font-size: 12.5px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  color: var(--c-purple);
+}
+
+.zht-rules__items {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--c-ink-2);
+}
+
+.zht-rules__items li + li {
+  margin-top: 3px;
+}
+
+.zht-rules__items li::marker {
+  color: var(--c-purple);
+  font-weight: 700;
+}
+
+/* 正误对照：绿 = 规范例句，红 = 有问题的例子；例句用楷体，与讲解分开 */
+.zht-ex__caption {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-ink-3);
+}
+
+.zht-ex {
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+}
+
+.zht-ex.is-ok {
+  border-color: rgba(26, 154, 108, 0.28);
+  background: var(--c-jade-soft);
+}
+
+.zht-ex.is-bad {
+  border-color: rgba(210, 79, 61, 0.26);
+  background: var(--c-red-soft);
+}
+
+.zht-ex__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.zht-ex__mark {
+  flex: none;
+  width: 18px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.75;
+}
+
+.zht-ex.is-ok .zht-ex__mark {
+  color: var(--c-jade);
+}
+
+.zht-ex.is-bad .zht-ex__mark {
+  color: var(--c-red);
+}
+
+.zht-ex__text {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-kai);
+  font-size: 15.5px;
+  font-weight: 600;
+  line-height: 1.9;
+}
+
+.zht-ex__analysis {
+  margin-top: 6px;
+  padding-left: 26px;
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--c-ink-2);
+}
+
+.zht-ex__fix {
+  margin: 6px 0 0 26px;
+  padding: 7px 10px;
+  border-left: 3px solid var(--c-jade);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: rgba(26, 154, 108, 0.1);
+  font-family: var(--font-kai);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.9;
+}
+
+.zht-ex__label {
+  display: inline-block;
+  margin-right: 6px;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  color: var(--c-ink-3);
+}
+
+.zht-ex__fix .zht-ex__label {
+  color: var(--c-jade);
+}
+
+/* 本节易错：金色小块，每条「错在哪 → 怎么办」 */
+.zht-sec__traps {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(189, 138, 37, 0.22);
+  border-radius: var(--r-md);
+  background: var(--c-gold-soft);
+}
+
+.zht-sec__trapsTitle {
+  margin-bottom: 5px;
+  font-size: 12.5px;
+  font-weight: 750;
+  color: #8d6410;
+}
+
+.zht-sec__trap {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #6b4d0d;
+}
+
+.zht-sec__trapMark {
+  flex: none;
+  color: var(--c-gold);
+}
+
+.zht-sec__foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+/* 窄屏：章节卡片收紧，例子讲解与「改」不再缩进 */
+@media (max-width: 560px) {
+  .zht-sec {
+    padding: 11px 12px;
+  }
+
+  .zht-ex__analysis {
+    padding-left: 0;
+  }
+
+  .zht-ex__fix {
+    margin-left: 0;
   }
 }

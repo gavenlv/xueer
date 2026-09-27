@@ -1,10 +1,11 @@
 /**
- * 「计分科目与分值」一览：一级菜单的信息骨架，首页与学科页共用。
+ * 「计分科目与分值」一览：**首页的科目入口**（学科页只讲本学科的章节，不再重复这张表）。
  *
  * 排序依据是 2027—2029 广州中考录取计分科目满分（数学 150 → 体育与健康 70），
  * 条形长度按分值等比，学生一眼就能看出该把时间往哪儿放。
+ * 每一行都是链接，点一下直接进入该科——首页要做的「快速跳到任何一科」就是这一张表。
  * 待开发科目照常列出（标注「待开发」），因为**分值不会因为还没开发而消失**——
- * 提前知道物理 100 分、化学 70 分，比只看到已上线的两科更有用。
+ * 提前知道物理 100 分、化学 70 分，比只看到已上线的科目更有用。
  */
 
 import { Link } from 'react-router-dom';
@@ -71,7 +72,7 @@ export function SubjectWeightList({ currentId }: { currentId?: string }) {
 export function WeightBoard({ currentId }: { currentId?: string }) {
   return (
     <section className="card card--pad stack stack--sm">
-      <SectionTitle sub={`按 2027—2029 广州中考录取计分科目满分排序 · 总分 ${TOTAL_SCORE} 分`}>
+      <SectionTitle sub={`点任意一科直接进入 · 按 2027—2029 广州中考录取计分科目满分排序 · 总分 ${TOTAL_SCORE} 分`}>
         计分科目与分值
       </SectionTitle>
       <SubjectWeightList currentId={currentId} />

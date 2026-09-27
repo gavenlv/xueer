@@ -1,4 +1,12 @@
-/** 学科页：模块总览 + 学段切换（学科无关，新增学科自动适配） */
+/**
+ * 学科页：**本学科的章节导航**（学段切换 + 模块网格 + 本科工具）。
+ *
+ * 只负责「这一科要从哪一块开始学」：所有学习数据（本科进度、已学/已标熟、分值看板）
+ * 都不在这里出现——首页负责选科、学科页负责选章节，「我的」负责看数据，
+ * 三层各管一件事，同一份数字也就不必在多处重复渲染。
+ *
+ * 学科无关，新增学科自动适配。
+ */
 
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -8,9 +16,8 @@ import { totalsOfModule } from '../data/totals';
 import { ENTRY_META } from '../data/summary';
 import { useStudy } from '../store/StudyContext';
 import type { GradeId, ModuleId, Subject } from '../types';
-import { GRADES, cn, pct } from '../lib/utils';
-import { EmptyState, PageHeader, ProgressBar, SectionTitle, Stat, Tag } from '../components/common';
-import { WeightBoard } from '../components/SubjectBoard';
+import { GRADES, cn } from '../lib/utils';
+import { EmptyState, PageHeader, SectionTitle, Tag } from '../components/common';
 
 /**
  * 本科工具：背诵 / 错题本 / 考点 / 知识拓展。
@@ -70,31 +77,25 @@ for (const m of ENTRY_META) {
 export default function SubjectPage() {
   const { subjectId = 'chinese' } = useParams();
   const subject = getSubject(subjectId);
-  const { state, grade, setGrade } = useStudy();
+  const { grade, setGrade } = useStudy();
   const [gradeFilter, setGradeFilter] = useState<GradeId | 'all'>(grade);
 
   const moduleIds = useMemo(() => moduleIdsOfSubject(subjectId), [subjectId]);
 
+  /** 每个模块在本学段有多少条内容 / 多少道题——只统计骨架，不加载正文，也不看学习进度 */
   const moduleStats = useMemo(() => {
-    const out: Record<
-      string,
-      { total: number; studied: number; questions: number; gradeCount: number }
-    > = {};
+    const out: Record<string, { gradeCount: number; questions: number }> = {};
     for (const id of moduleIds) {
-      const entries = META_BY_MODULE.get(id) ?? [];
-      const inGrade = entries.filter(
+      const entries = (META_BY_MODULE.get(id) ?? []).filter(
         (e) => gradeFilter === 'all' || e.grade === gradeFilter || e.grade === 'all',
       );
-      const studied = inGrade.filter((e) => (state.progress[e.id]?.studied ?? 0) > 0).length;
       out[id] = {
-        total: entries.length,
-        studied,
-        questions: inGrade.reduce((n, e) => n + e.questions, 0),
-        gradeCount: inGrade.length,
+        gradeCount: entries.length,
+        questions: entries.reduce((n, e) => n + e.questions, 0),
       };
     }
     return out;
-  }, [state.progress, gradeFilter, moduleIds]);
+  }, [gradeFilter, moduleIds]);
 
   if (!subject) {
     return <EmptyState icon="🧭" title="没有这个学科" desc="请从首页重新选择。" />;
@@ -161,20 +162,17 @@ export default function SubjectPage() {
             ))}
           </div>
         </section>
-
-        <WeightBoard currentId={subject.id} />
       </div>
     );
   }
 
   const totals = moduleIds.reduce(
     (acc, id) => {
-      acc.total += moduleStats[id]?.gradeCount ?? 0;
-      acc.studied += moduleStats[id]?.studied ?? 0;
+      acc.gradeCount += moduleStats[id]?.gradeCount ?? 0;
       acc.questions += moduleStats[id]?.questions ?? 0;
       return acc;
     },
-    { total: 0, studied: 0, questions: 0 },
+    { gradeCount: 0, questions: 0 },
   );
 
   /** 随机练习的默认模块：取本学科第一个模块 */
@@ -189,7 +187,7 @@ export default function SubjectPage() {
             {subject.icon} {subject.name}
           </span>
         }
-        desc={`中考 ${subject.score} 分 · 占 ${weightOf(subject)}%${subject.examNote ? ` · ${subject.examNote}` : ''} · ${subject.desc} · ${subject.modules.length} 个模块 · ${totals.questions} 道练习题`}
+        desc={`中考 ${subject.score} 分（占 ${weightOf(subject)}%）· ${subject.modules.length} 个模块 · ${totals.questions} 道练习题${subject.examNote ? ` · ${subject.examNote}` : ''}`}
         extra={
           <Link
             className="btn btn--primary btn--sm"
@@ -200,21 +198,7 @@ export default function SubjectPage() {
         }
       />
 
-      {/* 本科工具：背诵 / 错题本 / 考点 / 知识拓展，都只作用于这一科 */}
-      <section className="stack stack--sm">
-        <SectionTitle sub="这些入口都只看本科内容，不与其他科目混在一起">本科工具</SectionTitle>
-        <div className="scroll-x quick-row">
-          {toolsOf(subject).map((t) => (
-            <Link className="quick" key={t.to} to={t.to}>
-              <span className="quick__icon">{t.icon}</span>
-              <span className="quick__label">{t.label}</span>
-              <span className="quick__desc">{t.desc}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* 学段切换 */}
+      {/* 学段切换：决定下面模块里显示哪一册的内容 */}
       <section className="stack stack--sm">
         <SectionTitle sub="选择教材册次，模块内容与练习范围会同步切换">学段</SectionTitle>
         <div className="scroll-x">
@@ -239,33 +223,13 @@ export default function SubjectPage() {
         </div>
       </section>
 
-      {/* 进度概览 */}
-      <section className="card card--pad stack stack--sm">
-        <div className="row row--between">
-          <span className="bold">
-            {gradeFilter === 'all' ? '全部学段' : GRADES.find((g) => g.id === gradeFilter)?.name}{' '}
-            学习进度
-          </span>
-          <span className="small muted">
-            {totals.studied} / {totals.total} 条已学
-          </span>
-        </div>
-        <ProgressBar value={totals.studied} max={Math.max(1, totals.total)} />
-        <div className="grid grid--3" style={{ marginTop: 4 }}>
-          <Stat value={totals.total} label="内容条目" />
-          <Stat value={totals.studied} label="已学习" tone="#1a9a6c" />
-          <Stat value={totals.questions} label="练习题" tone="#bd8a25" />
-        </div>
-      </section>
-
-      {/* 模块 */}
+      {/* 模块：本页的主角——章节导航，点进去按篇目/词条学 */}
       <section className="stack stack--sm">
-        <SectionTitle sub="点进去按篇目/词条学习，随时可以开始练习">模块</SectionTitle>
+        <SectionTitle sub="点进去按篇目/词条学习，随时可以开始练习">章节模块</SectionTitle>
         <div className="grid grid--auto">
           {subject.modules.map((m) => {
-            const st = moduleStats[m.id] ?? { total: 0, studied: 0, questions: 0, gradeCount: 0 };
-            const ms = totalsOfModule(m.id as ModuleId);
-            const allCount = ms.entries;
+            const st = moduleStats[m.id] ?? { gradeCount: 0, questions: 0 };
+            const allCount = totalsOfModule(m.id as ModuleId).entries;
             return (
               <Link
                 key={m.id}
@@ -286,26 +250,12 @@ export default function SubjectPage() {
                   <span className="module-card__desc" style={{ display: 'block' }}>
                     {m.desc}
                   </span>
-                  <span style={{ display: 'block', marginTop: 10 }}>
-                    <ProgressBar
-                      value={st.studied}
-                      max={Math.max(1, st.gradeCount)}
-                      tone={st.studied === st.gradeCount && st.gradeCount > 0 ? 'jade' : 'blue'}
-                      thin
-                    />
-                  </span>
                   <span className="module-card__foot">
                     <span>
                       本学段 {st.gradeCount} 条 / 共 {allCount} 条
                     </span>
                     <span>·</span>
                     <span>{st.questions} 题</span>
-                    {st.gradeCount > 0 ? (
-                      <>
-                        <span>·</span>
-                        <span>{pct(st.studied, st.gradeCount)}%</span>
-                      </>
-                    ) : null}
                   </span>
                 </span>
               </Link>
@@ -314,7 +264,19 @@ export default function SubjectPage() {
         </div>
       </section>
 
-      <WeightBoard currentId={subject.id} />
+      {/* 本科工具：背诵 / 错题本 / 考点 / 知识拓展，都只作用于这一科 */}
+      <section className="stack stack--sm">
+        <SectionTitle sub="这些入口都只看本科内容，不与其他科目混在一起">本科工具</SectionTitle>
+        <div className="scroll-x quick-row">
+          {toolsOf(subject).map((t) => (
+            <Link className="quick" key={t.to} to={t.to}>
+              <span className="quick__icon">{t.icon}</span>
+              <span className="quick__label">{t.label}</span>
+              <span className="quick__desc">{t.desc}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

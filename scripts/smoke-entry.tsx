@@ -218,7 +218,7 @@ if (!progressTarget) {
             daily: {},
             grade: '7a',
             totalSeconds: 0,
-            // 一张已经「背对 3 次」的卡：标熟必须能出现在首页/学习报告上
+            // 一张已经「背对 3 次」的卡：标熟必须能出现在「我的」与学习报告上
             cards: cardTarget
               ? {
                   [cardTarget.id]: {
@@ -673,22 +673,22 @@ if (!progressTarget) {
       noCardReciteHtml.includes('没有可背诵的知识点卡片') &&
         noCardReciteHtml.includes('href="/s/physics"'),
     ],
-    // 学科页（语文）：本科工具 + 模块网格
+    // 学科页（语文）：本科工具 + 章节模块网格
     ['学科页列出本科模块', chineseSubjectHtml.split('module-card').length - 1 >= 3],
+    // 学科页只做本学科的章节导航：分值看板与本科进度都搬走了，别又长回去
+    [
+      '学科页不重复个人进度与分值看板',
+      !chineseSubjectHtml.includes('学习进度') && !chineseSubjectHtml.includes('计分科目与分值'),
+    ],
     // 考点页按科目取数：数学考点页必须是数学的，不是语文的
     ['考点页按科目取数（数学）', mathExamHtml.includes('数学') && !mathExamHtml.includes('古诗词背诵与默写')],
-    // 首页：模块网格 + 快捷入口直达科目子页面
-    ['首页模块网格（默认学科）', homeHtml.split('module-card').length - 1 >= 3],
-    ['首页快捷入口：知识点背诵', homeHtml.includes('知识点背诵') && homeHtml.includes('/s/chinese/recite')],
-    ['首页快捷入口：整卷模拟考试', homeHtml.includes('整卷模拟考试') && homeHtml.includes('/s/history/hist-exam')],
-    ['首页快捷入口：历史考点与考情', homeHtml.includes('历史考点与考情') && homeHtml.includes('/s/history/exam')],
-    ['首页快捷入口：语文考点', homeHtml.includes('语文考点') && homeHtml.includes('/s/chinese/exam')],
-    ['首页快捷入口：知识拓展', homeHtml.includes('知识拓展') && homeHtml.includes('/s/chinese/extras')],
+    // 首页 = 科目入口：一行一科，点任意一科直接进该科（章节导航交给学科页）
+    ['首页可一跳进任一科', SUBJECTS.every((s) => homeHtml.includes(`href="/s/${s.id}"`))],
+    // 首页只做导航：今日概览、总进度这些数据项必须留在「我的」，别又摊回首页
     [
-      '首页学科切换（语文/历史）',
-      homeHtml.includes('subj-tab') && homeHtml.includes('语文') && homeHtml.includes('历史'),
+      '首页不重复个人进度（已移至「我的」）',
+      !homeHtml.includes('今日概览') && !homeHtml.includes('已标熟知识点'),
     ],
-    ['首页学科可切换（各科都是按钮）', (homeHtml.match(/subj-tab/g) ?? []).length >= 4 && homeHtml.includes('aria-pressed')],
     // 一级菜单 = 按 2027 中考满分降序的全部计分科目（含待开发科目）
     [
       '首页按分值列出全部计分科目',
@@ -770,9 +770,6 @@ if (!progressTarget) {
     ['名著卡片含「整本书阅读」简答题', litKinds.has('整本书阅读')],
     // 详情页的知识点背诵区默认收起，但标题与待背数在首屏
     ['详情页挂上了「知识点背诵」区', histHtml.includes('知识点背诵') && histHtml.includes('个待背/待复习')],
-    // 已标熟必须真的流到首页（只看 localStorage 里那张 streak=3 的卡）
-    ['首页显示「已标熟知识点」', homeHtml.includes('已标熟知识点')],
-    ['首页进度区分「已学内容」与「已标熟」', homeHtml.includes('已学内容') && homeHtml.includes('看过 ≠ 掌握')],
   ];
   const reciteOk = reciteChecks.every(([, ok]) => ok);
   console.log(
@@ -798,6 +795,8 @@ if (!progressTarget) {
     ['学习报告有「已标熟知识点」', statsHtml.includes('已标熟知识点')],
     ['学习报告并列「已学内容（看过）」', statsHtml.includes('已学内容（看过）')],
     ['两个数字分开说明', statsHtml.includes('看过 ≠ 掌握') || statsHtml.includes('完全掌握')],
+    // 首页简化后，今日概览搬到这里——数据必须有地方看得到，不是删掉了
+    ['学习报告承接首页搬来的「今日概览」', statsHtml.includes('今日概览') && statsHtml.includes('今日答题')],
   ];
   const statsOk = statsChecks.every(([, ok]) => ok);
   console.log(
@@ -1264,13 +1263,32 @@ if (!progressTarget) {
  */
 const zhTopicEntries = allEntries.filter((e) => e.moduleId === 'zh-topics');
 const zhTopic = zhTopicEntries[0];
-const zhTopicHtml = zhTopic
-  ? renderToString(
-      <MemoryRouter initialEntries={[`/s/chinese/zh-topics/${zhTopic.id}`]}>
-        <AppWithProviders />
-      </MemoryRouter>,
-    ).replace(/<!--[\s\S]*?-->/g, '')
-  : '';
+/**
+ * 「逐类讲透（章节）」是这一模块最要紧的一层（用户要求每个类目、每个子类都单独成节，
+ * 有讲解、有正误对照例子、有当节练习），所以单独拿一个**带章节的专题**渲染一遍来断言：
+ * 少一条 `sections` 渲染分支、或章节名与题目标签对不上，学生就只会看到一个空区块。
+ */
+const zhTopicWithSections = zhTopicEntries.find(
+  (e) => (((e.data as { sections?: unknown[] }).sections?.length ?? 0) > 0),
+);
+const renderZhTopic = (id: string) =>
+  renderToString(
+    <MemoryRouter initialEntries={[`/s/chinese/zh-topics/${id}`]}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+const zhTopicHtml = zhTopic ? renderZhTopic(zhTopic.id) : '';
+const zhSectionHtml = zhTopicWithSections ? renderZhTopic(zhTopicWithSections.id) : '';
+/** 模块页：七个专题与「几节逐类讲透 · 多少题」都要看得见 */
+const zhModuleHtml = renderToString(
+  <MemoryRouter initialEntries={['/s/chinese/zh-topics']}>
+    <AppWithProviders />
+  </MemoryRouter>,
+).replace(/<!--[\s\S]*?-->/g, '');
+const zhSectionData = zhTopicWithSections?.data as
+  | { sections?: { name: string; examples?: unknown[] }[] }
+  | undefined;
+const zhSectionNames = (zhSectionData?.sections ?? []).map((s) => s.name);
 const zhTopicChecks: [string, boolean][] = [
   ['语文中考专题共 7 个', zhTopicEntries.length === 7],
   ['专题页渲染出专题名', Boolean(zhTopic) && zhTopicHtml.includes(zhTopic.title)],
@@ -1279,6 +1297,24 @@ const zhTopicChecks: [string, boolean][] = [
   ['分步讲解带示范', zhTopicHtml.includes('示范')],
   ['攻破标准（全题过关）', zhTopicHtml.includes('攻破')],
   ['训练分组与「刷这一组」入口', zhTopicHtml.includes('刷这一组') && zhTopicHtml.includes('?tag=')],
+  [
+    '逐类讲透：章节区块与正误对照',
+    Boolean(zhTopicWithSections) &&
+      zhSectionHtml.includes('逐类讲透') &&
+      zhSectionHtml.includes('正误对照') &&
+      zhSectionHtml.includes('判定要点'),
+  ],
+  [
+    '每一节都能点「刷这一节」',
+    zhSectionNames.length > 0 &&
+      zhSectionNames.every((n) => zhSectionHtml.includes(encodeURIComponent(n))) &&
+      zhSectionHtml.includes('刷这一节'),
+  ],
+  ['章节里渲染出修改后的句子', zhSectionHtml.includes('改：')],
+  [
+    '模块页列出七个专题与章节规模',
+    zhTopicEntries.every((e) => zhModuleHtml.includes(e.title)) && zhModuleHtml.includes('节逐类讲透'),
+  ],
 ];
 const zhTopicOk = zhTopicChecks.every(([, ok]) => ok);
 console.log(

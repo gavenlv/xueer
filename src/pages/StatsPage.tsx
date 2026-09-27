@@ -22,6 +22,8 @@ export default function StatsPage() {
   const { state, resetAll } = useStudy();
   const { user } = useAuth();
   const streak = useStreak();
+  /** 今日数据：首页简化后，「今日概览」搬到了这里（数据只在一处看） */
+  const today = state.daily[dateKey()] ?? { answered: 0, correct: 0, minutes: 0 };
   /**
    * 页面统计几乎全部来自轻量清单 summary（首屏已加载，约 20 kB gzip），
    * **不必加载任何正文数据**——之前为了算模块进度加载语文+数学全部内容，
@@ -226,6 +228,20 @@ export default function StatsPage() {
         />
       ) : (
         <>
+          {/* 今日概览：从首页搬来（首页只留导航，数据统一归「我的」） */}
+          <section className="stack stack--sm">
+            <SectionTitle sub="答对答错都会记录，跨天自动清零">今日概览</SectionTitle>
+            <div className="grid grid--3">
+              <Stat value={today.answered} label="今日答题" tone="#2f66d6" />
+              <Stat
+                value={today.answered ? `${pct(today.correct, today.answered)}%` : '—'}
+                label="今日正确率"
+                tone="#1a9a6c"
+              />
+              <Stat value={Math.round(today.minutes)} label="学习分钟" tone="#bd8a25" />
+            </div>
+          </section>
+
           <section className="stack stack--sm">
             <SectionTitle sub="从第一次使用开始累计">总览</SectionTitle>
             <div className="grid grid--3">

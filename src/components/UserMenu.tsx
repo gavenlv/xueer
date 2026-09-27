@@ -12,6 +12,8 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { isCloudConfigured } from '../lib/supabase';
 import { useStreak, useStudy } from '../store/StudyContext';
+import { ENTRY_META, MODULE_TOTALS } from '../data/summary';
+import { isMastered } from '../lib/recite';
 import { cn, dateKey } from '../lib/utils';
 
 /** 用户相关入口：不针对某一科，所以不属于科目一级菜单 */
@@ -29,22 +31,49 @@ function useUserLabel(): string {
   return user ? `👤 ${displayName || '同学'}` : '登录 / 注册';
 }
 
+/** 掌握率的分母来自轻量清单 summary，不必为几个数字加载任何正文 */
+const TOTAL_ENTRIES = ENTRY_META.length;
+const TOTAL_CARDS = MODULE_TOTALS.reduce((n, m) => n + m.cards, 0);
+
 /**
- * 连续打卡与今日答题数：原本占着顶栏的位置，8 个科目平铺后放不下，
- * 于是收进「我的」（它们本来就只跟用户有关，不针对某一科）。
+ * 「我的」里的个人数据小结：连续打卡 / 今日答题 / 已学内容 / 已标熟知识点。
+ *
+ * 这几个数字原先摊在首页（今日概览、我的进度）与学科页（本科学习进度）上，
+ * 同一份数据在三处重复；现在只留在「我的」——首页与学科页专注导航，
+ * 数据要看就来这里，或者点下面的「学习报告」看完整版。
  */
-function useUserStat(): { streak: number; answered: number } {
+function UserStat() {
   const streak = useStreak();
   const { state } = useStudy();
-  return { streak, answered: state.daily[dateKey()]?.answered ?? 0 };
-}
+  const today = state.daily[dateKey()]?.answered ?? 0;
+  const studied = Object.values(state.progress).filter((p) => (p.studied ?? 0) > 0).length;
+  let mastered = 0;
+  for (const rec of Object.values(state.cards ?? {})) if (isMastered(rec)) mastered += 1;
 
-function UserStat() {
-  const { streak, answered } = useUserStat();
   return (
-    <div className="usermenu__stat">
-      <span>🔥 连续 {streak} 天</span>
-      <span>✍️ 今日 {answered} 题</span>
+    <div className="mystat">
+      <div className="mystat__cell">
+        <span className="mystat__num">{streak}</span>
+        <span className="mystat__label">连续打卡（天）</span>
+      </div>
+      <div className="mystat__cell">
+        <span className="mystat__num">{today}</span>
+        <span className="mystat__label">今日答题</span>
+      </div>
+      <div className="mystat__cell">
+        <span className="mystat__num">
+          {studied}
+          <i> / {TOTAL_ENTRIES}</i>
+        </span>
+        <span className="mystat__label">已学内容（看过）</span>
+      </div>
+      <div className="mystat__cell">
+        <span className="mystat__num">
+          {mastered}
+          <i> / {TOTAL_CARDS}</i>
+        </span>
+        <span className="mystat__label">已标熟知识点</span>
+      </div>
     </div>
   );
 }
