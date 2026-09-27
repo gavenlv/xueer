@@ -1083,6 +1083,26 @@ if (!progressTarget) {
       { t: 'coil', x: 50, y: 34, turns: 4, frontCurrent: 'down' },
       // 停表：小盘 1.5 min（过半格）+ 大盘 10.4 s，读数应为 100.4 s
       { t: 'stopwatch', x: 50, y: 50, r: 30, minute: 1.5, second: 10.4, label: '停表自测' },
+      // 化学图元：试管、锥形瓶、酒精灯、集气瓶、原子、分子、铁架台、漏斗
+      { t: 'testTube', x: 20, y: 30, h: 30, liquid: 0.6, color: 'blue', label: '试管' },
+      { t: 'flask', x: 45, y: 34, kind: 'conical', liquid: 0.5, color: 'yellow', label: '锥形瓶' },
+      { t: 'alcoholLamp', x: 62, y: 40, lit: true, label: '酒精灯' },
+      { t: 'gasJar', x: 80, y: 32, liquid: 0.5, color: 'colorless', cover: true, label: '集气瓶' },
+      { t: 'atom', x: 16, y: 78, symbol: 'Na', charge: '+', color: 'purple', label: '钠离子' },
+      {
+        t: 'molecule',
+        x: 46,
+        y: 78,
+        atoms: [
+          { dx: 0, dy: 0, symbol: 'O', color: 'red' },
+          { dx: -5, dy: -4, r: 2.6, symbol: 'H' },
+          { dx: 5, dy: -4, r: 2.6, symbol: 'H' },
+        ],
+        bonds: [[0, 1], [0, 2]],
+        label: 'H₂O',
+      },
+      { t: 'stand', x: 78, y: 92, h: 30, clamps: [0.6], label: '铁架台' },
+      { t: 'funnel', x: 92, y: 74, kind: 'long', label: '长颈漏斗' },
     ],
   };
   const probeSvg = renderToString(<PhysicsFigureView figure={probeFigure} />);
@@ -1100,6 +1120,27 @@ if (!progressTarget) {
     [...probeSvg.matchAll(/stroke="var\(--c-red\)"/g)].length >= 2 &&
     probeSvg.includes('>15<') &&
     probeSvg.includes('>30<');
+  /**
+   * 化学图元自测：确认装置与粒子都画出来了——
+   *   试管/锥形瓶/集气瓶的**液体颜色**（蓝色与黄色各出现一次，无色不填充）、
+   *   酒精灯的火焰、原子模型的元素符号与电荷、分子模型的化学键连线、铁架台的铁夹。
+   * 这些图元错一个，装置图与粒子模型就会误导学生（化学装置图是中考实验题的核心考点）。
+   */
+  const chemPrimsOk =
+    probeSvg.includes('#2f7fd6') && // 试管里的蓝色液体
+    probeSvg.includes('#e0b020') && // 锥形瓶里的黄色液体
+    probeSvg.includes('#e8a33d') && // 酒精灯火焰
+    probeSvg.includes('>Na<') &&
+    probeSvg.includes('>+<') &&
+    probeSvg.includes('>H₂O<') &&
+    [...probeSvg.matchAll(/<line[^>]*stroke="var\(--c-ink\)"/g)].length >= 2 && // 分子化学键等
+    probeSvg.includes('铁架台');
+  /**
+   * 无色液体必须画出**液面线**：探针里的集气瓶装的是 `colorless`（无色）液体。
+   * 「无色」不等于「没有液体」——液面高度、是否浸没、凹液面最低处都是考点，
+   * 图上没有液面线这些考点就全部消失了（内容作者一开始只能自己用折线补）。
+   */
+  const colorlessOk = probeSvg.includes('fill-opacity="0.06"') || /y1="41" /.test(probeSvg);
 
   const phyChecks: [string, boolean][] = [
     ['问题与理解的关键', phyHtml.includes('要解决的问题') && phyHtml.includes('理解的关键')],
@@ -1141,6 +1182,61 @@ if (!progressTarget) {
       .join('、') || '十六类断言全通过'}）`,
   );
   if (!phyOk) failed += 1;
+
+  /* ------------- 接线检查：化学（三重表征 + 化学用语 + 全题过关） ------------- */
+
+  /**
+   * 化学这一科最容易被「页面没报错」掩盖的三件事：
+   *   ① 三重表征的教学标签（宏观/微观/符号）没渲染出来 → 学生看不到三种表达的对应；
+   *   ② **化学方程式**与**实验**这两块是化学独有的，漏接就等于丢了这一科的核心内容；
+   *   ③ chem-exam 里整卷与题型专题共用模块 id，分流错会把卷子渲染成知识页。
+   */
+  const chemTopic = allEntries.find((e) => e.moduleId === 'chem-matter' && !('sections' in e.data));
+  const chemAcid = allEntries.find((e) => e.moduleId === 'chem-acid');
+  const chemPaper = allEntries.find((e) => e.moduleId === 'chem-exam' && 'sections' in e.data);
+  const renderChem = (id: string) => {
+    const mod = allEntries.find((x) => x.id === id)?.moduleId ?? 'chem-matter';
+    return renderToString(
+      <MemoryRouter initialEntries={[`/s/chemistry/${mod}/${id}`]}>
+        <AppWithProviders />
+      </MemoryRouter>,
+    ).replace(/<!--[\s\S]*?-->/g, '');
+  };
+  const chemHtml = chemTopic ? renderChem(chemTopic.id) : '';
+  const chemAcidHtml = chemAcid ? renderChem(chemAcid.id) : '';
+  const chemPaperHtml = chemPaper ? renderChem(chemPaper.id) : '';
+  const chemModuleHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/chemistry/chem-matter']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+
+  const chemChecks: [string, boolean][] = [
+    ['问题与理解的关键', chemHtml.includes('要解决的问题') && chemHtml.includes('理解的关键')],
+    ['三重表征标签（宏观/微观/符号）', chemHtml.includes('宏观') && chemHtml.includes('微观') && chemHtml.includes('符号')],
+    ['理解过程分步渲染', chemHtml.includes('理解过程') && /physics-step__title/.test(chemHtml)],
+    ['化学方程式块', chemHtml.includes('化学方程式') && /chem-equation__eq/.test(chemHtml)],
+    ['实验块（含现象与注意事项）', /chem-experiment__title/.test(chemAcidHtml) && chemAcidHtml.includes('注意事项')],
+    ['图解渲染成 SVG', /<svg[^>]*class="fig__svg"/.test(chemHtml)],
+    [
+      '过关清单（全题过关才掌握）',
+      chemHtml.includes('过关清单') && chemHtml.includes('全部题目都过关才算掌握') && /physics-quizItem/.test(chemHtml),
+    ],
+    ['综合题与踩分点入口', chemHtml.includes('看参考答案与踩分点')],
+    ['模拟卷结构表（选择 12 题 + 非选择 5 题）', chemPaperHtml.includes('试卷结构') && chemPaperHtml.includes('非选择题')],
+    ['模块页有化学条目', chemModuleHtml.includes('化学') && /list-item__title/.test(chemModuleHtml)],
+    ['图元自测：化学装置与粒子（液体颜色/火焰/原子/分子）', chemPrimsOk],
+    // 无色液体也要看得见液面：否则「液面在哪」在图上消失
+    ['图元自测：无色液体的液面线', colorlessOk],
+  ];
+  const chemOk = chemChecks.every(([, ok]) => ok);
+  console.log(
+    `  ${chemOk ? '✅' : '❌'} 接线检查：化学（${chemChecks
+      .filter(([, ok]) => !ok)
+      .map(([n]) => n)
+      .join('、') || `${chemChecks.length} 类断言全通过`}）`,
+  );
+  if (!chemOk) failed += 1;
 }
 
 if (failed) {

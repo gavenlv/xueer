@@ -46,11 +46,12 @@ function scopeOfPaper(paperId: string): ModuleScope {
   if (paperId.startsWith('eng-')) return ['eng-exam'];
   if (paperId.startsWith('pol-')) return ['pol-exam'];
   if (paperId.startsWith('phy-')) return ['phy-exam'];
+  if (paperId.startsWith('chem-')) return ['chem-exam'];
   if (paperId.startsWith('paper-')) return ['hist-exam'];
-  return ['hist-exam', 'eng-exam', 'pol-exam', 'phy-exam'];
+  return ['hist-exam', 'eng-exam', 'pol-exam', 'phy-exam', 'chem-exam'];
 }
 
-type ModuleScope = ('hist-exam' | 'eng-exam' | 'pol-exam' | 'phy-exam')[];
+type ModuleScope = ('hist-exam' | 'eng-exam' | 'pol-exam' | 'phy-exam' | 'chem-exam')[];
 
 export default function ExamRunPage() {
   const { paperId = '' } = useParams();

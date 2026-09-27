@@ -24,6 +24,7 @@ import { allTopics, allPapers } from '../src/data/history';
 // allTopics 含 pol-exam 的「题型专题」（与整卷共用 pol-exam），allPapers 只含卷子：
 // 校验卷面结构必须从 allPapers 取，不能按 moduleId === 'pol-exam' 从条目里筛。
 import { allPapers as polPapers, allTopics as polTopics } from '../src/data/politics';
+import { validateChemistry } from './validate-chemistry';
 import { validatePhysics } from './validate-physics';
 import type { EnglishKnowledge, EnglishPaper, PoliticsPaper } from '../src/types';
 import { BOOK_EXAM_POINT_TAGS } from '../src/lib/bookExams';
@@ -2083,6 +2084,12 @@ console.log(
  * 规则多且专，单独放在 `scripts/validate-physics.ts`，这里只调用一次并打印报告。
  */
 validatePhysics({ err, allEntries });
+
+/**
+ * 化学：卷面结构 + 三重表征 + 化学用语（方程式配平与条件）+ 实验注意事项。
+ * 与物理一样单独成文件，这里只调用一次并打印报告。
+ */
+validateChemistry({ err, allEntries });
 
 /* ------------------------ 汇总报告 ------------------------ */
 

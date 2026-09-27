@@ -2,7 +2,15 @@
 
 import { Suspense, lazy, useEffect, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import type { ModuleId, PhysicsPaperEntry, PhysicsTopicEntry, PoliticsPaperEntry, PoliticsTopicEntry } from '../types';
+import type {
+  ChemPaperEntry,
+  ChemTopicEntry,
+  ModuleId,
+  PhysicsPaperEntry,
+  PhysicsTopicEntry,
+  PoliticsPaperEntry,
+  PoliticsTopicEntry,
+} from '../types';
 import { findEntryById } from '../data';
 import { getModuleMeta } from '../data/subjects';
 import { useStudy } from '../store/StudyContext';
@@ -20,6 +28,8 @@ import { EnglishDetail } from './detail/EnglishDetail';
 import { EnglishPaperDetail } from './detail/EnglishPaperDetail';
 import { PoliticsDetail } from './detail/PoliticsDetail';
 import { PoliticsPaperDetail } from './detail/PoliticsPaperDetail';
+import { ChemistryDetail } from './detail/ChemistryDetail';
+import { ChemistryPaperDetail } from './detail/ChemistryPaperDetail';
 import { PhysicsDetail } from './detail/PhysicsDetail';
 import { PhysicsPaperDetail } from './detail/PhysicsPaperDetail';
 
@@ -126,6 +136,19 @@ export default function DetailPage() {
       case 'pol-nation':
       case 'pol-current':
         return <PoliticsDetail entry={entry} moduleName={meta?.module.name ?? '道德与法治'} />;
+      // 化学：chem-exam 里同样既有整卷也有题型专题，按数据形状分流
+      case 'chem-exam':
+        return 'sections' in entry.data ? (
+          <ChemistryPaperDetail entry={entry as ChemPaperEntry} moduleName={meta?.module.name ?? '模拟考试'} />
+        ) : (
+          <ChemistryDetail entry={entry as ChemTopicEntry} moduleName={meta?.module.name ?? '化学'} />
+        );
+      case 'chem-matter':
+      case 'chem-substance':
+      case 'chem-acid':
+      case 'chem-equation':
+      case 'chem-experiment':
+        return <ChemistryDetail entry={entry} moduleName={meta?.module.name ?? '化学'} />;
       // 物理：phy-exam 里同样既有整卷也有题型专题，按数据形状分流
       case 'phy-exam':
         return 'sections' in entry.data ? (

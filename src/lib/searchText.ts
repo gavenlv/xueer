@@ -250,6 +250,50 @@ export function searchTextOf(entry: Entry): string {
       ]);
       break;
     }
+    case 'chem-matter':
+    case 'chem-substance':
+    case 'chem-acid':
+    case 'chem-equation':
+    case 'chem-experiment':
+    case 'chem-exam': {
+      // chem-exam 同道法/物理：既有整卷（有 sections），也有题型专题知识条目
+      if ('sections' in entry.data) {
+        const p = entry.data;
+        text = join([
+          p.title,
+          p.basis,
+          p.questions.map((q) => `${q.stem}${(q.options ?? []).join('')}${q.figure?.alt ?? ''}`),
+          (p.materials ?? []).map((m) => `${m.material}${m.questions.map((q) => q.stem).join('')}`),
+        ]);
+        break;
+      }
+      /**
+       * 化学的检索文本把**化学方程式与实验现象**拼进去：
+       * 学生常按式子或现象找内容（「2H₂O₂」「白色沉淀」「火星四射」），
+       * 这些字符串往往只出现在方程式与现象字段里，不进索引就搜不到。
+       */
+      const c = entry.data;
+      const figAlt = (f?: { alt?: string; title?: string }) => (f ? `${f.title ?? ''}${f.alt ?? ''}` : '');
+      text = join([
+        c.title,
+        c.unit,
+        c.question,
+        c.keyIdea,
+        c.steps.map((s) => `${s.representation ?? ''}${s.heading}${s.body}${s.note ?? ''}${figAlt(s.figure)}`),
+        c.equations?.map((e) => `${e.equation}${e.condition ?? ''}${e.phenomenon}${e.note ?? ''}`),
+        c.experiments?.map(
+          (x) => `${x.title}${x.purpose}${x.apparatus.join('')}${x.steps.join('')}${x.phenomenon}${x.conclusion}${(x.cautions ?? []).join('')}${figAlt(x.figure)}`,
+        ),
+        c.apps.map((a) => `${a.title}${a.scene}${a.analysis}${a.steps.join('')}${a.result}${figAlt(a.figure)}`),
+        c.formulas?.map((f) => `${f.name}${f.text ?? ''}${f.tex ?? ''}${f.units ?? ''}${f.usage}`),
+        c.confusions?.map((x) => `${x.wrong}${x.right}${x.why}`),
+        c.compares?.map((x) => `${x.title}${x.aspect}${x.rows.map((r) => `${r.item}${r.left}${r.right}`).join('')}`),
+        c.examAngles?.map((a) => `${a.angle}${a.detail}`),
+        c.materials?.map((m) => `${m.material}${m.questions.map((q) => q.stem).join('')}`),
+        c.questions.map((q) => `${q.stem}${(q.options ?? []).join('')}${figAlt(q.figure)}${figAlt(q.answerFigure)}`),
+      ]);
+      break;
+    }
     default: {
       // 数学：${...}$ 公式源码也进检索文本，学生可以按符号找知识点
       const m = entry.data as {

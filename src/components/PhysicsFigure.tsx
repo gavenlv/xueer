@@ -27,6 +27,36 @@ const TONE: Record<FigureTone, string> = {
   ok: 'var(--c-jade)',
 };
 
+/**
+ * 化学里「物质/溶液的颜色」是**内容**而不是样式（硫酸铜溶液就是蓝的），
+ * 所以数据里写 `color: 'blue'`，由这里映射成色值；`colorless` 表示无色透明。
+ */
+const CHEM_COLOR: Record<string, string | null> = {
+  colorless: null,
+  blue: '#2f7fd6',
+  yellow: '#e0b020',
+  green: '#2f9e6a',
+  brown: '#9a6b3a',
+  red: '#d24f3d',
+  purple: '#7b4fd0',
+  black: '#3a3f47',
+  white: '#f2f2f2',
+};
+
+/**
+ * 液体怎么画：有色液体填充色块，**无色液体必须画一条液面线**。
+ *
+ * 无色不是「没有液体」——试管里装着水，图上就得看得出液面在哪，
+ * 否则「液面高度」「凹液面最低处」「是否浸没」这些考点在图上全部消失。
+ * （内容作者一开始只能用折线自己画液面绕开这一点，这里补上。）
+ */
+function liquidPaint(color?: string): { fill: string | null; opacity: number; surface: boolean } {
+  if (!color) return { fill: null, opacity: 0, surface: false };
+  const c = CHEM_COLOR[color];
+  if (c === null) return { fill: 'var(--c-ink)', opacity: 0.06, surface: true };
+  return { fill: c, opacity: 0.45, surface: false };
+}
+
 const toneOf = (t?: FigureTone) => TONE[t ?? 'main'];
 const FONT = 4.2;
 
@@ -869,6 +899,209 @@ function renderPrim(p: FigurePrim, key: number) {
           <circle cx={p.x} cy={p.y} r={r} fill="none" stroke={toneOf('main')} strokeWidth={0.5} />
           <polygon points={`${tx},${ty} ${bx + (by - p.y) * 0.18},${by - (bx - p.x) * 0.18} ${bx - (by - p.y) * 0.18},${by + (bx - p.x) * 0.18}`} fill="var(--c-red)" fillOpacity={0.7} />
           {p.label ? <Label x={p.x} y={p.y - r - 3} text={p.label} size={3.6} /> : null}
+        </g>
+      );
+    }
+
+    /* ------------------------- 化学：装置与微观粒子 ------------------------- */
+
+    case 'testTube': {
+      const h = p.h ?? 34;
+      const w = p.w ?? 9;
+      const tilt = p.tilt ?? 0;
+      const liq = Math.max(0, Math.min(1, p.liquid ?? 0));
+      const paint = liquidPaint(p.color);
+      const surfaceY = h / 2 - w / 2 - (h - w) * liq * 0.9;
+      // 试管：底部圆弧的 U 形管，液体按液面高度填充
+      const body = (
+        <g>
+          <path
+            d={`M ${-w / 2} ${-h / 2} L ${-w / 2} ${h / 2 - w / 2} A ${w / 2} ${w / 2} 0 0 0 ${w / 2} ${h / 2 - w / 2} L ${w / 2} ${-h / 2}`}
+            fill="none"
+            stroke={toneOf('main')}
+            strokeWidth={0.6}
+          />
+          {liq > 0 && paint.fill ? (
+            <path
+              d={`M ${-w / 2 + 0.6} ${surfaceY} L ${-w / 2 + 0.6} ${h / 2 - w / 2} A ${w / 2 - 0.6} ${w / 2 - 0.6} 0 0 0 ${w / 2 - 0.6} ${h / 2 - w / 2} L ${w / 2 - 0.6} ${surfaceY} Z`}
+              fill={paint.fill}
+              fillOpacity={paint.opacity}
+            />
+          ) : null}
+          {/* 无色液体：画一条液面线，否则「液面在哪」在图上完全看不出来 */}
+          {liq > 0 && paint.surface ? (
+            <line x1={-w / 2 + 0.6} y1={surfaceY} x2={w / 2 - 0.6} y2={surfaceY} stroke={toneOf('main')} strokeWidth={0.4} />
+          ) : null}
+        </g>
+      );
+      return (
+        <g key={key} transform={`translate(${p.x} ${p.y}) rotate(${tilt})`}>
+          {body}
+          {p.label ? <Label x={0} y={h / 2 + 4.6} text={p.label} size={3.6} /> : null}
+        </g>
+      );
+    }
+
+    case 'flask': {
+      const h = p.h ?? 30;
+      const w = p.w ?? 24;
+      const liq = Math.max(0, Math.min(1, p.liquid ?? 0));
+      const paint = liquidPaint(p.color);
+      const isRound = p.kind === 'round';
+      const surfaceY = h / 2 - (h * 0.7) * liq;
+      // 锥形瓶：底部矩形 + 斜肩 + 细颈；圆底烧瓶：圆底 + 细颈
+      const outline = isRound
+        ? `M 0 ${h / 2} a ${w / 2} ${w / 2} 0 1 1 0.01 0 M ${-w / 4.2} ${h / 2 - w * 0.36} L ${-w / 8} ${-h / 2} L ${w / 8} ${-h / 2} L ${w / 4.2} ${h / 2 - w * 0.36}`
+        : `M ${-w / 2} ${h / 2 - 2} L ${-w / 2} ${h / 2} L ${w / 2} ${h / 2} L ${w / 2} ${h / 2 - 2} L ${w / 7} ${-h / 2 + 6} L ${-w / 7} ${-h / 2 + 6} Z`;
+      return (
+        /**
+         * 必须 translate 到 (x, y)：图元内部用的是「以瓶中心为原点」的局部坐标，
+         * 少了这一步所有锥形瓶都会画在画布左上角（内容作者曾因此改用 poly 自己画瓶）。
+         */
+        <g key={key} transform={`translate(${p.x} ${p.y})`}>
+          <path d={outline} fill="none" stroke={toneOf('main')} strokeWidth={0.6} />
+          {liq > 0 && paint.fill ? (
+            <rect
+              x={-w / 2 + 3}
+              y={surfaceY}
+              width={w - 6}
+              height={(h * 0.7) * liq}
+              fill={paint.fill}
+              fillOpacity={paint.opacity}
+            />
+          ) : null}
+          {liq > 0 && paint.surface ? (
+            <line x1={-w / 2 + 3} y1={surfaceY} x2={w / 2 - 3} y2={surfaceY} stroke={toneOf('main')} strokeWidth={0.4} />
+          ) : null}
+          {p.label ? <Label x={0} y={h / 2 + 5} text={p.label} size={3.6} /> : null}
+        </g>
+      );
+    }
+
+    case 'alcoholLamp': {
+      const lit = p.lit ?? true;
+      return (
+        <g key={key}>
+          {/* 灯身：梯形瓶体 + 灯芯 + 火焰 */}
+          <path d={`M ${p.x - 9} ${p.y + 12} L ${p.x + 9} ${p.y + 12} L ${p.x + 6} ${p.y - 2} L ${p.x - 6} ${p.y - 2} Z`} fill="var(--c-line)" fillOpacity={0.6} stroke={toneOf('main')} strokeWidth={0.5} />
+          <rect x={p.x - 4} y={p.y - 5} width={8} height={3} fill="none" stroke={toneOf('main')} strokeWidth={0.5} />
+          <line x1={p.x} y1={p.y - 5} x2={p.x} y2={p.y - 8} stroke={toneOf('main')} strokeWidth={0.8} />
+          {lit ? (
+            <path
+              d={`M ${p.x} ${p.y - 17} C ${p.x + 4.5} ${p.y - 13} ${p.x + 4} ${p.y - 9} ${p.x} ${p.y - 8} C ${p.x - 4} ${p.y - 9} ${p.x - 4.5} ${p.y - 13} ${p.x} ${p.y - 17} Z`}
+              fill="#e8a33d"
+              fillOpacity={0.75}
+              stroke="#d2803a"
+              strokeWidth={0.4}
+            />
+          ) : null}
+          {p.label ? <Label x={p.x} y={p.y + 18} text={p.label} size={3.6} /> : null}
+        </g>
+      );
+    }
+
+    case 'gasJar': {
+      const w = p.w ?? 20;
+      const h = p.h ?? 26;
+      const liq = Math.max(0, Math.min(1, p.liquid ?? 0));
+      const paint = liquidPaint(p.color);
+      const surfaceY = p.y + h / 2 - h * liq;
+      return (
+        <g key={key}>
+          <rect x={p.x - w / 2} y={p.y - h / 2} width={w} height={h} fill="none" stroke={toneOf('main')} strokeWidth={0.6} />
+          {liq > 0 && paint.fill ? (
+            <rect x={p.x - w / 2 + 0.8} y={surfaceY} width={w - 1.6} height={h * liq} fill={paint.fill} fillOpacity={paint.opacity} />
+          ) : null}
+          {liq > 0 && paint.surface ? (
+            <line x1={p.x - w / 2 + 0.8} y1={surfaceY} x2={p.x + w / 2 - 0.8} y2={surfaceY} stroke={toneOf('main')} strokeWidth={0.4} />
+          ) : null}
+          {p.cover ? (
+            <rect x={p.x - w / 2 - 2} y={p.y - h / 2 - 2.6} width={w + 4} height={2.4} fill="var(--c-line)" stroke={toneOf('main')} strokeWidth={0.4} />
+          ) : null}
+          {p.label ? <Label x={p.x} y={p.y + h / 2 + 4.6} text={p.label} size={3.6} /> : null}
+        </g>
+      );
+    }
+
+    case 'funnel': {
+      const h = p.h ?? 20;
+      const kind = p.kind ?? 'funnel';
+      if (kind === 'sep') {
+        return (
+          <g key={key}>
+            {/* 分液漏斗：球形 + 上口 + 活塞 + 下端细管 */}
+            <path d={`M ${p.x - 7} ${p.y - h / 2} L ${p.x + 7} ${p.y - h / 2} L ${p.x + 4} ${p.y} L ${p.x + 2} ${p.y + 3} L ${p.x + 2} ${p.y + h / 2} L ${p.x - 2} ${p.y + h / 2} L ${p.x - 2} ${p.y + 3} L ${p.x - 4} ${p.y} Z`} fill="none" stroke={toneOf('main')} strokeWidth={0.5} />
+            <line x1={p.x - 3} y1={p.y + h / 2 - 3} x2={p.x + 3} y2={p.y + h / 2 - 3} stroke={toneOf('main')} strokeWidth={1.2} />
+            {p.label ? <Label x={p.x} y={p.y - h / 2 - 3} text={p.label} size={3.6} /> : null}
+          </g>
+        );
+      }
+      const neck = kind === 'long' ? 14 : 5;
+      return (
+        <g key={key}>
+          <path d={`M ${p.x - 8} ${p.y - h / 2} L ${p.x + 8} ${p.y - h / 2} L ${p.x + 1.6} ${p.y + 2} L ${p.x + 1.6} ${p.y + 2 + neck} L ${p.x - 1.6} ${p.y + 2 + neck} L ${p.x - 1.6} ${p.y + 2} Z`} fill="none" stroke={toneOf('main')} strokeWidth={0.5} />
+          {p.label ? <Label x={p.x} y={p.y - h / 2 - 3} text={p.label} size={3.6} /> : null}
+        </g>
+      );
+    }
+
+    case 'stand': {
+      const h = p.h ?? 46;
+      const w = p.w ?? 22;
+      const clamps = p.clamps ?? [0.5];
+      return (
+        <g key={key}>
+          {/* 底座 + 立杆 + 铁夹 */}
+          <rect x={p.x - w / 2} y={p.y} width={w} height={2.6} fill="var(--c-line)" stroke={toneOf('main')} strokeWidth={0.4} />
+          <line x1={p.x - w / 2 + 2} y1={p.y} x2={p.x - w / 2 + 2} y2={p.y - h} stroke={toneOf('main')} strokeWidth={1.1} />
+          {clamps.map((c, i) => {
+            const cy = p.y - h * c;
+            return (
+              <g key={i}>
+                <line x1={p.x - w / 2 + 2} y1={cy} x2={p.x - w / 2 + 10} y2={cy} stroke={toneOf('main')} strokeWidth={0.9} />
+                <path d={`M ${p.x - w / 2 + 10} ${cy - 2.2} a 3 3 0 1 1 0 4.4`} fill="none" stroke={toneOf('main')} strokeWidth={0.6} />
+              </g>
+            );
+          })}
+          {p.label ? <Label x={p.x} y={p.y + 6} text={p.label} size={3.6} /> : null}
+        </g>
+      );
+    }
+
+    case 'atom': {
+      const r = p.r ?? 4.6;
+      const col = p.color ? CHEM_COLOR[p.color] : null;
+      return (
+        <g key={key}>
+          <circle cx={p.x} cy={p.y} r={r} fill={col ?? 'var(--c-surface)'} fillOpacity={col ? 0.45 : 1} stroke={toneOf('main')} strokeWidth={0.5} />
+          <Label x={p.x} y={p.y + 0.3} text={p.symbol} size={r * 0.94} />
+          {p.charge ? <Label x={p.x + r * 0.75} y={p.y - r * 0.75} text={p.charge} size={3.2} anchor="start" /> : null}
+          {p.label ? <Label x={p.x} y={p.y + r + 3.4} text={p.label} size={3.4} tone="muted" /> : null}
+        </g>
+      );
+    }
+
+    case 'molecule': {
+      const pts = p.atoms.map((a) => ({ x: p.x + a.dx, y: p.y + a.dy, r: a.r ?? 3.4, symbol: a.symbol, color: a.color }));
+      return (
+        <g key={key}>
+          {/* 化学键先画，原子盖在上面 */}
+          {(p.bonds ?? []).map(([i, j], k) => {
+            const a = pts[i];
+            const b = pts[j];
+            if (!a || !b) return null;
+            return <line key={`b${k}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={toneOf('muted')} strokeWidth={0.7} />;
+          })}
+          {pts.map((a, i) => {
+            const col = a.color ? CHEM_COLOR[a.color] : null;
+            return (
+              <g key={`a${i}`}>
+                <circle cx={a.x} cy={a.y} r={a.r} fill={col ?? 'var(--c-surface)'} fillOpacity={col ? 0.45 : 1} stroke={toneOf('main')} strokeWidth={0.5} />
+                {a.symbol ? <Label x={a.x} y={a.y + 0.3} text={a.symbol} size={a.r * 0.95} /> : null}
+              </g>
+            );
+          })}
+          {p.label ? <Label x={p.x} y={p.y + 12} text={p.label} size={3.6} /> : null}
         </g>
       );
     }

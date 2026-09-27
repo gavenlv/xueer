@@ -23,7 +23,7 @@ export const MASTERY_MIN_ANSWERS = 3;
 /** 「已掌握」要求的正确率下限（仅 `rate` 策略使用） */
 export const MASTERY_RATE = 0.8;
 /** 「全题过关」策略的学科前缀：理科。化学加进来时在这里补 `chem-` 即可 */
-export const ALL_QUESTIONS_PREFIXES = ['phy-'];
+export const ALL_QUESTIONS_PREFIXES = ['phy-', 'chem-'];
 
 /** 掌握判定策略 */
 export type MasteryPolicy = 'rate' | 'all-questions';

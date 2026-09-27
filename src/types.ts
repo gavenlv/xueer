@@ -714,7 +714,14 @@ export interface HistoryMaterialGroup {
      * 这里给的是「卷面上该按什么步骤写」，理科按步骤给分，两者不能混为一谈。
      */
     answerSteps?: string[];
-    /** 设问配图（物理的探究与实验题常给装置图、数据表或图像） */
+    /**
+     * 设问解析（可选）。
+     *
+     * 材料设问原本只有参考答案与踩分点，但理科的材料题常常「错得很有道理」——
+     * 写清「为什么这样答」比只给答案更有用，因此允许设问单独带解析。
+     */
+    explanation?: string;
+    /** 设问配图（物理/化学的探究与实验题常给装置图、数据表或图像） */
     figure?: PhysicsFigure;
     /** 设问的参考答案图（作图小题：学生自己画完再展开对照） */
     answerFigure?: PhysicsFigure;
@@ -1269,13 +1276,63 @@ export type FigurePrim =
       showCurrent?: boolean;
     }
   /** 小磁针，`deg` 为北极指向 */
-  | { t: 'compass'; x: number; y: number; deg?: number; label?: string };
+  | { t: 'compass'; x: number; y: number; deg?: number; label?: string }
+  /* ---------------- 化学装置与微观粒子（化学模块用；物理内容不会用到） ---------------- */
+  /** 试管：`tilt` 为倾斜角（度，0 竖直），`liquid` 液面 0—1，`color` 液体颜色 */
+  | {
+      t: 'testTube';
+      x: number;
+      y: number;
+      h?: number;
+      w?: number;
+      tilt?: number;
+      liquid?: number;
+      color?: ChemColor;
+      label?: string;
+    }
+  | {
+      t: 'flask';
+      x: number;
+      y: number;
+      kind?: 'conical' | 'round';
+      h?: number;
+      w?: number;
+      liquid?: number;
+      color?: ChemColor;
+      label?: string;
+    }
+  | { t: 'alcoholLamp'; x: number; y: number; lit?: boolean; label?: string }
+  | {
+      t: 'gasJar';
+      x: number;
+      y: number;
+      w?: number;
+      h?: number;
+      liquid?: number;
+      color?: ChemColor;
+      cover?: boolean;
+      label?: string;
+    }
+  | { t: 'funnel'; x: number; y: number; kind?: 'funnel' | 'long' | 'sep'; h?: number; label?: string }
+  | { t: 'stand'; x: number; y: number; h?: number; w?: number; clamps?: number[]; label?: string }
+  | { t: 'atom'; x: number; y: number; r?: number; symbol: string; charge?: string; color?: ChemColor; label?: string }
+  | {
+      t: 'molecule';
+      x: number;
+      y: number;
+      atoms: { dx: number; dy: number; r?: number; symbol?: string; color?: ChemColor }[];
+      bonds?: [number, number][];
+      label?: string;
+    };
 
 /**
  * 一张图解。
  *
  * `alt` 不是装饰：整页朗读靠它把图读出来，检索也靠它把「凸透镜成像规律」这类
  * 问题搜到图上——所以校验器要求每张图都必须有 `alt`。
+ *
+ * 这个 DSL 是**理科共用**的（物理、化学）：名字保留 `PhysicsFigure` 是为了不动既有内容的引用，
+ * 化学代码里用 `SciFigure` 这个别名。
  */
 export interface PhysicsFigure {
   id: string;
@@ -1377,6 +1434,179 @@ export interface PhysicsPaperEntry extends EntryBase {
 
 export type PhysicsEntry = PhysicsTopicEntry | PhysicsPaperEntry;
 
+/* ------------------------------------------------------------------ */
+/* 化学                                                                */
+/* ------------------------------------------------------------------ */
+
+/** 理科共用的图解类型别名（物理与化学同一套 DSL） */
+export type SciFigure = PhysicsFigure;
+/** 理科共用的公式/计算关系类型别名 */
+export type ChemFormula = PhysicsFormula;
+
+/**
+ * 溶液或物质的颜色。
+ *
+ * 化学里「颜色」不是装饰而是**物质的属性**（硫酸铜溶液蓝色、氯化铁溶液黄色、
+ * 高锰酸钾溶液紫红色……），所以它属于内容，写进数据；渲染器只负责把它画成对应的色值。
+ * `colorless` 画成空心（无色透明）。
+ */
+export type ChemColor = 'colorless' | 'blue' | 'yellow' | 'green' | 'brown' | 'red' | 'purple' | 'black' | 'white';
+
+/**
+ * 化学装置的图元（除下面这些，通用图元、坐标图像、`dot`、`beaker`、`thermometer`、
+ * `stopwatch` 等与物理共用）。
+ */
+export type ChemPrim =
+  /** 试管：`tilt` 为倾斜角（度，0 竖直），`liquid` 为液面高度 0—1 */
+  | {
+      t: 'testTube';
+      x: number;
+      y: number;
+      h?: number;
+      w?: number;
+      tilt?: number;
+      liquid?: number;
+      color?: ChemColor;
+      label?: string;
+    }
+  /** 锥形瓶 / 圆底烧瓶 */
+  | {
+      t: 'flask';
+      x: number;
+      y: number;
+      kind?: 'conical' | 'round';
+      h?: number;
+      w?: number;
+      liquid?: number;
+      color?: ChemColor;
+      label?: string;
+    }
+  /** 酒精灯（`lit` 是否点燃，画火焰） */
+  | { t: 'alcoholLamp'; x: number; y: number; lit?: boolean; label?: string }
+  /** 集气瓶（`cover` 是否盖玻璃片，`liquid` 为瓶内液体高度） */
+  | { t: 'gasJar'; x: number; y: number; w?: number; h?: number; liquid?: number; color?: ChemColor; cover?: boolean; label?: string }
+  /** 漏斗：普通漏斗 / 长颈漏斗 / 分液漏斗 */
+  | { t: 'funnel'; x: number; y: number; kind?: 'funnel' | 'long' | 'sep'; h?: number; label?: string }
+  /** 铁架台：底座 + 立杆 + 若干铁夹（`clamps` 给出夹持点的高度比例 0—1） */
+  | { t: 'stand'; x: number; y: number; h?: number; w?: number; clamps?: number[]; label?: string }
+  /** 原子/离子模型：圆内写元素符号，右上角标电荷 */
+  | { t: 'atom'; x: number; y: number; r?: number; symbol: string; charge?: string; color?: ChemColor; label?: string }
+  /**
+   * 分子模型：`atoms` 给出各原子相对分子中心的偏移，`bonds` 用下标连线。
+   * 例如水分子：O 在中心、两个 H 分别偏左上与右上，两条键连到 O。
+   */
+  | {
+      t: 'molecule';
+      x: number;
+      y: number;
+      atoms: { dx: number; dy: number; r?: number; symbol?: string; color?: ChemColor }[];
+      bonds?: [number, number][];
+      label?: string;
+    };
+
+/** 化学方程式 */
+export interface ChemEquation {
+  /** 化学方程式（用 `=` 连接，条件写在等号上下方由渲染器排；这里直接写完整式） */
+  equation: string;
+  /** 反应条件，如「点燃」「加热」「高温」「催化剂」 */
+  condition?: string;
+  /** 现象（学生要会描述） */
+  phenomenon: string;
+  /** 配平要点与易错说明 */
+  note?: string;
+}
+
+/** 化学实验（含装置图） */
+export interface ChemExperiment {
+  title: string;
+  /** 实验目的 */
+  purpose: string;
+  /** 器材与药品 */
+  apparatus: string[];
+  /** 装置图 */
+  figure?: SciFigure;
+  /** 操作步骤 */
+  steps: string[];
+  /** 现象 */
+  phenomenon: string;
+  /** 结论与化学方程式 */
+  conclusion: string;
+  /** 注意事项与安全（中考必考） */
+  cautions?: string[];
+}
+
+/** 理解过程的一步：化学按**三重表征**排——宏观现象 → 微观解释 → 符号表达 */
+export interface ChemStep {
+  heading: string;
+  /** 这一步属于哪一重表征 */
+  representation?: '宏观' | '微观' | '符号' | '应用';
+  body: string;
+  figure?: SciFigure;
+  note?: string;
+}
+
+/** 应用/例题：从真实情境到化学表达 */
+export interface ChemApp {
+  title: string;
+  scene: string;
+  /** 化学视角：抓住哪些物质、发生了什么反应 */
+  analysis: string;
+  steps: string[];
+  result: string;
+  figure?: SciFigure;
+}
+
+/** 一个知识点（化学的最小学习单元） */
+export interface ChemTopic {
+  id: string;
+  /** 教材章节归属，如「人教版九年级 · 第三单元 物质构成的奥秘」 */
+  unit: string;
+  grade: GradeOrAll;
+  title: string;
+  /** 这个知识点要回答的问题 */
+  question: string;
+  /** 理解的关键一句话（化学常落在一句规律上） */
+  keyIdea: string;
+  steps: ChemStep[];
+  /** 化学方程式（本知识点涉及的，含现象与配平要点） */
+  equations?: ChemEquation[];
+  /** 实验（含装置图、现象、注意事项） */
+  experiments?: ChemExperiment[];
+  apps: ChemApp[];
+  /** 计算关系与化学用语规则（每条都要写适用范围） */
+  formulas?: ChemFormula[];
+  confusions?: { wrong: string; right: string; why: string }[];
+  compares?: HistoryCompare[];
+  examAngles?: HistoryExamAngle[];
+  materials?: HistoryMaterialGroup[];
+  /** 练习：每个知识点不少于 8 道，且**全部过关才算掌握** */
+  questions: QuizQuestion[];
+}
+
+/** 化学整卷模拟（按广州中考卷面结构） */
+export interface ChemPaper {
+  id: string;
+  grade: GradeOrAll;
+  title: string;
+  basis: string;
+  duration: number;
+  totalScore: number;
+  sections: { name: string; kind: 'choice' | 'material'; count: number; score: number }[];
+  materials: HistoryMaterialGroup[];
+  questions: QuizQuestion[];
+}
+
+export interface ChemTopicEntry extends EntryBase {
+  moduleId: ChemistryModuleId;
+  data: ChemTopic;
+}
+export interface ChemPaperEntry extends EntryBase {
+  moduleId: 'chem-exam';
+  data: ChemPaper;
+}
+
+export type ChemEntry = ChemTopicEntry | ChemPaperEntry;
+
 /* ------------------------------ 数学 ------------------------------ */
 
 /** 公式 / 定理 */
@@ -1441,6 +1671,7 @@ export type Entry =
   | EnglishEntry
   | PoliticsEntry
   | PhysicsEntry
+  | ChemEntry
   | MathEntry;
 
 /** 练习会话中的一道题（带来源信息） */

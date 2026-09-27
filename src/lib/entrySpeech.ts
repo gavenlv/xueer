@@ -188,6 +188,54 @@ export function speechSegmentsOf(entry: Entry): SpeechSegment[] {
       }
 
       /**
+       * 化学：按**三重表征**读——问题 → 理解的关键 → 宏观现象与微观解释 → 化学方程式 → 实验。
+       *
+       * 方程式一定要读：`2H₂ + O₂ —点燃→ 2H₂O` 这种式子是化学的核心表达，
+       * 听着记比看着记牢；实验的「现象」与「注意事项」也要读（中考实验题就考这两处）。
+       * 必须放在「通用试卷分支」**之前**：化学知识点的 `materials` 也有材料与设问，
+       * 否则整段讲解会被那个分支截走。
+       */
+      if (entry.moduleId.startsWith('chem-')) {
+        const c = entry.data as {
+          question?: string;
+          keyIdea?: string;
+          steps?: { representation?: string; heading?: string; body?: string; note?: string; figure?: { title?: string; alt?: string } }[];
+          equations?: { equation?: string; condition?: string; phenomenon?: string }[];
+          experiments?: { title?: string; phenomenon?: string; conclusion?: string; cautions?: string[] }[];
+          materials?: { material?: string; questions: { stem: string }[] }[];
+          basis?: string;
+        };
+        if (Array.isArray(c.steps)) {
+          push(out, 'question', c.question, '要解决的问题');
+          push(out, 'keyIdea', c.keyIdea, '理解的关键');
+          c.steps.forEach((s, i) => {
+            const rep = s.representation ? `（${s.representation}）` : '';
+            push(
+              out,
+              `step-${i}`,
+              `${s.heading ?? ''}${rep}。${s.body ?? ''}${s.note ? `。注意：${s.note}` : ''}`,
+              `理解第 ${i + 1} 步${rep}`,
+            );
+            if (s.figure) push(out, `step-${i}-fig`, `${s.figure.title ?? ''}。${s.figure.alt ?? ''}`, `第 ${i + 1} 步的图`);
+          });
+          c.equations?.forEach((e, i) =>
+            push(out, `eq-${i}`, `${e.equation ?? ''}。反应条件：${e.condition ?? '无'}。现象：${e.phenomenon ?? ''}`, `化学方程式 ${i + 1}`),
+          );
+          c.experiments?.forEach((x, i) => {
+            push(out, `exp-${i}`, `实验现象：${x.phenomenon ?? ''}。结论：${x.conclusion ?? ''}`, `实验·${x.title ?? i + 1}`);
+            pushList(out, `exp-${i}-caution`, (k) => `实验注意·第 ${k + 1} 条`, x.cautions);
+          });
+          break;
+        }
+        // 化学整卷：只读卷面说明与材料（题目留给学生做）
+        push(out, 'basis', c.basis, '卷面说明');
+        (c.materials ?? []).forEach((m, i) => {
+          push(out, `mat-${i}`, m.material, `材料${i + 1}`);
+          m.questions.forEach((q, k) => push(out, `mat-${i}-q${k}`, q.stem, `第 ${i + 1} 题第 ${k + 1} 问`));
+        });
+        break;
+      }
+      /**
        * 英语：**按模块 id 判断**（不是按数据形状）——英语七块的「可朗读材料」各不相同：
        *   听说脚本（本应用用它代替听力音频，点朗读条就等于听听力材料）→ 阅读语篇 →
        *   语法/专题的**例句**（最值得跟读的东西）→ 书面表达范文与句型 →

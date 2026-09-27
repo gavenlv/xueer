@@ -22,6 +22,7 @@ import type {
   ModuleId,
   PhysicsModuleId,
   PhysicsFigure,
+  ChemistryModuleId,
   Poem,
   PoliticsModuleId,
   QuizQuestion,
@@ -33,6 +34,7 @@ import { matchesKeyword } from '../lib/searchText';
 import * as chinese from './chinese';
 import * as history from './history';
 import * as english from './english';
+import * as chemistry from './chemistry';
 import * as physics from './physics';
 import * as politics from './politics';
 import * as math from './math';
@@ -66,6 +68,7 @@ function syncSubjectContainers(): void {
     ...english.allEntries,
     ...politics.allEntries,
     ...physics.allEntries,
+    ...chemistry.allEntries,
     ...math.allEntries,
   ]) {
     if (!entryIndex.has(e.id)) {
@@ -91,6 +94,8 @@ const ENGLISH_MODULE_IDS = new Set<string>(english.MODULE_IDS);
 const POLITICS_MODULE_IDS = new Set<string>(politics.MODULE_IDS);
 /** 物理模块 id（八块：声光热/力学/功与机械能/电学/电与磁 + 实验操作 + 中考专题） */
 const PHYSICS_MODULE_IDS = new Set<string>(physics.MODULE_IDS);
+/** 化学模块 id（六块：物质构成/身边物质/酸碱盐/方程式与计算/实验 + 中考专题） */
+const CHEMISTRY_MODULE_IDS = new Set<string>(chemistry.MODULE_IDS);
 /** 语文模块 id —— 也是 splitScope 的兜底分支，必须显式判断，见下 */
 const CHINESE_MODULE_IDS = new Set<string>(chinese.MODULE_IDS);
 
@@ -109,6 +114,7 @@ export function isScopeReady(scope: DataScope[]): boolean {
     english.isScopeReady(request.english) &&
     politics.isScopeReady(request.politics) &&
     physics.isScopeReady(request.physics) &&
+    chemistry.isScopeReady(request.chemistry) &&
     (request.math.length ? math.isLoaded() : true)
   );
 }
@@ -122,6 +128,7 @@ export async function ensureModules(scope: DataScope[]): Promise<void> {
     english.loadModules(request.english),
     politics.loadModules(request.politics),
     physics.loadModules(request.physics),
+    chemistry.loadModules(request.chemistry),
   ]);
   if (request.math.length) await math.load();
   syncSubjectContainers();
@@ -134,6 +141,7 @@ function splitScope(scope: DataScope[]): {
   english: EnglishModuleId[];
   politics: PoliticsModuleId[];
   physics: PhysicsModuleId[];
+  chemistry: ChemistryModuleId[];
   math: ModuleId[];
 } {
   const out = {
@@ -142,6 +150,7 @@ function splitScope(scope: DataScope[]): {
     english: [] as EnglishModuleId[],
     politics: [] as PoliticsModuleId[],
     physics: [] as PhysicsModuleId[],
+    chemistry: [] as ChemistryModuleId[],
     math: [] as ModuleId[],
   };
   for (const s of scope) {
@@ -151,6 +160,7 @@ function splitScope(scope: DataScope[]): {
     else if (ENGLISH_MODULE_IDS.has(s)) out.english.push(s as EnglishModuleId);
     else if (POLITICS_MODULE_IDS.has(s)) out.politics.push(s as PoliticsModuleId);
     else if (PHYSICS_MODULE_IDS.has(s)) out.physics.push(s as PhysicsModuleId);
+    else if (CHEMISTRY_MODULE_IDS.has(s)) out.chemistry.push(s as ChemistryModuleId);
     else if (CHINESE_MODULE_IDS.has(s)) out.chinese.push(s as chinese.ChineseModuleId);
     // 其余模块 id 属于「待开发」科目的占位模块：没有内容可加载，直接忽略，
     // 由页面渲染「内容正在准备中」。兜底到语文会拿未知 id 去查加载器，反而出错。
@@ -166,6 +176,7 @@ export async function ensureAll(): Promise<void> {
     english.loadAll(),
     politics.loadAll(),
     physics.loadAll(),
+    chemistry.loadAll(),
   ]);
   await math.load();
   syncSubjectContainers();
@@ -201,6 +212,8 @@ export interface ExamPaper {
       tags?: string[];
       /** 规范解题步骤（理科计算/解答题分步给分用） */
       answerSteps?: string[];
+      /** 设问解析（可选，见 types.ts 的说明） */
+      explanation?: string;
       /** 设问配图与参考答案图（物理的装置图、数据表、作图小题） */
       figure?: PhysicsFigure;
       answerFigure?: PhysicsFigure;
@@ -280,6 +293,22 @@ export function examPaperOf(id: string): ExamPaper | undefined {
       sections: phy.sections,
       materials: phy.materials,
       questions: phy.questions,
+    };
+  }
+
+  const chem = chemistry.allPapers.find((p) => p.id === id);
+  if (chem) {
+    return {
+      id: chem.id,
+      subjectId: 'chemistry',
+      moduleId: 'chem-exam',
+      title: chem.title,
+      basis: chem.basis,
+      duration: chem.duration,
+      totalScore: chem.totalScore,
+      sections: chem.sections,
+      materials: chem.materials,
+      questions: chem.questions,
     };
   }
 
