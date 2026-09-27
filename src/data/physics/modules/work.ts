@@ -1535,6 +1535,8 @@ export const topics: PhysicsTopic[] = [
             { t: 'line', x1: 88, y1: 36, x2: 78.5, y2: 19.55, dashed: true, tone: 'muted', width: 0.4 },
             { t: 'line', x1: 50, y1: 36, x2: 78.5, y2: 19.55, dashed: true, tone: 'accent', width: 0.7 },
             { t: 'angle', x: 78.5, y: 19.55, from: 210, to: 120, right: true, r: 5, tone: 'muted' },
+            // 垂足：作图规范里要把这个点标出来，否则「力臂是哪一段」在图上不明确
+            { t: 'dot', x: 78.5, y: 19.55, tone: 'accent' },
             { t: 'arrow', x1: 88, y1: 36, x2: 94, y2: 46.4, tone: 'accent', label: 'F₁', labelDx: -9, labelDy: 2 },
             { t: 'line', x1: 12, y1: 36, x2: 50, y2: 36, dashed: true, tone: 'accent', width: 0.7 },
             { t: 'arrow', x1: 12, y1: 36, x2: 12, y2: 48, tone: 'danger', label: 'F₂', labelDx: -7 },
@@ -1778,9 +1780,14 @@ export const topics: PhysicsTopic[] = [
             { t: 'lever', x1: 10, y1: 36, x2: 90, y2: 36, pivot: 0.5, label: 'O' },
             { t: 'line', x1: 88, y1: 36, x2: 78.5, y2: 19.55, dashed: true, tone: 'muted', width: 0.4 },
             { t: 'arrow', x1: 88, y1: 36, x2: 94, y2: 46.4, tone: 'accent', label: 'F₁', labelDx: -9, labelDy: 2 },
+            /**
+             * 三条候选线段**画法完全一致**（同色、同线型、同粗细），让几何关系说话。
+             * 原先在正确选项上画了直角符号，等于把答案直接画在卷面上——那是「作图规范」的
+             * 正确画法，但出现在选择题的选项图里就抹掉了这道题的区分度。
+             * 规范画法（虚线延长作用线 + 垂线段 + 垂足直角）留给参考答案图 `fig-work-lever-a1`。
+             */
             { t: 'line', x1: 50, y1: 36, x2: 88, y2: 36, dashed: true, tone: 'muted', width: 0.4 },
             { t: 'line', x1: 50, y1: 36, x2: 78.5, y2: 19.55, dashed: true, tone: 'muted', width: 0.4 },
-            { t: 'angle', x: 78.5, y: 19.55, from: 210, to: 120, right: true, r: 5, tone: 'muted' },
             { t: 'line', x1: 50, y1: 36, x2: 83, y2: 27.3, dashed: true, tone: 'muted', width: 0.4 },
             { t: 'text', x: 70, y: 41, text: '甲', size: 3.4 },
             { t: 'text', x: 62, y: 22, text: '乙', size: 3.4 },
@@ -1930,6 +1937,7 @@ export const topics: PhysicsTopic[] = [
             { t: 'line', x1: 12, y1: 44, x2: 24, y2: 23.2, dashed: true, tone: 'muted', width: 0.4 },
             { t: 'line', x1: 60, y1: 44, x2: 24, y2: 23.2, dashed: true, tone: 'accent', width: 0.7 },
             { t: 'angle', x: 24, y: 23.2, from: -30, to: 60, right: true, r: 5, tone: 'muted' },
+            { t: 'dot', x: 24, y: 23.2, tone: 'accent' },
             { t: 'arrow', x1: 12, y1: 44, x2: 6, y2: 54.4, tone: 'accent', label: 'F₁', labelDx: 4, labelDy: -7 },
             { t: 'line', x1: 60, y1: 44, x2: 88, y2: 44, dashed: true, tone: 'accent', width: 0.7 },
             { t: 'arrow', x1: 88, y1: 44, x2: 88, y2: 58, tone: 'danger', label: 'F₂', labelDx: 7 },

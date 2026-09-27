@@ -209,6 +209,32 @@ function renderPrim(p: FigurePrim, key: number) {
     case 'text':
       return <Label key={key} x={p.x} y={p.y} text={p.text} anchor={p.anchor} tone={p.tone} size={p.size} />;
 
+    case 'dot': {
+      const r = p.r ?? 1.1;
+      return (
+        <g key={key}>
+          <circle
+            cx={p.x}
+            cy={p.y}
+            r={r}
+            fill={p.hollow ? 'var(--c-surface)' : toneOf(p.tone ?? 'main')}
+            stroke={toneOf(p.tone ?? 'main')}
+            strokeWidth={0.4}
+          />
+          {p.label ? (
+            <Label
+              x={p.x + (p.labelDx ?? r + 2.4)}
+              y={p.y + (p.labelDy ?? -r - 1.6)}
+              text={p.label}
+              anchor="start"
+              tone={p.tone}
+              size={3.8}
+            />
+          ) : null}
+        </g>
+      );
+    }
+
     case 'angle': {
       const r = p.r ?? 6;
       if (p.right) {

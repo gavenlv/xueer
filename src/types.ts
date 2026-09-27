@@ -1142,6 +1142,26 @@ export type FigurePrim =
   | { t: 'poly'; points: [number, number][]; closed?: boolean; tone?: FigureTone; fill?: boolean; dashed?: boolean }
   | { t: 'arc'; cx: number; cy: number; r: number; from: number; to: number; tone?: FigureTone; dashed?: boolean; arrow?: boolean }
   | { t: 'text'; x: number; y: number; text: string; anchor?: 'start' | 'middle' | 'end'; size?: number; tone?: FigureTone }
+  /**
+   * 标记点（实心 dot / 空心圈）。
+   *
+   * 作图规范里需要「把某个点标出来」的地方很多：力臂的**垂足**、光学的**光心 O 与焦点 F**、
+   * 像点、交点、杠杆的**支点**。`circle` 也能画，但它默认半径与描边是给「物体」用的，
+   * 标点需要更小、可实心、可空心，所以单独给一个图元，避免每张图各写一遍半径。
+   */
+  | {
+      t: 'dot';
+      x: number;
+      y: number;
+      /** 半径，默认 1.1（画布单位） */
+      r?: number;
+      /** 空心圈（如光学作图里的焦点标记） */
+      hollow?: boolean;
+      tone?: FigureTone;
+      label?: string;
+      labelDx?: number;
+      labelDy?: number;
+    }
   | ({ t: 'angle' } & FigureAngleMark)
   /**
    * 坐标图像。理科的「图像法」全靠它：s-t、v-t、m-V、U-I、I-U、熔化曲线。
