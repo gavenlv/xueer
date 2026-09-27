@@ -7,7 +7,8 @@
  * - checkins：日期并集
  * - daily：每个计数取较大值（避免双向同步把同一天重复累加）
  * - totalSeconds：取较大值
- * - grade：本地选过非默认学段则保留本地，否则跟随云端
+ * - grade：本地**主动选过**学段则保留本地，否则跟随云端（用 `gradePicked` 判断，
+ *   不能拿 `'7a'` 当哨兵——「七上」既是默认值，也是学生会主动选的正常学段）
  */
 
 import type { GradeId, StudyState } from '../types';
@@ -24,6 +25,7 @@ export function normalizeStudyState(parsed: unknown): StudyState {
     checkins: Array.isArray(p.checkins) ? p.checkins : [],
     daily: p.daily ?? {},
     grade: (p.grade as GradeId | undefined) ?? '7a',
+    gradePicked: p.gradePicked === true,
     totalSeconds: typeof p.totalSeconds === 'number' && p.totalSeconds > 0 ? p.totalSeconds : 0,
     recite: p.recite ?? {},
     cards: p.cards ?? {},
@@ -110,7 +112,10 @@ export function mergeStates(local: StudyState, remote: StudyState): StudyState {
     wrongRemoved,
     checkins,
     daily,
-    grade: local.grade !== '7a' ? local.grade : remote.grade,
+    // 本地主动选过学段就保留本地的选择；两边都没选过（都是默认值）时跟随云端。
+    // 标记取并集：只要任一侧表示「学生选过」，合并结果就不再是「从没选过」的默认态。
+    grade: local.gradePicked ? local.grade : remote.grade,
+    gradePicked: Boolean(local.gradePicked) || Boolean(remote.gradePicked),
     totalSeconds: Math.max(local.totalSeconds, remote.totalSeconds),
     recite,
     cards,

@@ -54,7 +54,16 @@ import {
   toMastery,
 } from '../src/lib/recite';
 import { reciteCardsOf } from '../src/lib/reciteCards';
-import type { Entry, MindNode, ModuleId, QuizQuestion, WritingLesson } from '../src/types';
+import { mergeStates, normalizeStudyState } from '../src/lib/sync';
+import type {
+  Entry,
+  GradeId,
+  MindNode,
+  ModuleId,
+  QuizQuestion,
+  StudyState,
+  WritingLesson,
+} from '../src/types';
 
 /**
  * 内容数据已改为**按需加载**（见 `src/data/chinese/index.ts`）：
@@ -1177,6 +1186,48 @@ const cardCases: [string, boolean, string][] = [
 
 const cardFailures = cardCases.filter(([, ok]) => !ok);
 
+/* ------------------------ 云端合并规则自测 ------------------------ */
+
+/**
+ * 学段的合并曾写成 `grade !== '7a' ? local.grade : remote.grade`——
+ * 拿默认值 `'7a'` 当「本地没选过」的哨兵。可「七上」本身就是学生会主动选的学段，
+ * 于是一个在设备上明确选了七上的学生，一登录就被云端学段覆盖掉。
+ * 这里把「按 gradePicked 标记判断」钉死，防止哨兵写法回潮。
+ */
+function stateWith(grade: GradeId, gradePicked: boolean): StudyState {
+  return normalizeStudyState({ grade, gradePicked });
+}
+
+const localPicked7a = stateWith('7a', true);
+const localNeverPicked = stateWith('7a', false);
+const remote9b = stateWith('9b', true);
+
+const mergeCases: [string, boolean, string][] = [
+  [
+    '本地主动选「七上」时保留本地，不被云端学段覆盖',
+    mergeStates(localPicked7a, remote9b).grade === '7a',
+    mergeStates(localPicked7a, remote9b).grade,
+  ],
+  [
+    '本地从没选过学段 → 跟随云端',
+    mergeStates(localNeverPicked, remote9b).grade === '9b',
+    mergeStates(localNeverPicked, remote9b).grade,
+  ],
+  [
+    '「学生选过」标记在合并后保留（任一侧选过即算选过）',
+    mergeStates(localNeverPicked, remote9b).gradePicked === true &&
+      mergeStates(localPicked7a, normalizeStudyState({})).gradePicked === true,
+    String(mergeStates(localNeverPicked, remote9b).gradePicked),
+  ],
+  [
+    '没选过的旧数据不会被凭空标成「选过」',
+    normalizeStudyState({ grade: '7a' }).gradePicked === false,
+    String(normalizeStudyState({ grade: '7a' }).gradePicked),
+  ],
+];
+
+const mergeFailures = mergeCases.filter(([, ok]) => !ok);
+
 
 /* ------------------------ 判分逻辑自测 ------------------------ */
 
@@ -2207,6 +2258,13 @@ for (const [note, , detail] of cardFailures) {
   console.log(`    ❌ ${note}  实际 ${detail}`);
 }
 
+console.log(
+  `  云端合并规则      ${mergeCases.length - mergeFailures.length} / ${mergeCases.length} 通过`,
+);
+for (const [note, , detail] of mergeFailures) {
+  console.log(`    ❌ ${note}  实际 ${detail}`);
+}
+
 /* --------------- 朗读分段 / 逐词释义 / 小段遮罩 --------------- */
 
 /**
@@ -2360,7 +2418,8 @@ if (
   gradeBad > 0 ||
   progressFailures.length > 0 ||
   reciteFailures.length > 0 ||
-  cardFailures.length > 0
+  cardFailures.length > 0 ||
+  mergeFailures.length > 0
 ) {
   if (errors.length) {
     console.log(`\n❌ 数据错误 ${errors.length} 条：`);
@@ -2378,6 +2437,9 @@ if (
   }
   if (cardFailures.length > 0) {
     console.log(`\n❌ 知识点卡片标熟规则自测失败 ${cardFailures.length} 条`);
+  }
+  if (mergeFailures.length > 0) {
+    console.log(`\n❌ 云端合并规则自测失败 ${mergeFailures.length} 条`);
   }
   process.exitCode = 1;
 } else {

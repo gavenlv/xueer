@@ -496,6 +496,15 @@ export interface StudyState {
   daily: Record<string, { answered: number; correct: number; minutes: number }>;
   /** 上次选择的学段 */
   grade: GradeId;
+  /**
+   * 学生是否**主动选过**学段。
+   *
+   * 为什么需要这个标记：`grade` 的默认值是 `'7a'`（七上），而「七上」本身也是学生会
+   * 主动选的正常学段。云端合并若直接用 `grade !== '7a'` 判断「本地选过没有」，
+   * 就会把**主动选七上**和**从没选过**混为一谈——学生明明选了七上，一登录就被云端
+   * 的学段覆盖掉。因此单独记一个标记来表达「这是学生的选择，不是默认值」。
+   */
+  gradePicked?: boolean;
   /** 总学习时长（秒） */
   totalSeconds: number;
   /** 背诵安排：内容 id -> 背诵记录（间隔重复） */

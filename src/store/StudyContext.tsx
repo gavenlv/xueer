@@ -29,6 +29,7 @@ function emptyState(): StudyState {
     checkins: [],
     daily: {},
     grade: '7a',
+    gradePicked: false,
     totalSeconds: 0,
     recite: {},
     cards: {},
@@ -139,7 +140,9 @@ export function StudyProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setGrade = useCallback((g: GradeId) => {
-    setState((s) => ({ ...s, grade: g }));
+    // gradePicked 记「这是学生的选择」：云端合并据此判断该不该跟随云端，
+    // 否则主动选「七上」会被当成「没选过」而被云端学段覆盖。
+    setState((s) => ({ ...s, grade: g, gradePicked: true }));
   }, []);
 
   const patchProgress = useCallback(
@@ -302,8 +305,11 @@ export function StudyProvider({ children }: { children: ReactNode }) {
 
   const resetAll = useCallback(() => {
     const g = stateRef.current.grade;
+    const picked = stateRef.current.gradePicked;
     const next = emptyState();
     next.grade = g;
+    // 清空学习数据不该顺手把「学段是学生选的」这件事也清掉
+    next.gradePicked = picked;
     setState(next);
     saveState(next);
   }, []);
