@@ -981,6 +981,12 @@ if (!progressTarget) {
       <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
+  /** 停表读数那一条（实验操作 → 基本测量）：断言双盘读数讲解真的渲染到页面上 */
+  const phyStopwatchHtml = renderToString(
+    <MemoryRouter initialEntries={['/s/physics/phy-experiment/phy-experiment-1']}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
   /**
    * 整卷考试页也要能渲染物理的图。
    * 这一条是**真实漏洞的回归保护**：考试页原先完全不渲染 `figure`，
@@ -1013,12 +1019,25 @@ if (!progressTarget) {
       { t: 'angle', x: 20, y: 80, from: 0, to: 60, label: '60°' },
       { t: 'coil', x: 50, y: 20, turns: 4 },
       { t: 'coil', x: 50, y: 34, turns: 4, frontCurrent: 'down' },
+      // 停表：小盘 1.5 min（过半格）+ 大盘 10.4 s，读数应为 100.4 s
+      { t: 'stopwatch', x: 50, y: 50, r: 30, minute: 1.5, second: 10.4, label: '停表自测' },
     ],
   };
   const probeSvg = renderToString(<PhysicsFigureView figure={probeFigure} />);
   /** 抓出两条 arc 的 d 属性，检查 large-arc 与 sweep 两个 flag */
   const arcPaths = [...probeSvg.matchAll(/d="M [^"]*?A [\d.]+ [\d.]+ 0 (\d) (\d)/g)].map((m) => `${m[1]}${m[2]}`);
   const coilLabels = [...probeSvg.matchAll(/>([NS])</g)].map((m) => m[1]).join('');
+  /**
+   * 停表自测：确认双盘都画出来了——两根指针（红色）、小盘在 12 点位置、
+   * 大盘一圈 30 s 的刻度（0/5/…/30 七个数字）。
+   * 停表最容易画错的是「大盘一圈只有 30 s」这件事（小盘决定哪一圈），
+   * 因此断言里带上小盘与大数字，避免以后改成 60 s 一圈而没人发现。
+   */
+  const stopwatchOk =
+    probeSvg.includes('停表自测') &&
+    [...probeSvg.matchAll(/stroke="var\(--c-red\)"/g)].length >= 2 &&
+    probeSvg.includes('>15<') &&
+    probeSvg.includes('>30<');
 
   const phyChecks: [string, boolean][] = [
     ['问题与理解的关键', phyHtml.includes('要解决的问题') && phyHtml.includes('理解的关键')],
@@ -1046,13 +1065,18 @@ if (!progressTarget) {
     ],
     // 螺线管极性由正面电流方向推出：向上 N 在左、向下 N 在右 → 「N」出现在两组不同位置
     ['图元自测：coil 极性随电流方向', coilLabels === 'NS' + 'SN' || /NS[\s\S]*SN/.test(probeSvg)],
+    ['图元自测：停表双盘（小盘分钟 + 大盘 30 s 一圈）', stopwatchOk],
+    [
+      '停表读数（双盘讲解 + 读数题都渲染出来）',
+      phyStopwatchHtml.includes('大盘一圈 30 s') && phyStopwatchHtml.includes('停表'),
+    ],
   ];
   const phyOk = phyChecks.every(([, ok]) => ok);
   console.log(
     `  ${phyOk ? '✅' : '❌'} 接线检查：物理（${phyChecks
       .filter(([, ok]) => !ok)
       .map(([n]) => n)
-      .join('、') || '十四类断言全通过'}）`,
+      .join('、') || '十六类断言全通过'}）`,
   );
   if (!phyOk) failed += 1;
 }

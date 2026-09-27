@@ -779,6 +779,86 @@ function renderPrim(p: FigurePrim, key: number) {
       );
     }
 
+    case 'stopwatch': {
+      const R = p.r ?? 30;
+      const cx = p.x;
+      const cy = p.y;
+      const minute = Math.max(0, Math.min(15, p.minute ?? 0));
+      const second = Math.max(0, Math.min(60, p.second ?? 0));
+      /** 表盘角度：0 在 12 点位置、读数增大时顺时针走 */
+      const dialAngle = (value: number, range: number) => 90 - (value / range) * 360;
+      /** 大盘一圈 30 s：≥30 的读数画在第二圈（靠小盘位置区分是哪一圈） */
+      const bigValue = second % 30;
+      const [hx, hy] = polar(cx, cy, R * 0.86, dialAngle(bigValue, 30));
+      const [tx, ty] = polar(cx, cy, R * 0.14, dialAngle(bigValue, 30) + 180);
+      // 小盘在 12 点位置，半径取大盘的 0.26
+      const sr = R * 0.26;
+      const sx = cx;
+      const sy = cy - R * 0.44;
+      const [mx, my] = polar(sx, sy, sr * 0.78, dialAngle(minute, 15));
+      return (
+        <g key={key}>
+          {/* 大盘 */}
+          <circle cx={cx} cy={cy} r={R} fill="var(--c-surface)" stroke={toneOf('main')} strokeWidth={0.8} />
+          {/* 0.1 s 小刻度（分度值就是它） */}
+          {Array.from({ length: 300 }).map((_, i) => {
+            const [x1, y1] = polar(cx, cy, R * 0.9, dialAngle(i / 10, 30));
+            const [x2, y2] = polar(cx, cy, R * 0.86, dialAngle(i / 10, 30));
+            return <line key={`m${i}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke={toneOf('muted')} strokeWidth={0.18} />;
+          })}
+          {/* 1 s 大刻度 + 每 5 s 的数字 */}
+          {Array.from({ length: 30 }).map((_, i) => {
+            const [x1, y1] = polar(cx, cy, R * 0.9, dialAngle(i, 30));
+            const [x2, y2] = polar(cx, cy, R * 0.8, dialAngle(i, 30));
+            const major = i % 5 === 0;
+            return (
+              <line
+                key={`M${i}`}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke={toneOf(major ? 'main' : 'muted')}
+                strokeWidth={major ? 0.5 : 0.3}
+              />
+            );
+          })}
+          {[0, 5, 10, 15, 20, 25, 30].map((v) => {
+            const [lx, ly] = polar(cx, cy, R * 0.66, dialAngle(v, 30));
+            return <Label key={`n${v}`} x={lx} y={ly} text={String(v)} size={Math.max(3, R * 0.13)} />;
+          })}
+          {/* 秒针 */}
+          <line x1={tx} y1={ty} x2={hx} y2={hy} stroke="var(--c-red)" strokeWidth={0.7} />
+          <circle cx={cx} cy={cy} r={1} fill={toneOf('main')} />
+          {/* 小盘（分钟盘，0—15 min，半格 0.5 min） */}
+          <circle cx={sx} cy={sy} r={sr} fill="var(--c-surface)" stroke={toneOf('main')} strokeWidth={0.5} />
+          {Array.from({ length: 30 }).map((_, i) => {
+            const [x1, y1] = polar(sx, sy, sr * 0.94, dialAngle(i * 0.5, 15));
+            const [x2, y2] = polar(sx, sy, sr * 0.82, dialAngle(i * 0.5, 15));
+            const major = i % 2 === 0;
+            return (
+              <line
+                key={`s${i}`}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke={toneOf(major ? 'main' : 'muted')}
+                strokeWidth={major ? 0.4 : 0.25}
+              />
+            );
+          })}
+          {[0, 5, 10, 15].map((v) => {
+            const [lx, ly] = polar(sx, sy, sr * 0.55, dialAngle(v, 15));
+            return <Label key={`sn${v}`} x={lx} y={ly} text={String(v)} size={Math.max(2.4, R * 0.1)} />;
+          })}
+          <line x1={sx} y1={sy} x2={mx} y2={my} stroke="var(--c-red)" strokeWidth={0.55} />
+          <circle cx={sx} cy={sy} r={0.8} fill={toneOf('main')} />
+          {p.label ? <Label x={cx} y={cy + R + 5} text={p.label} size={3.8} /> : null}
+        </g>
+      );
+    }
+
     case 'compass': {
       const deg = p.deg ?? 0;
       const r = 4;

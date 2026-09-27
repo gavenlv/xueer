@@ -117,7 +117,12 @@
 `beaker`（`fill` 水位 0—1）。
 
 **热学与磁**：`thermometer`（`value` 液柱 0—1）、`magnet`（左 N 右 S）、
-`coil`（通电螺线管，`turns`）、`compass`（`deg` 北极指向）。
+`coil`（通电螺线管，`turns`；`frontCurrent` 定 N/S 极性，`showCurrent` 才代画电流箭头）、
+`compass`（`deg` 北极指向）。
+
+**计时与标记**：`stopwatch`（机械停表双盘：`minute` 小盘 0—15 min、`second` 大盘 0—60 s
+且**一圈只有 30 s**，分度值 0.1 s；读数题靠小盘判断大盘是哪一圈）、
+`dot`（标点：力臂的垂足、光学光心与焦点、支点、交点；`hollow` 画空心圈）。
 
 ### 3.4 两个完整示例
 

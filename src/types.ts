@@ -1223,6 +1223,28 @@ export type FigurePrim =
   /* ---------------- 热学与磁 ---------------- */
   /** 温度计，`value` 为液柱高度 0—1 */
   | { t: 'thermometer'; x: number; y: number; h: number; value?: number; label?: string }
+  /**
+   * 机械停表（双盘）。
+   *
+   * 停表是初中读数题里最容易错的一件器材：**大盘一圈只有 30 s**，
+   * 所以「大盘读数取 10.4 s 还是 40.4 s」要由**小盘是否过半格**决定。
+   * 这个图元把两个盘按真实结构画出来（小盘在 12 点位置、大盘在外圈），
+   * 学生一眼能看出「先看小盘、再看大盘」的读数顺序。
+   *
+   * - `minute`：小盘示数 0—15，步进 0.5（大盘每转一圈，小盘走半格）
+   * - `second`：大盘示数 0—60，步进 0.1；`≥30` 表示指针已进入第二圈
+   *   （画出来时取 `second − 30` 的位置，靠小盘位置区分是哪一圈）
+   */
+  | {
+      t: 'stopwatch';
+      x: number;
+      y: number;
+      /** 大盘半径，默认 30（配合 `view: 'square'` 使用） */
+      r?: number;
+      minute?: number;
+      second?: number;
+      label?: string;
+    }
   /** 条形磁体（左 N 右 S） */
   | { t: 'magnet'; x: number; y: number; w?: number; h?: number; label?: string }
   /**
