@@ -69,21 +69,63 @@ export function uniqBy<T>(arr: readonly T[], key: (item: T) => string): T[] {
  * - `strict`：**保留** `-` `.` `(` `)` `,` `/` 等符号。
  *   适用于数学（`3` 与 `-3`、`25` 与 `2.5` 是不同答案），
  *   以及文言文断句题（`/` 的位置就是作答内容本身）。
+ * - `numeric`：**按数值比较**（物理、化学这类答案就是一个数的填空）。
+ *   不能沿用 loose —— loose 会把小数点当标点删掉，`2.7` 归一化成 `27`，
+ *   于是学生填 `27` 会被判对；`3.6` 与 `36` 也会互相判对。理科填空题的答案
+ *   恰恰就是一个数，判错等于把「全题过关才算掌握」的过关记录也污染掉。
+ *   比较时容忍写法差异：`2.70`、`2.7`、全角数字、`1/2` 与 `0.5` 都算对；
+ *   非数值的答案（如「平衡力」）自动退回 loose 的文字比较。
  *
  * 注意：**不能按学科一刀切** —— 同一个学科内部两者都有：
  * 语文默写要 loose，语文断句题要 strict。
  */
-export type AnswerMode = 'loose' | 'strict';
+export type AnswerMode = 'loose' | 'strict' | 'numeric';
 
 /**
  * 按题目自动选择判分模式。
  * 断句题的答案里一定含 `/`，这是它唯一的判据，语文填空题里也没有别的题型会用 `/`；
- * 数学全部用 strict。
+ * 数学全部用 strict；物理/化学的填空答案是数值，用 numeric。
  */
 export function answerModeFor(moduleId: string, answer: string): AnswerMode {
   if (moduleId.startsWith('math-')) return 'strict';
+  // 理科：答案就是一个数，必须按数值比（loose 会把 2.7 与 27 判成同一个答案）
+  if (moduleId.startsWith('phy-') || moduleId.startsWith('chem-')) return 'numeric';
   if (/[/／]/.test(answer)) return 'strict';
   return 'loose';
+}
+
+/**
+ * 把填空答案解析成数值：支持小数、正负号、科学计数法与简单分数（`1/2`），
+ * 并容忍**答案里带着单位**（`2 A`、`0.5A`、`10Ω`、`2.5m/s`）——单位的写法归一后
+ * 只比较数值部分。不是数值（如「平衡力」）时返回 null，由调用方退回文字比较。
+ *
+ * 为什么单位要单独处理：内容的备选答案常常写成 `2|2 A|2A`，学生若写 `0.50 A`
+ * （多一个尾零、带单位）在纯文字比较里会判错，而它其实是对的。
+ */
+function parseNumericAnswer(s: string): number | null {
+  let t = toHalfWidth(s).replace(/[\s，。、；：]/g, '');
+  if (!t) return null;
+  // 先剥掉尾部单位：常见物理单位与其组合（m/s、g/cm³、kW·h、℃ 等）
+  t = t.replace(
+    /(km\/h|m\/s|cm\/s|g\/cm3|g\/cm³|kg\/m3|kg\/m³|kW·h|kW|mA|mV|kΩ|MΩ|Ω|Pa|kPa|Hz|kHz|cm³|cm3|mL|kg|mg|cm|mm|km|min|mL|L|A|V|W|J|N|s|m|g|℃|C|h)$/,
+    '',
+  );
+  if (!t) return null;
+  const frac = t.match(/^([+-]?\d+(?:\.\d+)?)\/([+-]?\d+(?:\.\d+)?)$/);
+  if (frac) {
+    const d = Number(frac[2]);
+    return d === 0 ? null : Number(frac[1]) / d;
+  }
+  if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(t)) return null;
+  const v = Number(t);
+  return Number.isFinite(v) ? v : null;
+}
+
+/** 数值相等判定：允许浮点误差，也允许 `2.7` 与 `2.700` 这类写法差异 */
+function numericEqual(a: number, b: number): boolean {
+  if (a === b) return true;
+  const scale = Math.max(Math.abs(a), Math.abs(b), 1);
+  return Math.abs(a - b) <= 1e-9 * scale;
 }
 
 /** 全角字符转半角（含全角逗号、括号、斜杠、小数点等） */
@@ -104,7 +146,11 @@ function toHalfWidth(s: string): string {
  * 既容易漏，也让数据膨胀。
  */
 export function normalizeAnswer(s: string, mode: AnswerMode = 'loose'): string {
-  if (mode === 'strict') {
+  if (mode === 'strict' || mode === 'numeric') {
+    /**
+     * `numeric` 复用 strict 的归一化：**保留小数点、负号、斜杠**，只统一符号写法。
+     * 若走 loose，小数点会被当标点删掉（`2.7` → `27`），数值判分就失去意义。
+     */
     return (
       toHalfWidth(s)
         // 各种减号/连字符统一为半角 -
@@ -128,7 +174,13 @@ export function normalizeAnswer(s: string, mode: AnswerMode = 'loose'): string {
     .trim();
 }
 
-/** 判断填空作答是否正确；answer 中多个可接受写法用 `|` 分隔 */
+/**
+ * 判断填空作答是否正确；answer 中多个可接受写法用 `|` 分隔。
+ *
+ * `numeric` 模式下先按数值比对（见 `parseNumericAnswer`）：两边都能解析成数就比数值，
+ * 否则退回文字比较——于是 `2.70`、全角 `２.７`、`1/2` 与 `0.5` 都算对，
+ * 而 `2.7` 与 `27`、`3.6` 与 `36` 会被正确判错。
+ */
 export function checkFill(
   userInput: string,
   answer: string,
@@ -136,12 +188,23 @@ export function checkFill(
 ): boolean {
   const u = normalizeAnswer(userInput, mode);
   if (!u) return false;
-  return answer
-    .split('|')
+  const variants = answer.split('|');
+  if (mode === 'numeric') {
+    const given = parseNumericAnswer(userInput);
+    if (given !== null) {
+      const hit = variants.some((a) => {
+        const want = parseNumericAnswer(a);
+        return want !== null && numericEqual(given, want);
+      });
+      if (hit) return true;
+      // 期望答案里有数值型写法但不匹配 → 直接判错，避免再走文字比较把 `27` 与 `2.7` 抹平
+      if (variants.some((a) => parseNumericAnswer(a) !== null)) return false;
+    }
+  }
+  return variants
     .map((a) => normalizeAnswer(a, mode))
     .some((a) => a.length > 0 && a === u);
 }
-
 export function cn(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(' ');
 }

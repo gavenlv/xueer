@@ -1248,6 +1248,35 @@ const duanjuFailures = duanjuCases.filter(
   ([input, answer, expect]) => checkFill(input, answer, answerModeFor('classical', answer)) !== expect,
 );
 
+/**
+ * 理科数值填空题用例（物理、化学）。
+ *
+ * 这一组是**真实踩过的坑**：物理填空题的答案就是一个数，而 `loose` 归一化会把小数点
+ * 当成标点删掉（`2.7` → `27`），于是学生填 `27` 会被判对、`3.6` 与 `36` 会互相判对。
+ * 理科的掌握判定是「每道题都过关」——判分一松，过关记录本身就是错的。
+ * 现在 `phy-` / `chem-` 走 `numeric` 模式：按数值比，容忍写法差异、不容忍数量级错误。
+ */
+const numericCases: [input: string, answer: string, expect: boolean, note: string][] = [
+  ['2.7', '2.7', true, '同一个数'],
+  ['2.70', '2.7', true, '末尾多余的 0 容错'],
+  ['2.7', '27', false, '小数点被吞掉会判对——这条就是修 bug 的原因'],
+  ['3.6', '36', false, '3.6 与 36 不是同一个数'],
+  ['0.5', '1/2', true, '分数与小数等价'],
+  ['１２０００', '12000', true, '全角数字容错'],
+  ['1.0e4', '10000', true, '科学计数法'],
+  ['1200', '12000', false, '数量级错必须判错'],
+  ['0.50 A', '0.5|0.5 A|0.50', true, '带单位 + 多一个尾零仍算对'],
+  ['2A', '2|2 A|2A', true, '紧贴单位'],
+  ['10 Ω', '10Ω|10 Ω', true, '带空格与不带空格的单位写法都容错'],
+  ['2.5 A', '2|2 A|2A', false, '数值不对，带单位也不能判对'],
+  ['平衡力', '平衡力', true, '非数值答案退回文字比较'],
+  ['平衡力', '非平衡力', false, '非数值答案仍要判错'],
+  ['', '2.7', false, '空答案判错'],
+];
+const numericFailures = numericCases.filter(
+  ([input, answer, expect]) => checkFill(input, answer, answerModeFor('phy-mech-6', answer)) !== expect,
+);
+
 /* ------------------------ 历史：备考内容完整性 ------------------------ */
 
 /**
@@ -2099,8 +2128,9 @@ console.log(
 );
 
 console.log('\n================ 校验结果 ================');
-const gradeTotal = fillCases.length + mathCases.length + duanjuCases.length;
-const gradeBad = fillFailures.length + mathFailures.length + duanjuFailures.length;
+const gradeTotal = fillCases.length + mathCases.length + duanjuCases.length + numericCases.length;
+const gradeBad =
+  fillFailures.length + mathFailures.length + duanjuFailures.length + numericFailures.length;
 console.log(`  判分逻辑自测      ${gradeTotal - gradeBad} / ${gradeTotal} 通过`);
 for (const [input, answer, expect, note] of fillFailures) {
   console.log(`    ❌ [文字] 输入「${input}」对答案「${answer}」应为 ${expect}（${note}）`);
@@ -2110,6 +2140,9 @@ for (const [input, answer, expect, note] of mathFailures) {
 }
 for (const [input, answer, expect, note] of duanjuFailures) {
   console.log(`    ❌ [断句] 输入「${input}」对答案「${answer}」应为 ${expect}（${note}）`);
+}
+for (const [input, answer, expect, note] of numericFailures) {
+  console.log(`    ❌ [理科数值] 输入「${input}」对答案「${answer}」应为 ${expect}（${note}）`);
 }
 
 for (const f of texFailures.slice(0, 20)) err(`KaTeX 渲染失败 ${f}`);
