@@ -1254,6 +1254,122 @@ if (!progressTarget) {
   if (!chemOk) failed += 1;
 }
 
+/* ------------- 接线检查：语文中考专题（内容写了必须真的渲染出来） ------------- */
+
+/**
+ * 这一块的坑特别隐蔽：专题详情页少一个 `case`（或 `searchText` 少一个分支）时，
+ * 页面会落到 `DetailPage` 的 default 分支渲染「暂不支持该模块」，或者干脆抛异常——
+ * 路由渲染不报错、冒烟测试也不会红，但学生点进去什么都看不到，整块内容等于白写。
+ * 所以这里直接断言专题页真的渲染出了考情、讲解（含示范）与训练入口。
+ */
+const zhTopicEntries = allEntries.filter((e) => e.moduleId === 'zh-topics');
+const zhTopic = zhTopicEntries[0];
+const zhTopicHtml = zhTopic
+  ? renderToString(
+      <MemoryRouter initialEntries={[`/s/chinese/zh-topics/${zhTopic.id}`]}>
+        <AppWithProviders />
+      </MemoryRouter>,
+    ).replace(/<!--[\s\S]*?-->/g, '')
+  : '';
+const zhTopicChecks: [string, boolean][] = [
+  ['语文中考专题共 7 个', zhTopicEntries.length === 7],
+  ['专题页渲染出专题名', Boolean(zhTopic) && zhTopicHtml.includes(zhTopic.title)],
+  ['不是「暂不支持该模块」空态', zhTopicHtml.length > 0 && !zhTopicHtml.includes('暂不支持该模块')],
+  ['近五年考情逐年渲染', ['2021', '2022', '2023', '2024', '2025'].every((y) => zhTopicHtml.includes(y))],
+  ['分步讲解带示范', zhTopicHtml.includes('示范')],
+  ['攻破标准（全题过关）', zhTopicHtml.includes('攻破')],
+  ['训练分组与「刷这一组」入口', zhTopicHtml.includes('刷这一组') && zhTopicHtml.includes('?tag=')],
+];
+const zhTopicOk = zhTopicChecks.every(([, ok]) => ok);
+console.log(
+  `  ${zhTopicOk ? '✅' : '❌'} 接线检查：语文中考专题（${zhTopicChecks
+    .filter(([, ok]) => !ok)
+    .map(([n]) => n)
+    .join('、') || `${zhTopicChecks.length} 类断言全通过`}）`,
+);
+if (!zhTopicOk) failed += 1;
+
+/* ------------- 接线检查：学段筛选（选了的学段必须真的生效） ------------- */
+
+/**
+ * 学段筛选曾出过两类 bug，都很隐蔽、都不会让页面报错：
+ *   ① 模块页把学生的选择「自动适配」回去——在单册模块（历史 hist-9b 等）点「九上」
+ *      会被立刻弹回本册学段，学生看到的现象是「点九下没反应 / 怎么每次进来都是九上」；
+ *   ② 学科页选好学段后，模块卡片不带 `?grade=`，点进去又回到全局学段。
+ *
+ * 这里用一份 `grade: '9b'` 的 localStorage 渲染四个页面来把这两点锁住：
+ * 既验证「手动选择优先」，也验证「没人选时自动适配仍不让学生撞空白」。
+ */
+(globalThis as unknown as { localStorage: unknown }).localStorage = {
+  getItem: (k: string) =>
+    k.includes('xueer')
+      ? JSON.stringify({
+          progress: {},
+          wrong: {},
+          checkins: [],
+          daily: {},
+          grade: '9b',
+          totalSeconds: 0,
+          recite: {},
+          cards: {},
+        })
+      : null,
+  setItem: () => {},
+  removeItem: () => {},
+} as unknown;
+
+const renderRoute = (route: string) =>
+  renderToString(
+    <MemoryRouter initialEntries={[route]}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
+
+/** 某个学段 chip 是否处于高亮态（ModulePage 的 chip 只渲染 class，不渲染事件与其它属性） */
+const isActiveGrade = (html: string, short: string) =>
+  html.includes(`class="chip is-active">${short}</button>`);
+
+// 没人手动选：进「九上」单册模块时全局学段是九下，应自动落到本册，而不是筛成空白
+const histAdaptHtml = renderRoute('/s/history/hist-9a');
+// 手动选「九上」再进「九下」单册模块：选择必须优先，不能被自动适配弹回
+const histPickedHtml = renderRoute('/s/history/hist-9b?grade=9a');
+// 学科页的学段要跟着模块卡片走
+const histSubjectHtml = renderRoute('/s/history');
+// 学段过滤必须真的过滤列表内容（九下 / 九上各看一遍）
+const poems9bHtml = renderRoute('/s/chinese/poems?grade=9b');
+const poems9aHtml = renderRoute('/s/chinese/poems?grade=9a');
+
+const gradeChecks: [string, boolean][] = [
+  [
+    '模块页：无人手动选时自动落到本册学段（不空白）',
+    isActiveGrade(histAdaptHtml, '九上') && histAdaptHtml.includes('list-item__title'),
+  ],
+  ['模块页：手动选「九上」不被自动适配弹回', isActiveGrade(histPickedHtml, '九上')],
+  [
+    '模块页：该学段确无内容时给诚实空态，不混入别册条目',
+    histPickedHtml.includes('暂无内容') && !histPickedHtml.includes('list-item__title'),
+  ],
+  ['学科页：模块卡片带上学段 ?grade=9b', histSubjectHtml.includes('/s/history/hist-9b?grade=9b')],
+  [
+    '模块页：?grade=9b 只列九下篇目',
+    poems9bHtml.includes('渔家傲·秋思') && !poems9bHtml.includes('沁园春·雪'),
+  ],
+  [
+    '模块页：?grade=9a 只列九上篇目',
+    poems9aHtml.includes('沁园春·雪') && !poems9aHtml.includes('渔家傲·秋思'),
+  ],
+];
+const gradeOk = gradeChecks.every(([, ok]) => ok);
+console.log(
+  `  ${gradeOk ? '✅' : '❌'} 接线检查：学段筛选（${
+    gradeChecks
+      .filter(([, ok]) => !ok)
+      .map(([n]) => n)
+      .join('、') || '六类断言全通过'
+  }）`,
+);
+if (!gradeOk) failed += 1;
+
 if (failed) {
   console.log('\n❌ 存在渲染失败或接线异常的页面');
   process.exitCode = 1;

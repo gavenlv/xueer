@@ -24,6 +24,8 @@
 
 import type {
   BookPlot,
+  ChineseExamTopic,
+  ChineseExamTopicEntry,
   ClassicalEntry,
   ClassicalText,
   Entry,
@@ -52,10 +54,21 @@ export const MODULE_IDS: ModuleId[] = [
   'reading',
   'writing',
   'literature',
+  'zh-topics',
 ];
 
-/** 语文的六个模块 id */
-export type ChineseModuleId = 'poems' | 'vocab' | 'classical' | 'reading' | 'writing' | 'literature';
+/**
+ * 语文的模块 id。前六块按教材内容组织；`zh-topics`（中考专题）按**卷面题型**组织，
+ * 是唯一为备考而设的模块——它排在最末，模块页里也就落在最后，符合「先学后考」的次序。
+ */
+export type ChineseModuleId =
+  | 'poems'
+  | 'vocab'
+  | 'classical'
+  | 'reading'
+  | 'writing'
+  | 'literature'
+  | 'zh-topics';
 
 /**
  * 「附加块」：思维导图与拓展阅读。它们不属于任何模块，但详情页与知识拓展页要用，
@@ -83,6 +96,8 @@ export const literatureItems: LiteratureItem[] = [];
 export const vocabItems: VocabItem[] = [];
 export const writingLessons: WritingLesson[] = [];
 export const readingPassages: ReadingPassage[] = [];
+/** 七个中考专题（考情 + 讲解 + 专项训练题） */
+export const zhExamTopicItems: ChineseExamTopic[] = [];
 
 /* ------------------------------------------------------------------ */
 /* 装配                                                                */
@@ -212,6 +227,30 @@ function buildLiteratureEntries(
   });
 }
 
+/**
+ * 中考专题装配。
+ *
+ * 与其它模块不同，专题的 `tags` 不是给「模块页筛选」用的类别，而是供检索与
+ * 面包屑显示的固定两项：`[专题名, '中考专题']`；真正需要按组筛选的是**题目上的标签**
+ * （= `drills[].name`），组卷走 `/practice/zh-topics/<id>?tag=<组名>`。
+ */
+const buildZhExamEntries = (items: ChineseExamTopic[]): ChineseExamTopicEntry[] =>
+  items.map((t) => {
+    const qs = dedupeQuestions(t.questions);
+    return {
+      id: t.id,
+      moduleId: 'zh-topics',
+      title: t.title,
+      // 副标题 = 卷面定位 + 这一专题的规模：模块页一眼能看到「多少分、多少题、几组训练」，
+      // 「大量训练」这件事不该只写在说明里。
+      subtitle: `${t.paper} · ${qs.length} 题 · ${t.drills.length} 组训练`,
+      grade: t.grade,
+      tags: [t.title, '中考专题'],
+      questions: qs,
+      data: t,
+    };
+  });
+
 /* ------------------------------------------------------------------ */
 /* 按需加载                                                            */
 /* ------------------------------------------------------------------ */
@@ -253,6 +292,11 @@ const LOADERS: Record<ChineseModuleId | 'extras', () => Promise<LoaderResult>> =
     const m = await import('./modules/literature');
     literatureItems.push(...m.literature);
     return { entries: buildLiteratureEntries(m.literature, m.guangzhouQuestions, m.bookPlots) };
+  },
+  'zh-topics': async () => {
+    const m = await import('./modules/zh-topics');
+    zhExamTopicItems.push(...m.zhExamTopics);
+    return { entries: buildZhExamEntries(m.zhExamTopics) };
   },
   extras: async () => {
     const m = await import('./modules/extras');

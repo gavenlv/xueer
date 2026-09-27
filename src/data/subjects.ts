@@ -100,7 +100,7 @@ export const SUBJECTS: Subject[] = [
     icon: '📕',
     color: '#2f66d6',
     score: 140,
-    desc: '古诗词·字词·文言文·现代文阅读·作文·名著',
+    desc: '古诗词·字词·文言文·现代文阅读·作文·名著 + 中考专题（按广州卷面题型逐个攻破）',
     available: true,
     examNote: '闭卷笔试',
     modules: [
@@ -150,6 +150,14 @@ export const SUBJECTS: Subject[] = [
         icon: '📚',
         desc: '作家作品、名著导读、文体与文化常识速记',
         color: '#0f7b8a',
+        available: true,
+      },
+      {
+        id: 'zh-topics',
+        name: '中考专题',
+        icon: '🎯',
+        desc: '按广州卷面题型设 7 个专题：近五年考情、分步讲解与答题模板、每专题 45+ 题专项训练（每题都答对才算攻破）',
+        color: '#8a6a3b',
         available: true,
       },
     ],

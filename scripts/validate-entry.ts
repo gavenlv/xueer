@@ -25,6 +25,7 @@ import { allTopics, allPapers } from '../src/data/history';
 // 校验卷面结构必须从 allPapers 取，不能按 moduleId === 'pol-exam' 从条目里筛。
 import { allPapers as polPapers, allTopics as polTopics } from '../src/data/politics';
 import { validateChemistry } from './validate-chemistry';
+import { validateChineseTopics } from './validate-chinese-topics';
 import { validatePhysics } from './validate-physics';
 import type { EnglishKnowledge, EnglishPaper, PoliticsPaper } from '../src/types';
 import { BOOK_EXAM_POINT_TAGS } from '../src/lib/bookExams';
@@ -2113,6 +2114,14 @@ validatePhysics({ err, allEntries });
  * 与物理一样单独成文件，这里只调用一次并打印报告。
  */
 validateChemistry({ err, allEntries });
+
+/**
+ * 语文「中考专题」：2027 卷面口径下的七个题型专题——
+ * 「详细讲解」（五年考情 / 分步讲解含示范 / 模板 / 评分点 / 易错失分）
+ * 与「大量训练」（每专题 ≥45 题、每个训练分组都要有题、题目标签与分组必须对得上）。
+ * 同样单独成文件，这里只调用一次并打印报告。
+ */
+validateChineseTopics({ err, allEntries });
 
 /* ------------------------ 汇总报告 ------------------------ */
 

@@ -6,14 +6,16 @@
  *
  * 这里有两套判定，按学科选用（`masteryPolicyOf`）：
  *
- * 1. `rate`（答对率型，语文/英语/历史/道法/数学沿用）：
+ * 1. `rate`（答对率型，语文教材模块/英语/历史/道法/数学沿用）：
  *    答够题量、正确率达到门槛即算掌握。适合**题量大、同类题多**的学科——
  *    语文一首诗有十几道默写题，要求学生把每一道都答对过并不现实。
- * 2. `all-questions`（全题过关型，理科用）：
+ * 2. `all-questions`（全题过关型，理科与语文中考专题用）：
  *    该知识点的**每一道题都答对过**才算掌握。理科的知识点题量少而精（8 道左右），
  *    每道题考的角度不同（理解、应用、作图、计算），漏掉一道往往就是漏掉一个角度；
  *    而且「全过关」给了学生一个明确的终点：卡片上的「过关 5/8」比一句「正确率 62%」
- *    更能说明下一步该做什么。
+ *    更能说明下一步该做什么。语文**中考专题**（`zht-`）也走这一套：专题就是按卷面
+ *    题型切出来的得分板块，用户的要求是「攻破每个专题就把这部分的分数拿下」，
+ *    因此验收标准必须是「本专题每一道题都答对过」。
  */
 
 import type { ItemProgress } from '../types';
@@ -22,8 +24,15 @@ import type { ItemProgress } from '../types';
 export const MASTERY_MIN_ANSWERS = 3;
 /** 「已掌握」要求的正确率下限（仅 `rate` 策略使用） */
 export const MASTERY_RATE = 0.8;
-/** 「全题过关」策略的学科前缀：理科。化学加进来时在这里补 `chem-` 即可 */
-export const ALL_QUESTIONS_PREFIXES = ['phy-', 'chem-'];
+/**
+ * 「全题过关」策略的**模块 id 前缀**。
+ *
+ * 物理、化学的模块 id 与题目 id 同前缀（`phy-light` / `phy-…`），所以写 `phy-` 就够；
+ * 语文的中考专题不同型：**模块 id 是 `zh-topics`，题目 id 才是 `zht-<专题>-qNN`**，
+ * 两个都要列——调用方（`ModulePage` / `QuizRunner` / `isMastered`）传的是模块 id，
+ * 而按条目的题目 id 前缀判断的调用点也存在（条目 id 形如 `zht-jilei`）。
+ */
+export const ALL_QUESTIONS_PREFIXES = ['phy-', 'chem-', 'zh-topics', 'zht-'];
 
 /** 掌握判定策略 */
 export type MasteryPolicy = 'rate' | 'all-questions';

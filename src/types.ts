@@ -359,6 +359,81 @@ export interface BookPlot {
 }
 
 /* ------------------------------------------------------------------ */
+/* 模块七：中考专题（按广州卷面题型逐个攻破）                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 一条「分步讲解」：把方法拆成「先做什么、再做什么」。
+ *
+ * 与写作课的 `content`（成段的讲稿）不同，专题要的是**可执行的顺序**：
+ * 学生考场上需要的是「第一步先判定文体，第二步再定读法」这样的动作序列，
+ * 因此每一步都必须有 `heading`（这一步做什么）。`demo` 是可选的「做一遍给你看」。
+ */
+export interface ChineseExamStep {
+  /** 这一步做什么，如「先判定文体，再决定读法」 */
+  heading: string;
+  /** 讲解正文 */
+  body: string;
+  /** 示范（可选）：按这一步的方法完整做一遍 */
+  demo?: string;
+}
+
+/**
+ * 近 5 年考情的一条记录。
+ *
+ * 只做**考情归纳**（考查形态、分值区间、选材倾向），不复刻真题原文——
+ * 真题的原题与材料有版权，而且学生真正需要的是「这几年都在考什么形态」，
+ * 不是再读一遍某年的具体题目。
+ */
+export interface ChineseExamTrend {
+  /** 年份，如「2025」 */
+  year: string;
+  /** 这一年的考查形态、分值区间与选材倾向 */
+  note: string;
+}
+
+/**
+ * 一个「中考专题」。**按广州中考语文卷面题型**设专题（与卷面板块一一对应），
+ * 内容是「考情归纳 + 专门讲解 + 专项训练」三件套。
+ *
+ * 为什么按题型而不是按知识点设专题：卷面板块本身就是命题单位，学生拿到卷子
+ * 也是按这几块分配时间的；「逐个攻破」的单位必须是题型，攻破才有可验证的终点。
+ * 按知识点聚合的那套仍然由「考点」页（`/s/:subjectId/exam`）负责，两者互补。
+ */
+export interface ChineseExamTopic {
+  id: string;
+  /** 一律 `'all'`：专题是初三总复习内容，不归属某一册 */
+  grade: GradeOrAll;
+  /** 专题名，如「古诗文默写」 */
+  title: string;
+  /** 卷面定位，如「第二大题之一 · 古诗文积累与默写（约 8—10 分）」 */
+  paper: string;
+  /** 一句话：这个专题在考什么、拿分靠什么 */
+  summary: string;
+  /** 近 5 年考情（恰好 5 条，一年一条） */
+  trends: ChineseExamTrend[];
+  /** 五年趋势结论：一句话说清「现在怎么考、往哪走」 */
+  trendSummary: string;
+  /** 命题角度（与历史/道法共用同一套：angle + years + detail） */
+  angles: HistoryExamAngle[];
+  /** 分步讲解 */
+  steps: ChineseExamStep[];
+  /** 答题模板：可直接背下来套用 */
+  templates?: { name: string; items: string[] }[];
+  /** 评分点／踩分点：写成「写到什么才给分」 */
+  scoring?: string[];
+  /** 易错与失分 */
+  pitfalls?: { wrong: string; right: string; why: string }[];
+  /**
+   * 专项训练分组。`name` **同时是题目上的标签**：分组刷题走
+   * `/practice/zh-topics/<条目 id>?tag=<name>`，不再另建一套组的 id 与路由。
+   */
+  drills: { name: string; note: string }[];
+  /** 专项训练题库（每题至少带一个 `drills` 里的标签） */
+  questions: QuizQuestion[];
+}
+
+/* ------------------------------------------------------------------ */
 /* 学习进度                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -508,14 +583,25 @@ export interface CardRecord {
 /* 统一内容条目（列表页 / 练习引擎 / 统计都基于它工作）                 */
 /* ------------------------------------------------------------------ */
 
-/** 语文学科模块 id */
+/**
+ * 语文学科模块 id。
+ *
+ * 前六块是教材模块；`zh-topics` 是**备考专用**的「中考专题」——按广州卷面题型
+ * 设专题（积累与运用 / 默写 / 文言文 / 古诗词鉴赏 / 现代文 / 名著 / 写作），
+ * 每块给「考情归纳 + 专门讲解 + 专项训练」，逐个攻破。
+ *
+ * 为什么不叫 `exam`：`/s/:subjectId/exam` 已经被「考点」子页面占用
+ * （见 `App.tsx` 的 `SubjectExamRoute`），模块 id 撞上它就没有路由了。
+ * `zh-` 前缀同时让掌握判定能按前缀识别（见 `lib/progress.ts` 的全题过关策略）。
+ */
 export type ChineseModuleId =
   | 'poems'
   | 'vocab'
   | 'classical'
   | 'reading'
   | 'writing'
-  | 'literature';
+  | 'literature'
+  | 'zh-topics';
 
 /** 数学学科模块 id */
 export type MathModuleId =
@@ -653,6 +739,10 @@ export interface WritingEntry extends EntryBase {
 export interface LiteratureEntry extends EntryBase {
   moduleId: 'literature';
   data: LiteratureItem;
+}
+export interface ChineseExamTopicEntry extends EntryBase {
+  moduleId: 'zh-topics';
+  data: ChineseExamTopic;
 }
 
 /* ------------------------------ 历史 ------------------------------ */
@@ -1669,6 +1759,7 @@ export type Entry =
   | ReadingEntry
   | WritingEntry
   | LiteratureEntry
+  | ChineseExamTopicEntry
   | HistoryEntry
   | EnglishEntry
   | PoliticsEntry

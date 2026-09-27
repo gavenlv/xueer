@@ -22,6 +22,7 @@ import { ClassicalDetail } from './detail/ClassicalDetail';
 import { ReadingDetail } from './detail/ReadingDetail';
 import { WritingDetail } from './detail/WritingDetail';
 import { LiteratureDetail } from './detail/LiteratureDetail';
+import { ChineseExamTopicDetail } from './detail/ChineseExamTopicDetail';
 import { HistoryDetail } from './detail/HistoryDetail';
 import { HistoryPaperDetail } from './detail/HistoryPaperDetail';
 import { EnglishDetail } from './detail/EnglishDetail';
@@ -100,6 +101,10 @@ export default function DetailPage() {
         return <WritingDetail entry={entry} moduleName={meta?.module.name ?? '作文训练'} />;
       case 'literature':
         return <LiteratureDetail entry={entry} moduleName={meta?.module.name ?? '文学常识'} />;
+      // 语文「中考专题」：按卷面题型逐个攻破（近五年考情 + 分步讲解 + 答题模板 + 评分点
+      // + 专项训练分组），数据形状与教材六块完全不同，所以单列一个渲染器。
+      case 'zh-topics':
+        return <ChineseExamTopicDetail entry={entry} moduleName={meta?.module.name ?? '中考专题'} />;
       // 历史：模拟卷走「整卷考试」那一套渲染，其余八块（六册 + 中考专题）共用备考版详情页
       case 'hist-exam':
         return <HistoryPaperDetail entry={entry} moduleName={meta?.module.name ?? '模拟考试'} />;

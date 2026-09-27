@@ -1,6 +1,6 @@
 /** 模块列表页：按学段 / 标签 / 关键词筛选内容条目 */
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { getModuleMeta, getSubject } from '../data/subjects';
 import { filterTagsOfModule, entriesOfModule } from '../data';
@@ -30,11 +30,16 @@ export default function ModulePage() {
 
   const [keyword, setKeyword] = useState('');
   /**
-   * 学段与标签支持从地址栏读入：中考考点页的「先学一遍 / 看相关条目」要能直接
-   * 跳到「筛好这一类考点」的列表，否则学生点进去还得自己再筛一次。
+   * 学段有两个来源，因此分成两个状态：
+   *   - `picked`：学生在**本页手动点选**的学段（或地址栏 `?grade=` 带来的）；
+   *   - `adaptedGrade`：按全局学段**自动适配**的结果（见下方）。
+   *
+   * 为什么不能只用一个状态：自动适配曾写成「用一个受控值、不匹配就把用户的选择改回去」，
+   * 于是在单册模块（历史 hist-9a / 道法各册 / 化学各册）里点「九下」会被**立刻弹回
+   * 「九上」**——学生看到的现象是「点九下没反应」「怎么老是九上」。手动选择必须永远优先。
    */
-  const [gradeFilter, setGradeFilter] = useState<GradeId | 'all'>(
-    (search.get('grade') as GradeId | 'all' | null) ?? grade,
+  const [picked, setPicked] = useState<GradeId | 'all' | null>(
+    (search.get('grade') as GradeId | 'all' | null) ?? null,
   );
   const [tagFilter, setTagFilter] = useState<string>(search.get('tag') ?? 'all');
 
@@ -47,16 +52,29 @@ export default function ModulePage() {
   );
 
   /**
-   * 生效的学段筛选：有些模块（如历史六册）按「一册 = 一个学段」组织，
-   * 学生点进 hist-7b 时全局学段可能还是 7 上——若照搬会把整页过滤成空。
-   * 因此数据就绪后做一次校正：当前学段在模块里没有条目时，自动落到该模块自己的学段。
+   * 换模块时清掉手动选择：全局学段已经是学生最近的选择，让新模块重新自适应。
+   * （在渲染期直接改状态是 React 认可的「随 props 调整状态」写法，SSR 下同样生效。）
    */
-  const effectiveGrade = useMemo<GradeId | 'all'>(() => {
-    if (!ready || gradeFilter === 'all') return gradeFilter;
-    if (allEntries.some((e) => e.grade === gradeFilter || e.grade === 'all')) return gradeFilter;
+  const prevModule = useRef(moduleId);
+  if (prevModule.current !== moduleId) {
+    prevModule.current = moduleId;
+    if (picked !== null) setPicked(null);
+  }
+
+  /**
+   * 自动适配：有些模块（如历史六册）按「一册 = 一个学段」组织，
+   * 学生点进 hist-9b 时全局学段可能还是七上——若照搬会把整页过滤成空。
+   * 因此数据就绪后，当前学段在本模块里**一条都没有**时，落到该模块自己的学段。
+   */
+  const adaptedGrade = useMemo<GradeId | 'all'>(() => {
+    if (!ready) return grade;
+    if (allEntries.some((e) => e.grade === grade || e.grade === 'all')) return grade;
     const first = allEntries.find((e) => e.grade !== 'all');
-    return (first?.grade as GradeId | undefined) ?? 'all';
-  }, [allEntries, gradeFilter, ready]);
+    return (first?.grade as GradeId | undefined) ?? grade;
+  }, [allEntries, ready, grade]);
+
+  /** 学生的选择优先于自动适配 */
+  const effectiveGrade = picked ?? adaptedGrade;
 
   const tags = useMemo(
     () => filterTagsOfModule(moduleId as ModuleId, effectiveGrade),
@@ -203,7 +221,7 @@ export default function ModulePage() {
         <div className="scroll-x">
           <button
             className={cn('chip', effectiveGrade === 'all' && 'is-active')}
-            onClick={() => setGradeFilter('all')}
+            onClick={() => setPicked('all')}
           >
             全部学段
           </button>
@@ -212,7 +230,7 @@ export default function ModulePage() {
               key={g.id}
               className={cn('chip', effectiveGrade === g.id && 'is-active')}
               onClick={() => {
-                setGradeFilter(g.id);
+                setPicked(g.id);
                 setGrade(g.id);
               }}
             >
@@ -256,15 +274,23 @@ export default function ModulePage() {
       {filtered.length === 0 ? (
         <EmptyState
           icon="🔍"
-          title="没有找到相关内容"
-          desc="试试切换学段，或者换个关键词。"
+          title={
+            effectiveGrade === 'all'
+              ? '没有找到相关内容'
+              : `「${GRADES.find((g) => g.id === effectiveGrade)?.name ?? effectiveGrade}」暂无内容`
+          }
+          desc={
+            effectiveGrade === 'all'
+              ? '试试切换学段，或者换个关键词。'
+              : `本学段在「${m.name}」里还没有条目，切到别的学段或「全部学段」看看。`
+          }
           action={
             <button
               className="btn"
               onClick={() => {
                 setKeyword('');
                 setTagFilter('all');
-                setGradeFilter('all');
+                setPicked('all');
               }}
             >
               清空筛选条件

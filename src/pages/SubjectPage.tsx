@@ -136,7 +136,11 @@ export default function SubjectPage() {
           </SectionTitle>
           <div className="grid grid--auto">
             {subject.modules.map((m) => (
-              <Link key={m.id} className="module-card" to={`/s/${subject.id}/${m.id}`}>
+              <Link
+                key={m.id}
+                className="module-card"
+                to={`/s/${subject.id}/${m.id}?grade=${gradeFilter}`}
+              >
                 <span className="module-card__accent" style={{ background: m.color }} />
                 <span
                   className="module-card__icon"
@@ -263,7 +267,11 @@ export default function SubjectPage() {
             const ms = totalsOfModule(m.id as ModuleId);
             const allCount = ms.entries;
             return (
-              <Link key={m.id} className="module-card" to={`/s/${subject.id}/${m.id}`}>
+              <Link
+                key={m.id}
+                className="module-card"
+                to={`/s/${subject.id}/${m.id}?grade=${gradeFilter}`}
+              >
                 <span className="module-card__accent" style={{ background: m.color }} />
                 <span
                   className="module-card__icon"
