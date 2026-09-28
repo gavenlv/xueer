@@ -221,3 +221,15 @@ export function relPool(loaded: Entry[]): Rel[] {
 export function relOfEntryFull(entry: Entry): Rel {
   return buildRel(entry, 'full');
 }
+
+/**
+ * 丢掉这条内容记忆的关联节点。
+ *
+ * 与 `forgetSearchText` 同一个原因：中考专题的条目是「先装骨架、正文到了再原地补齐」，
+ * 骨架阶段算出的 QTags 是空的（题目还没下载），缓存住就会让专题页少掉
+ * 「同一考点」这类分组。补齐时必须显式失效。
+ */
+export function forgetRel(entry: Entry): void {
+  entryCache.delete(entry);
+}
+

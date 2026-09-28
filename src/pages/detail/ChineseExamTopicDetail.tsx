@@ -22,6 +22,7 @@
  *   ⑩ 专项训练分组     —— 每组一个「刷这一组」入口，组名即题目标签
  *   ⑪ 题库总览        —— 只列题干摘要与题型，作答一律走练习页
  *   ⑫ 底部行动条      —— 「从头练这个专题（全部 N 题）」，另给「只练没过关的」
+ *   ⑬ 浮动按钮        —— 滚动一段距离后淡入：回顶部 / 退回专题列表
  *
  * 「先给整体方法（分步讲解），再逐类拆开（逐类讲透），最后给可背的模板」是刻意的顺序：
  * 专题粒度太粗（「积累与运用」不是一个能直接下手的单位），真正能被学生吃下去的是
@@ -35,9 +36,28 @@
  *
  * 底部「知识点背诵 / 本课思维导图 / 拓展阅读 / 关联学习 / 学一补多」由 `DetailShell`
  * 统一接上，与其它详情页完全一致，这里不再重复实现。
+ *
+ * ---------------------------------------------------------------------------
+ * ## 这一页「太长、太重」是怎么治的
+ *
+ * 一个专题会一次铺开 12 个区块，其中「逐类讲透」最多 17 节、每节含判定要点 + 正误对照
+ * 例子 + 易错 + 练习入口（十几行到几十行）。全部铺开时 DOM 节点上万，首屏之后的内容
+ * 学生根本看不到，却照样参与样式计算、布局与绘制——这是这一页卡顿的主因。现在：
+ *
+ *   ① **逐类讲透每一节默认只留节头**：序号 + 节名 +「本节里有什么」+ 本节题量 +
+ *      「刷这一节」。正文用**条件渲染**摘掉（不是 CSS 藏起来），真的少掉这批节点。
+ *      第一节默认展开，学生一眼能看到「讲透」长什么样，服务端渲染的冒烟断言也仍能拿到正文。
+ *   ② 展开集合按专题记在 `localStorage` 的 `zht-open:<专题 id>` 里，下次进同一个专题保持；
+ *      标题旁的「展开全部 / 收起全部」写回同一份记录。
+ *   ③ 近五年考情 / 命题角度 / 分步讲解 / 专项训练 / 题库总览共用同一个 `Fold`，
+ *      默认展开（题库总览默认收起），标题行整行可点，一键收起。
+ *   ④ 长区块与收起的节交给浏览器跳过离屏的布局与绘制（`content-visibility`），
+ *      首屏可见的区块不加，避免占位高度与真实高度打架造成滚动跳动。
+ *   ⑤ 右下角一组浮动按钮，滚动超过一屏后淡入，长页面里随时能回顶部或退回专题列表。
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { ChineseExamTopicEntry, QuizQuestion } from '../../types';
 import { cn } from '../../lib/utils';
@@ -46,10 +66,17 @@ import { useStudy } from '../../store/StudyContext';
 import { Tag } from '../../components/common';
 import { DetailShell, Section } from './DetailShell';
 
-/** 题库总览最多列这么多题：详情页只用来「看清题量与考法」，作答在练习页 */
-const PREVIEW_LIMIT = 40;
+/**
+ * 题库总览最多列这么多题：详情页只用来「看清题量与考法」，作答在练习页。
+ * 从 40 条收到 20 条——学生要判断的是「这个专题有多少题、都是什么考法」，
+ * 看 20 条足够，剩下的一半纯粹是把页面拉长（真要练就直接进练习页）。
+ */
+const PREVIEW_LIMIT = 20;
 /** 题干摘要的截断长度（题干多是长材料，整段铺开会把页面拉爆） */
 const STEM_LIMIT = 60;
+
+/** 滚动超过这个距离才让浮动按钮淡入：刚进页面时右侧不摆多余的东西 */
+const FLOAT_AFTER = 500;
 
 const TYPE_LABEL: Record<QuizQuestion['type'], string> = {
   choice: '选择题',
@@ -86,6 +113,23 @@ const SECTION_NAV_MIN = 6;
 const sectionAnchorId = (no: number) => `zht-sec-${no}`;
 
 /**
+ * 系统开了「减少动态效果」时不做平滑滚动、不做淡入淡出：
+ * 前庭敏感的学生被强制看一段长滚动动画是会难受的，这是无障碍要求而不是口味问题。
+ */
+function reduceMotion(): boolean {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
+
+/** 平滑还是直接跳：交给上面那条偏好决定 */
+function scrollBehavior(): ScrollBehavior {
+  return reduceMotion() ? 'auto' : 'smooth';
+}
+
+/**
  * 跳到某一节。
  *
  * **必须是 JS 滚动，不能写成 `<a href="#zht-sec-3">`**：本站用的是 `HashRouter`
@@ -94,7 +138,155 @@ const sectionAnchorId = (no: number) => `zht-sec-${no}`;
  * （`scrollIntoView`）才既跳得对又不改路由。
  */
 function jumpToSection(no: number) {
-  document.getElementById(sectionAnchorId(no))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById(sectionAnchorId(no))?.scrollIntoView({
+    behavior: scrollBehavior(),
+    block: 'start',
+  });
+}
+
+/**
+ * 等两帧再做事：调用方先改了折叠状态，要等 React 把 DOM 提交完、浏览器重新量过高度，
+ * 滚动才落得准（否则按旧高度算出来的位置会差出被展开的那几百像素）。
+ * 服务端渲染里没有 `requestAnimationFrame`，兜底直接执行。
+ */
+function afterLayout(fn: () => void) {
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(() => requestAnimationFrame(fn));
+  } else {
+    fn();
+  }
+}
+
+/* ------------------- 折叠状态的持久化（localStorage） ------------------- */
+
+/**
+ * 每一节的展开集合按专题分开存：键 `zht-open:<专题 id>`，值是**已展开的节名数组**。
+ * 存节名而不是下标：节增删、调序之后旧记录最多是多一条陌生节名（会被过滤掉），
+ * 而存下标会让整份记录错位到别的节上。
+ */
+const openKeyOf = (topicId: string) => `zht-open:${topicId}`;
+
+function readOpenNames(topicId: string): string[] | null {
+  try {
+    const raw = globalThis.localStorage?.getItem(openKeyOf(topicId));
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return parsed.filter((v): v is string => typeof v === 'string');
+  } catch {
+    /* 服务端渲染、隐私模式、脏数据：一律回落到默认状态 */
+    return null;
+  }
+}
+
+function writeOpenNames(topicId: string, names: string[]): void {
+  try {
+    globalThis.localStorage?.setItem(openKeyOf(topicId), JSON.stringify(names));
+  } catch {
+    /* 写不进去也无所谓：折叠状态丢了不影响学习 */
+  }
+}
+
+/**
+ * 默认展开哪些节。
+ * 没存过就只展开第一节——「讲透」长什么样必须一眼看到，全收起等于把内容藏起来；
+ * 存过就照存的来（含「全部收起」留下的空数组）。
+ */
+function initialOpenNames(topicId: string, names: string[]): string[] {
+  const stored = readOpenNames(topicId);
+  // 与当前数据求交集：节名改过之后，旧记录里的陌生节名不该继续占位
+  if (stored) return stored.filter((n) => names.includes(n));
+  return names.length ? [names[0]] : [];
+}
+
+/** 区块（Fold）的展开状态：`1` / `0` 两个字符，比存 JSON 更抗脏数据 */
+function readFoldOpen(storeKey: string | undefined, fallback: boolean): boolean {
+  if (!storeKey) return fallback;
+  try {
+    const raw = globalThis.localStorage?.getItem(storeKey);
+    if (raw === '1') return true;
+    if (raw === '0') return false;
+  } catch {
+    /* 同上：读不到就用默认值 */
+  }
+  return fallback;
+}
+
+function writeFoldOpen(storeKey: string | undefined, open: boolean): void {
+  if (!storeKey) return;
+  try {
+    globalThis.localStorage?.setItem(storeKey, open ? '1' : '0');
+  } catch {
+    /* 同上 */
+  }
+}
+
+/** 收起状态下这一节里有什么：写成一行小字，不展开也能判断值不值得看 */
+function sectionOutline(ruleCount: number, exampleCount: number, pitfallCount: number): string {
+  const parts: string[] = [];
+  if (ruleCount) parts.push(`判定要点 ${ruleCount} 条`);
+  if (exampleCount) parts.push(`正误对照 ${exampleCount} 例`);
+  if (pitfallCount) parts.push(`易错 ${pitfallCount} 条`);
+  return parts.join(' · ');
+}
+
+/**
+ * 可折叠的长区块：标题行**整行可点**，收起时只留标题 + 数量徽标 + 一句说明。
+ *
+ * 正文用条件渲染摘掉（`{open ? … : null}`）而不是 CSS 隐藏——这一页的问题就是
+ * DOM 节点太多（布局与绘制都按节点算），藏起来不减负等于没做。
+ *
+ * 展开状态也记到 localStorage（键由调用方拼好传进来）：学生把某个长区块折起来
+ * 就是为了少滚动，下次进来又弹开等于白折。
+ */
+function Fold({
+  icon,
+  title,
+  count,
+  hint,
+  defaultOpen = true,
+  storeKey,
+  bodyClassName,
+  children,
+}: {
+  icon?: string;
+  title: string;
+  /** 标题右侧常驻的徽标（如「最近一年 · 2025」），收起时也看得见 */
+  count?: ReactNode;
+  /** 一句话说明这一块讲什么 */
+  hint?: string;
+  defaultOpen?: boolean;
+  storeKey?: string;
+  /** 正文容器的附加类（长列表用 `zht-cv` 让浏览器跳过离屏的布局与绘制） */
+  bodyClassName?: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(() => readFoldOpen(storeKey, defaultOpen));
+
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    writeFoldOpen(storeKey, next);
+  };
+
+  return (
+    <section className={cn('card', 'zht-fold', open && 'is-open')}>
+      <button type="button" className="zht-fold__head" aria-expanded={open} onClick={toggle}>
+        <span className="card__title">
+          {icon ? <span aria-hidden>{icon}</span> : null}
+          {title}
+        </span>
+        {count}
+        <span className="spacer" />
+        {hint ? <span className="zht-fold__hint">{hint}</span> : null}
+        <span className="zht-fold__state">{open ? '收起' : '展开'}</span>
+        <span className="zht-fold__caret" aria-hidden>
+          ▼
+        </span>
+      </button>
+      {open ? <div className={cn('card__body', 'fade-in', bodyClassName)}>{children}</div> : null}
+    </section>
+  );
 }
 
 export default function ChineseExamTopicDetail({
@@ -162,7 +354,82 @@ export default function ChineseExamTopicDetail({
     [sections],
   );
 
-  const preview = questions.slice(0, PREVIEW_LIMIT);
+  /** 节名数组：折叠状态按它存、按它比对（每帧都在用，不重算） */
+  const sectionNames = useMemo(() => sections.map((s) => s.name), [sections]);
+
+  /** 题库总览：只取前若干条，切片也在 memo 里，避免每次渲染重算 */
+  const preview = useMemo(() => questions.slice(0, PREVIEW_LIMIT), [questions]);
+
+  /* ------------------------ 逐类讲透：展开集合 ------------------------ */
+
+  const [openMemo, setOpenMemo] = useState(() => ({
+    topicId: entry.id,
+    names: initialOpenNames(entry.id, sectionNames),
+  }));
+
+  /**
+   * 换了专题就重置展开集合。
+   * 外壳的 `<main key={location.pathname}>` 让详情页整棵子树重挂载，正常情况下这里
+   * 不会命中；但详情页本身不带 key（`DetailPage` 按 moduleId 分发），一旦外壳哪天改了，
+   * 上一个专题的节名会留在 state 里、表现为「刚进来就莫名展开着某一节」，所以留一道闸。
+   */
+  if (openMemo.topicId !== entry.id) {
+    setOpenMemo({ topicId: entry.id, names: initialOpenNames(entry.id, sectionNames) });
+  }
+  const openNames = openMemo.names;
+
+  /** 所有写入口都走这里：先落状态再落 localStorage，两处不会漂移 */
+  const applyOpenNames = (next: string[]) => {
+    setOpenMemo({ topicId: entry.id, names: next });
+    writeOpenNames(entry.id, next);
+  };
+
+  const toggleSection = (name: string) => {
+    applyOpenNames(
+      openNames.includes(name) ? openNames.filter((n) => n !== name) : [...openNames, name],
+    );
+  };
+
+  /** 章节索引点击用：只加不减（学生要的是「把这一节打开给我看」） */
+  const openSection = (name: string) => {
+    if (openNames.includes(name)) return;
+    applyOpenNames([...openNames, name]);
+  };
+
+  /** 「展开全部」：全部节名一次写进记录 */
+  const expandAllSections = () => applyOpenNames(sectionNames.slice());
+
+  /** 「收起全部」：留一个空数组（和「从来没展开过」区分开，下次进来仍是全收起） */
+  const collapseAllSections = () => applyOpenNames([]);
+
+  /* ------------------------- 浮动按钮的显隐 ------------------------- */
+
+  const [floatOn, setFloatOn] = useState(false);
+  /** 上一次的显隐结果：滚动事件每帧都来，值没变就不 setState，别让滚动变卡 */
+  const floatRef = useRef(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const next = window.scrollY > FLOAT_AFTER;
+      if (next === floatRef.current) return;
+      floatRef.current = next;
+      setFloatOn(next);
+    };
+    // 先同步一次：从别的页面带着滚动位置进来时，状态要跟当前位置一致
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const backToTop = () => {
+    window.scrollTo({ top: 0, behavior: scrollBehavior() });
+  };
+
+  /** 章节索引：先把那一节展开，等 DOM 提交完再滚过去（否则滚动位置会差一截） */
+  const jumpAfterOpen = (name: string, no: number) => {
+    openSection(name);
+    afterLayout(() => jumpToSection(no));
+  };
 
   return (
     <DetailShell
@@ -200,6 +467,7 @@ export default function ChineseExamTopicDetail({
       {/*
         ①′ 章节索引：专题粒度太粗，「逐类讲透」可能有十几节，先给一份能点的目录，
         学生直接跳到「我今天就要补的那一节」。少于 6 节时不给（页面本来就不长，目录成噪音）。
+        点一节会**先把那一节展开**再滚过去——收起状态下滚过去只会看到一行节头。
       */}
       {sections.length >= SECTION_NAV_MIN ? (
         <section className="card card--pad zht-secnav">
@@ -212,7 +480,7 @@ export default function ChineseExamTopicDetail({
               <button
                 className="zht-secnav__item"
                 key={s.name}
-                onClick={() => jumpToSection(i + 1)}
+                onClick={() => jumpAfterOpen(s.name, i + 1)}
                 title={s.intro}
               >
                 <span>
@@ -238,10 +506,13 @@ export default function ChineseExamTopicDetail({
 
       {/* ③ 近五年考情：逐年一条，最近一年置顶；结论单独强调 */}
       {trends.length ? (
-        <Section
-          title={`近五年考情（${trends.length} 条）`}
+        <Fold
           icon="📈"
-          extra={latestYear ? <Tag tone="purple">最近一年 · {latestYear}</Tag> : null}
+          title={`近五年考情（${trends.length} 条）`}
+          count={latestYear ? <Tag tone="purple">最近一年 · {latestYear}</Tag> : null}
+          hint="逐年形态与分值"
+          storeKey={`zht-fold:${entry.id}:trends`}
+          bodyClassName="zht-cv"
         >
           <div className="small muted" style={{ marginBottom: 8, lineHeight: 1.85 }}>
             只看「这几年都在考什么形态、分值大概多少、选材偏向什么」——考情用来决定复习时间往哪块倾斜，
@@ -270,15 +541,17 @@ export default function ChineseExamTopicDetail({
               <Emph text={t.trendSummary} />
             </div>
           </div>
-        </Section>
+        </Fold>
       ) : null}
 
       {/* ④ 命题角度：这几年反复从哪几个角度考，复习时对号入座 */}
       {t.angles.length ? (
-        <Section
-          title={`命题角度（${t.angles.length} 类）`}
+        <Fold
           icon="🎯"
-          extra={<span className="small muted">复习时对号入座</span>}
+          title={`命题角度（${t.angles.length} 类）`}
+          hint="复习时对号入座"
+          storeKey={`zht-fold:${entry.id}:angles`}
+          bodyClassName="zht-cv"
         >
           <div className="stack stack--sm">
             {t.angles.map((a, i) => (
@@ -293,15 +566,17 @@ export default function ChineseExamTopicDetail({
               </div>
             ))}
           </div>
-        </Section>
+        </Fold>
       ) : null}
 
       {/* ⑤ 分步讲解：考场上的动作序列，每一步「做什么」，demo 是「做一遍给你看」 */}
       {t.steps.length ? (
-        <Section
-          title={`分步讲解（${t.steps.length} 步）`}
+        <Fold
           icon="🧭"
-          extra={<span className="small muted">按顺序做，别跳步</span>}
+          title={`分步讲解（${t.steps.length} 步）`}
+          hint="按顺序做，别跳步"
+          storeKey={`zht-fold:${entry.id}:steps`}
+          bodyClassName="zht-cv"
         >
           <div className="small muted" style={{ marginBottom: 10, lineHeight: 1.85 }}>
             这几步是考场上真按这个顺序执行的，读的时候把每一步的「动作」记下来，
@@ -328,7 +603,7 @@ export default function ChineseExamTopicDetail({
               </div>
             ))}
           </div>
-        </Section>
+        </Fold>
       ) : null}
 
       {/*
@@ -336,124 +611,174 @@ export default function ChineseExamTopicDetail({
         + 本节易错（pitfalls）+ 当节练习入口。这是「讲透」真正落地的区块：
         例子必须正误对照才学得会判断，所以 ok === true 走绿色 ✔、否则走红色 ✘，
         有 fix 的直接把「改成什么」摆在错例下面。
+
+        每一节**默认只渲染节头**（序号 + 节名 + 本节有什么 + 题量 + 刷这一节），
+        正文靠条件渲染摘掉；第一节默认展开。「刷这一节」放在节头里而不是正文里，
+        是为了让学生不舍得展开也能直接开练：入口和折叠无关。
       */}
       {sections.length ? (
         <Section
-          title={`逐类讲透（${sections.length} 节 · ${exampleCount} 个例子）`}
+          title="逐类讲透"
           icon="🧩"
-          extra={<span className="small muted">一节一节吃：看懂 → 刷这一节</span>}
+          extra={
+            <span className="zht-secall">
+              <span className="zht-secall__count">
+                共 {sections.length} 节 · {exampleCount} 个例子
+              </span>
+              <button type="button" className="btn btn--sm" onClick={expandAllSections}>
+                展开全部
+              </button>
+              <button type="button" className="btn btn--sm" onClick={collapseAllSections}>
+                收起全部
+              </button>
+            </span>
+          }
         >
           <div className="small muted" style={{ marginBottom: 12, lineHeight: 1.85 }}>
             一个专题（如「积累与运用」）不是一个能直接下手的单位，真正要练的是它下面的子类。
-            下面每一节都有判断方法、正误对照的例子和当节练习，看完一节立刻刷一节。
+            每一节都有判断方法、正误对照的例子和当节练习——默认只展开第一节，
+            想看哪一节点哪一节（章节索引也能直接跳过去），看完立刻刷一节。
           </div>
 
           <div className="stack stack--lg">
-            {sections.map((s, i) => (
-              <section className="zht-sec" id={sectionAnchorId(i + 1)} key={s.name}>
-                <div className="zht-sec__head">
-                  <span className="zht-sec__no">{i + 1}</span>
-                  <span className="zht-sec__name">{s.name}</span>
-                  <span className="spacer" />
-                  <Tag tone={s.count ? 'jade' : 'default'}>{s.count} 题</Tag>
-                </div>
+            {sections.map((s, i) => {
+              const open = openNames.includes(s.name);
+              const ruleCount = s.rules?.length ?? 0;
+              const exampleNum = s.examples?.length ?? 0;
+              const pitfallNum = s.pitfalls?.length ?? 0;
+              return (
+                <section
+                  className={cn(
+                    'zht-sec',
+                    open && 'is-open',
+                    // 收起的节只有节头一行，离屏时交给浏览器跳过布局与绘制
+                    // （展开的那一节不加：它刚被点开就在眼前，跳过去反而要重新量高度）
+                    !open && 'zht-cv zht-cv--sec',
+                  )}
+                  id={sectionAnchorId(i + 1)}
+                  key={s.name}
+                >
+                  <div className="zht-sec__head">
+                    <button
+                      type="button"
+                      className="zht-sec__toggle"
+                      aria-expanded={open}
+                      onClick={() => toggleSection(s.name)}
+                    >
+                      <span className="zht-sec__no">{i + 1}</span>
+                      <span className="zht-sec__name">{s.name}</span>
+                      <span className="zht-sec__meta">
+                        {sectionOutline(ruleCount, exampleNum, pitfallNum)}
+                      </span>
+                      <span className="zht-sec__caret" aria-hidden>
+                        ▼
+                      </span>
+                    </button>
 
-                <div className="zht-sec__intro">
-                  <Emph text={s.intro} />
-                </div>
-
-                {/* 判定要点：写「怎么一眼看出来」，编号列出，与正文视觉分开 */}
-                {s.rules?.length ? (
-                  <div className="zht-rules">
-                    <div className="zht-rules__title">判定要点</div>
-                    <ol className="zht-rules__items">
-                      {s.rules.map((r, k) => (
-                        <li key={k}>
-                          <Emph text={r} />
-                        </li>
-                      ))}
-                    </ol>
+                    {/* 节头右侧：本节题量 + 当节练习入口，展开与否都常驻 */}
+                    <span className="zht-sec__tools">
+                      <Tag tone={s.count ? 'jade' : 'default'}>{s.count} 题</Tag>
+                      <Link
+                        className="btn btn--sm"
+                        to={`${practiceBase}?tag=${encodeURIComponent(s.name)}`}
+                      >
+                        ✍️ 刷这一节（本节 {s.count} 题）
+                      </Link>
+                      {s.count === 0 ? <span className="small muted">本节题目正在补充</span> : null}
+                    </span>
                   </div>
-                ) : null}
 
-                {/* 正误对照：最要紧的一块——错例要说清错在哪、改成什么 */}
-                {s.examples?.length ? (
-                  <div className="stack stack--sm" style={{ marginTop: 12 }}>
-                    <div className="zht-ex__caption">
-                      ✍️ 正误对照（{s.examples.length} 例 · ✔ 规范 ✘ 有问题）
-                    </div>
-                    {s.examples.map((ex, k) => {
-                      const ok = ex.ok === true;
-                      return (
-                        <div className={cn('zht-ex', ok ? 'is-ok' : 'is-bad')} key={k}>
-                          <div className="zht-ex__row">
-                            <span className="zht-ex__mark" aria-hidden>
-                              {ok ? '✔' : '✘'}
-                            </span>
-                            <span className="zht-ex__text">
-                              <Emph text={ex.text} />
-                            </span>
-                          </div>
-                          <div className="zht-ex__analysis">
-                            <span className="zht-ex__label">讲解：</span>
-                            <Emph text={ex.analysis} />
-                          </div>
-                          {ex.fix ? (
-                            <div className="zht-ex__fix">
-                              <span className="zht-ex__label">改：</span>
-                              <Emph text={ex.fix} />
-                            </div>
-                          ) : null}
+                  {open ? (
+                    <div className="zht-sec__body fade-in">
+                      <div className="zht-sec__intro">
+                        <Emph text={s.intro} />
+                      </div>
+
+                      {/* 判定要点：写「怎么一眼看出来」，编号列出，与正文视觉分开 */}
+                      {s.rules?.length ? (
+                        <div className="zht-rules">
+                          <div className="zht-rules__title">判定要点</div>
+                          <ol className="zht-rules__items">
+                            {s.rules.map((r, k) => (
+                              <li key={k}>
+                                <Emph text={r} />
+                              </li>
+                            ))}
+                          </ol>
                         </div>
-                      );
-                    })}
-                  </div>
-                ) : null}
+                      ) : null}
 
-                {/* 本节易错：与专题级同一套三行写法（✘ 常犯 / ✔ 正确 / 为什么容易错） */}
-                {s.pitfalls?.length ? (
-                  <div className="zht-sec__traps">
-                    <div className="zht-sec__trapsTitle">本节易错（错在哪 → 怎么办）</div>
-                    <div className="stack stack--sm">
-                      {s.pitfalls.map((p, k) => (
-                        <div className="zht-sec__trap" key={k}>
-                          <span className="zht-sec__trapMark">◆</span>
-                          {typeof p === 'string' ? (
-                            <span>
-                              <Emph text={p} />
-                            </span>
-                          ) : (
-                            <span className="stack stack--sm">
-                              <span>
-                                <b>✘ 常犯：</b>
-                                <Emph text={p.wrong} />
-                              </span>
-                              <span>
-                                <b>✔ 正确：</b>
-                                <Emph text={p.right} />
-                              </span>
-                              <span className="small muted">
-                                为什么容易错：<Emph text={p.why} />
-                              </span>
-                            </span>
-                          )}
+                      {/* 正误对照：最要紧的一块——错例要说清错在哪、改成什么 */}
+                      {s.examples?.length ? (
+                        <div className="stack stack--sm" style={{ marginTop: 12 }}>
+                          <div className="zht-ex__caption">
+                            ✍️ 正误对照（{s.examples.length} 例 · ✔ 规范 ✘ 有问题）
+                          </div>
+                          {s.examples.map((ex, k) => {
+                            const ok = ex.ok === true;
+                            return (
+                              <div className={cn('zht-ex', ok ? 'is-ok' : 'is-bad')} key={k}>
+                                <div className="zht-ex__row">
+                                  <span className="zht-ex__mark" aria-hidden>
+                                    {ok ? '✔' : '✘'}
+                                  </span>
+                                  <span className="zht-ex__text">
+                                    <Emph text={ex.text} />
+                                  </span>
+                                </div>
+                                <div className="zht-ex__analysis">
+                                  <span className="zht-ex__label">讲解：</span>
+                                  <Emph text={ex.analysis} />
+                                </div>
+                                {ex.fix ? (
+                                  <div className="zht-ex__fix">
+                                    <span className="zht-ex__label">改：</span>
+                                    <Emph text={ex.fix} />
+                                  </div>
+                                ) : null}
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
+                      ) : null}
 
-                <div className="zht-sec__foot">
-                  <Link
-                    className="btn btn--sm"
-                    to={`${practiceBase}?tag=${encodeURIComponent(s.name)}`}
-                  >
-                    ✍️ 刷这一节（本节 {s.count} 题）
-                  </Link>
-                  {s.count === 0 ? <span className="small muted">本节题目正在补充</span> : null}
-                </div>
-              </section>
-            ))}
+                      {/* 本节易错：与专题级同一套三行写法（✘ 常犯 / ✔ 正确 / 为什么容易错） */}
+                      {s.pitfalls?.length ? (
+                        <div className="zht-sec__traps">
+                          <div className="zht-sec__trapsTitle">本节易错（错在哪 → 怎么办）</div>
+                          <div className="stack stack--sm">
+                            {s.pitfalls.map((p, k) => (
+                              <div className="zht-sec__trap" key={k}>
+                                <span className="zht-sec__trapMark">◆</span>
+                                {typeof p === 'string' ? (
+                                  <span>
+                                    <Emph text={p} />
+                                  </span>
+                                ) : (
+                                  <span className="stack stack--sm">
+                                    <span>
+                                      <b>✘ 常犯：</b>
+                                      <Emph text={p.wrong} />
+                                    </span>
+                                    <span>
+                                      <b>✔ 正确：</b>
+                                      <Emph text={p.right} />
+                                    </span>
+                                    <span className="small muted">
+                                      为什么容易错：<Emph text={p.why} />
+                                    </span>
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </section>
+              );
+            })}
           </div>
         </Section>
       ) : null}
@@ -537,10 +862,12 @@ export default function ChineseExamTopicDetail({
 
       {/* ⑩ 专项训练分组：组名即题目标签，一组一个入口，只出这一组的题 */}
       {drills.length ? (
-        <Section
-          title={`专项训练（${drills.length} 组 · ${total} 题）`}
+        <Fold
           icon="🏋️"
-          extra={<span className="small muted">点「刷这一组」只出这一组的题</span>}
+          title={`专项训练（${drills.length} 组 · ${total} 题）`}
+          hint="点「刷这一组」只出这一组的题"
+          storeKey={`zht-fold:${entry.id}:drills`}
+          bodyClassName="zht-cv"
         >
           <div className="small muted" style={{ marginBottom: 12, lineHeight: 1.85 }}>
             每一组对应一种卷面考法，组名就是题目上的标签。建议一组一组过：练完一组，
@@ -579,14 +906,21 @@ export default function ChineseExamTopicDetail({
               另有 {ungrouped} 题暂未归入上面的训练组，练「从头练这个专题」时会一并出现。
             </div>
           ) : null}
-        </Section>
+        </Fold>
       ) : null}
 
-      {/* ⑪ 题库总览：只给题干摘要与题型，用来判断题量，作答一律走练习页 */}
-      <Section
-        title={`题库总览（共 ${total} 题）`}
+      {/*
+        ⑪ 题库总览：只给题干摘要与题型，用来判断题量，作答一律走练习页。
+        **默认收起**：这一块最多就是一份长清单，学生进详情页要的是讲解；
+        展开后也只列前 `PREVIEW_LIMIT` 条，其余的去练习页按组出题。
+      */}
+      <Fold
         icon="📚"
-        extra={<span className="small muted">只列题干，作答在练习页</span>}
+        title={`题库总览（共 ${total} 题）`}
+        hint="只列题干，作答在练习页"
+        defaultOpen={false}
+        storeKey={`zht-fold:${entry.id}:bank`}
+        bodyClassName="zht-cv"
       >
         {preview.length ? (
           <>
@@ -618,7 +952,7 @@ export default function ChineseExamTopicDetail({
         ) : (
           <div className="small muted">本专题的题库正在补充，先看讲解，题目到位后入口会自动出现。</div>
         )}
-      </Section>
+      </Fold>
 
       {/* ⑫ 底部行动条：从头练全部题；已经练过的，只练还没过关的那几题 */}
       <section className="card card--pad zht-cta">
@@ -648,6 +982,20 @@ export default function ChineseExamTopicDetail({
           ) : null}
         </div>
       </section>
+
+      {/*
+        ⑬ 浮动按钮：页面长起来之后（超过约一屏）才淡入。
+        始终渲染在 DOM 里、靠 `is-on` 控制显隐，是为了让服务端渲染的冒烟断言
+        能直接看到这组结构；`prefers-reduced-motion` 下不做平滑动画（见 index.css）。
+      */}
+      <nav className={cn('zht-float', floatOn && 'is-on')} aria-label="页面快捷操作">
+        <button type="button" className="btn btn--sm zht-float__btn" onClick={backToTop}>
+          ↑ 顶部
+        </button>
+        <Link className="btn btn--sm zht-float__btn" to={`/s/chinese/${entry.moduleId}`}>
+          ← 专题列表
+        </Link>
+      </nav>
     </DetailShell>
   );
 }

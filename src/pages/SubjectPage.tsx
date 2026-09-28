@@ -9,7 +9,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { TOTAL_SCORE, getSubject, weightOf } from '../data/subjects';
 import { moduleIdsOfSubject } from '../data';
 import { totalsOfModule } from '../data/totals';
@@ -77,8 +77,24 @@ for (const m of ENTRY_META) {
 export default function SubjectPage() {
   const { subjectId = 'chinese' } = useParams();
   const subject = getSubject(subjectId);
-  const { grade, setGrade } = useStudy();
-  const [gradeFilter, setGradeFilter] = useState<GradeId | 'all'>(grade);
+  const { setGrade } = useStudy();
+  const [search] = useSearchParams();
+
+  /**
+   * 本页**是否显式选过**学段：点过上面的 chip，或地址栏带 `?grade=`。
+   *
+   * 只有显式选过，才把学段透传给模块页/练习页的链接。原因：全局学段是**用户级**
+   * 设置（可能是很久以前在别处选的「九上」并持久化了下来），把它当成「在本页选了
+   * 九上」发布到 URL 上，模块页会当作权威选择（`picked`），于是从这一科进任何单册
+   * 模块都被顶到九上——例如「物理·力学基础」是人教版八上/八下内容，进来就是空白页。
+   * 不带 `?grade=` 时模块页会自适应到本册学段（见 ModulePage 的 adaptedGrade）。
+   */
+  const [picked, setPicked] = useState<GradeId | 'all' | null>(
+    (search.get('grade') as GradeId | 'all' | null) ?? null,
+  );
+  const gradeFilter: GradeId | 'all' = picked ?? 'all';
+  /** 只在显式选过时把学段写进链接，见上面 `picked` 的说明 */
+  const gradeQuery = picked ? `?grade=${picked}` : '';
 
   const moduleIds = useMemo(() => moduleIdsOfSubject(subjectId), [subjectId]);
 
@@ -140,7 +156,7 @@ export default function SubjectPage() {
               <Link
                 key={m.id}
                 className="module-card"
-                to={`/s/${subject.id}/${m.id}?grade=${gradeFilter}`}
+                to={`/s/${subject.id}/${m.id}${gradeQuery}`}
               >
                 <span className="module-card__accent" style={{ background: m.color }} />
                 <span
@@ -191,7 +207,7 @@ export default function SubjectPage() {
         extra={
           <Link
             className="btn btn--primary btn--sm"
-            to={`/practice/${firstModule}?grade=${gradeFilter}`}
+            to={`/practice/${firstModule}${gradeQuery}`}
           >
             🎲 随机练习
           </Link>
@@ -204,7 +220,7 @@ export default function SubjectPage() {
         <div className="scroll-x">
           <button
             className={cn('chip', gradeFilter === 'all' && 'is-active')}
-            onClick={() => setGradeFilter('all')}
+            onClick={() => setPicked('all')}
           >
             全部
           </button>
@@ -213,7 +229,7 @@ export default function SubjectPage() {
               key={g.id}
               className={cn('chip', gradeFilter === g.id && 'is-active')}
               onClick={() => {
-                setGradeFilter(g.id);
+                setPicked(g.id);
                 setGrade(g.id);
               }}
             >
@@ -234,7 +250,7 @@ export default function SubjectPage() {
               <Link
                 key={m.id}
                 className="module-card"
-                to={`/s/${subject.id}/${m.id}?grade=${gradeFilter}`}
+                to={`/s/${subject.id}/${m.id}${gradeQuery}`}
               >
                 <span className="module-card__accent" style={{ background: m.color }} />
                 <span
@@ -252,7 +268,9 @@ export default function SubjectPage() {
                   </span>
                   <span className="module-card__foot">
                     <span>
-                      本学段 {st.gradeCount} 条 / 共 {allCount} 条
+                      {gradeFilter === 'all'
+                        ? `共 ${allCount} 条`
+                        : `本学段 ${st.gradeCount} 条 / 共 ${allCount} 条`}
                     </span>
                     <span>·</span>
                     <span>{st.questions} 题</span>

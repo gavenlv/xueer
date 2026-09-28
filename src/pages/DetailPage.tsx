@@ -12,9 +12,10 @@ import type {
   PoliticsTopicEntry,
 } from '../types';
 import { findEntryById } from '../data';
+import { isZhTopicId } from '../data/chinese';
 import { getModuleMeta } from '../data/subjects';
 import { useStudy } from '../store/StudyContext';
-import { useDataScope } from '../lib/useData';
+import { useDataScope, useZhTopics, DataLoading } from '../lib/useData';
 import { EmptyState } from '../components/common';
 import { PoemDetail } from './detail/PoemDetail';
 import { VocabDetail } from './detail/VocabDetail';
@@ -61,8 +62,27 @@ function DetailLoading() {
 export default function DetailPage() {
   const { moduleId = 'poems', itemId = '' } = useParams();
   const { recordStudy } = useStudy();
-  // 本条内容所属模块的数据 + 思维导图/拓展阅读（详情页底部要用）
-  const ready = useDataScope([moduleId as ModuleId, 'extras']);
+  /**
+   * 本条内容所属模块的数据；`extras`（思维导图 + 拓展阅读）是详情页底部要用的。
+   *
+   * **语文「中考专题」不加载 `extras`**：这一模块既没有课时导图也没有拓展阅读
+   * （`mindmaps-*.ts` / `extensions-*.ts` 里没有任何 `zht-*` 数据），
+   * 而 `extras` 有 125 kB（gzip 约 127 kB）——看一个专题却要白下这些，
+   * 是这一页最不该付的代价。专题页底部因此不会出现导图/拓展区块（本来就该没有内容），
+   * 关联学习与学一补多依赖的是 `relations.ts` 与已加载条目，不受影响。
+   * 请不要「顺手」把它补回来。
+   */
+  const needExtras = moduleId !== 'zh-topics';
+  const moduleReady = useDataScope(
+    needExtras ? [moduleId as ModuleId, 'extras'] : [moduleId as ModuleId],
+  );
+  /**
+   * 语文「中考专题」是**一专题一块**：模块范围只装骨架（模块列表页因此零下载），
+   * 正文要按本条内容点名下载。少了这一步，详情页会拿着骨架渲染出空白的考情与讲解
+   * ——那比停在加载中更糟：学生以为「这个专题没内容」。
+   */
+  const topic = useZhTopics(moduleId === 'zh-topics' && isZhTopicId(itemId) ? [itemId] : undefined);
+  const ready = moduleReady && topic.ready;
   const entry = useMemo(() => findEntryById(itemId), [itemId, ready]);
   const counted = useRef<string | null>(null);
 
@@ -73,7 +93,11 @@ export default function DetailPage() {
     recordStudy(entry.id);
   }, [entry, recordStudy]);
 
-  if (!ready) return <DetailLoading />;
+  if (!moduleReady) return <DetailLoading />;
+  // 专题正文还在下载：走真实的加载占位（带进度、失败可重试），不要渲染空内容
+  if (!topic.ready) {
+    return <DataLoading label="正在加载专题…" failed={topic.failed} onRetry={topic.retry} />;
+  }
 
   if (!entry || entry.moduleId !== moduleId) {
     return (

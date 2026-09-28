@@ -1328,13 +1328,16 @@ if (!zhTopicOk) failed += 1;
 /* ------------- 接线检查：学段筛选（选了的学段必须真的生效） ------------- */
 
 /**
- * 学段筛选曾出过两类 bug，都很隐蔽、都不会让页面报错：
+ * 学段筛选曾出过三类 bug，都很隐蔽、都不会让页面报错：
  *   ① 模块页把学生的选择「自动适配」回去——在单册模块（历史 hist-9b 等）点「九上」
  *      会被立刻弹回本册学段，学生看到的现象是「点九下没反应 / 怎么每次进来都是九上」；
- *   ② 学科页选好学段后，模块卡片不带 `?grade=`，点进去又回到全局学段。
+ *   ② 学科页选好学段后，模块卡片不带 `?grade=`，点进去又回到全局学段；
+ *   ③ **学科页把「全局持久化的学段」当成「在本页选过」**，于是从任何一科进任何单册
+ *      模块都被顶到那个学段——「物理·力学基础」是人教版八上/八下内容，进来直接空白。
  *
- * 这里用一份 `grade: '9b'` 的 localStorage 渲染四个页面来把这两点锁住：
- * 既验证「手动选择优先」，也验证「没人选时自动适配仍不让学生撞空白」。
+ * 这里用一份 `grade: '9b'` 的 localStorage 渲染几个页面来把三点都锁住：
+ * 既验证「手动选择优先」，也验证「没人选时自动适配仍不让学生撞空白」，
+ * 还验证「没在本页选过时不要把全局学段写进模块链接」。
  */
 (globalThis as unknown as { localStorage: unknown }).localStorage = {
   getItem: (k: string) =>
@@ -1369,8 +1372,16 @@ const isActiveGrade = (html: string, short: string) =>
 const histAdaptHtml = renderRoute('/s/history/hist-9a');
 // 手动选「九上」再进「九下」单册模块：选择必须优先，不能被自动适配弹回
 const histPickedHtml = renderRoute('/s/history/hist-9b?grade=9a');
-// 学科页的学段要跟着模块卡片走
-const histSubjectHtml = renderRoute('/s/history');
+// 学科页显式选学段（地址栏 ?grade=9b）时，学段要跟着模块卡片走
+const histSubjectPickedHtml = renderRoute('/s/history?grade=9b');
+// 学科页没选过学段：不得把持久的全局学段（这里是 9b）写进模块链接
+const histSubjectBareHtml = renderRoute('/s/history');
+const phySubjectBareHtml = renderRoute('/s/physics');
+// 报过的 bug：全局学段是九上时进「物理·力学基础」（八上/八下内容）必须照常列出知识点。
+// 这里**从学科页真正产出的链接出发**（而不是手写路由），否则「链接带上了学段」这类
+// 回归会被绕过——学生点的就是卡片上那个链接。
+const phyMechHref = /href="([^"]*phy-mech[^"]*)"/.exec(phySubjectBareHtml)?.[1] ?? '';
+const phyMechHtml = renderRoute(phyMechHref || '/s/physics/phy-mech');
 // 学段过滤必须真的过滤列表内容（九下 / 九上各看一遍）
 const poems9bHtml = renderRoute('/s/chinese/poems?grade=9b');
 const poems9aHtml = renderRoute('/s/chinese/poems?grade=9a');
@@ -1385,7 +1396,23 @@ const gradeChecks: [string, boolean][] = [
     '模块页：该学段确无内容时给诚实空态，不混入别册条目',
     histPickedHtml.includes('暂无内容') && !histPickedHtml.includes('list-item__title'),
   ],
-  ['学科页：模块卡片带上学段 ?grade=9b', histSubjectHtml.includes('/s/history/hist-9b?grade=9b')],
+  [
+    '学科页：显式选学段后模块卡片带上 ?grade=9b',
+    histSubjectPickedHtml.includes('/s/history/hist-9b?grade=9b'),
+  ],
+  [
+    '学科页：没选过学段时不把全局学段写进模块链接',
+    !histSubjectBareHtml.includes('?grade=') &&
+      histSubjectBareHtml.includes('/s/history/hist-9b"'),
+  ],
+  [
+    '学科页（物理）：没选过学段时模块卡片不带 ?grade=',
+    !phySubjectBareHtml.includes('?grade='),
+  ],
+  [
+    '模块页：从学科页点「力学基础」进去（全局学段九下）照常列出知识点，不撞空白',
+    phyMechHtml.includes('list-item__title'),
+  ],
   [
     '模块页：?grade=9b 只列九下篇目',
     poems9bHtml.includes('渔家傲·秋思') && !poems9bHtml.includes('沁园春·雪'),
@@ -1401,7 +1428,7 @@ console.log(
     gradeChecks
       .filter(([, ok]) => !ok)
       .map(([n]) => n)
-      .join('、') || '六类断言全通过'
+      .join('、') || `${gradeChecks.length} 类断言全通过`
   }）`,
 );
 if (!gradeOk) failed += 1;

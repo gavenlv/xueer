@@ -15,7 +15,7 @@ import { useStudy } from '../store/StudyContext';
 import type { ModuleId } from '../types';
 import { makeReciteQuestions } from '../lib/quiz';
 import { cn } from '../lib/utils';
-import { useDataScope, DataLoading } from '../lib/useData';
+import { useDataScope, useZhTopics, DataLoading } from '../lib/useData';
 import {
   EmptyState,
   PageHeader,
@@ -35,7 +35,14 @@ export default function ExamPage() {
   const [keyword, setKeyword] = useState('');
   const [moduleFilter, setModuleFilter] = useState<ModuleId | 'all'>('all');
   /** 考点要从**本科全部**题目的知识点标签聚合出来，因此这一页需要加载本科全部数据 */
-  const ready = useDataScope(moduleIdsOfSubject(subjectId));
+  const moduleIds = useMemo(() => moduleIdsOfSubject(subjectId), [subjectId]);
+  /**
+   * 语文「中考专题」的题目在专题正文里（一专题一块，模块范围只装骨架）。
+   * 考点页正是**按题目标签**聚合的，少加载一块就少一整片考点：
+   * 页面照常渲染，只是「字音」「一词多义」这些考点凭空不见。所以这里全部加载。
+   */
+  const zhTopics = useZhTopics(moduleIds.includes('zh-topics') ? 'all' : undefined);
+  const ready = useDataScope(moduleIds) && zhTopics.ready;
   /**
    * 考点总数已经 600+，一次全铺出来会把页面撑到近 400 KB HTML、手机上必卡。
    * 因此每个模块先只显示前若干个，点「展开全部」再看剩下的；
@@ -152,7 +159,9 @@ export default function ExamPage() {
     );
   }
 
-  if (!ready) return <DataLoading label="正在汇总考点…" />;
+  if (!ready) {
+    return <DataLoading label="正在汇总考点…" failed={zhTopics.failed} onRetry={zhTopics.retry} />;
+  }
 
   return (
     <div className="stack stack--lg">

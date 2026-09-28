@@ -13,7 +13,7 @@ import { isCloudConfigured } from '../lib/supabase';
 import { dateKey, formatDuration, pct, shiftDate } from '../lib/utils';
 import { isMastered } from '../lib/recite';
 import { entryIdOfCard } from '../lib/reciteCards';
-import { useDataScope, DataLoading } from '../lib/useData';
+import { useDataScope, useZhTopics, DataLoading } from '../lib/useData';
 import { EmptyState, PageHeader, ProgressBar, SectionTitle, Stat, Tag } from '../components/common';
 
 const DAYS = 14;
@@ -36,7 +36,14 @@ export default function StatsPage() {
     for (const w of Object.values(state.wrong)) if (w.moduleId) ids.add(w.moduleId);
     return [...ids] as ModuleId[];
   }, [state.wrong]);
-  const ready = useDataScope(wrongModuleIds);
+  /**
+   * 薄弱知识点要靠题目上的标签聚合，语文「中考专题」的题目在专题正文里
+   * （一专题一块，模块范围只装骨架）：只要错题里出现过 zh-topics，
+   * 就必须把七个专题的正文都加载进来，否则这几个专题的错题会**静默不算**，
+   * 「薄弱知识点」凭空少一截，而页面看不出任何异常。
+   */
+  const zhTopics = useZhTopics(wrongModuleIds.includes('zh-topics') ? 'all' : undefined);
+  const ready = useDataScope(wrongModuleIds) && zhTopics.ready;
 
   /* summary 骨架索引 */
   const metaById = useMemo(() => new Map(ENTRY_META.map((e) => [e.id, e])), []);
@@ -179,7 +186,11 @@ export default function StatsPage() {
 
   const hasData = totals.answered > 0 || totals.studied > 0 || cardTotals.practiced > 0;
 
-  if (!ready) return <DataLoading label="正在汇总学习数据…" />;
+  if (!ready) {
+    return (
+      <DataLoading label="正在汇总学习数据…" failed={zhTopics.failed} onRetry={zhTopics.retry} />
+    );
+  }
 
   return (
     <div className="stack stack--lg">

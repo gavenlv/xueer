@@ -8,7 +8,7 @@ import { useStudy } from '../store/StudyContext';
 import type { ModuleId } from '../types';
 import { OPTION_KEYS, cn, timeAgo } from '../lib/utils';
 import { searchTextOf } from '../lib/searchText';
-import { useDataScope, DataLoading } from '../lib/useData';
+import { useDataScope, useZhTopics, DataLoading } from '../lib/useData';
 import { EmptyState, PageHeader, SearchBox, Tag } from '../components/common';
 import { RichText } from '../components/RichText';
 
@@ -22,8 +22,14 @@ export default function WrongBook() {
   /**
    * 错题只按题目 id 存，要显示题干就得在题库里反查，
    * 因此这里加载**本科**全部模块的数据（不再顺带把别的科目也拉下来）。
+   *
+   * 语文「中考专题」是一专题一块：模块范围只装骨架，题目在专题正文里。
+   * 错题本必须按题目反查题干（`findQuestion`），少加载一块就等于**静默少掉**那一块的错题，
+   * 所以这里显式把七个专题的正文都拉到内存里（其它科目没有这一层，传 undefined）。
    */
-  const ready = useDataScope(moduleIdsOfSubject(subjectId));
+  const moduleIds = moduleIdsOfSubject(subjectId);
+  const zhTopics = useZhTopics(moduleIds.includes('zh-topics') ? 'all' : undefined);
+  const ready = useDataScope(moduleIds) && zhTopics.ready;
 
   /** 把本科错题记录与题库中的题目对上（数据更新后可能失配，直接丢弃） */
   const rows = useMemo(() => {
@@ -79,7 +85,7 @@ export default function WrongBook() {
     return <EmptyState icon="🧭" title="没有这个学科" desc="请从首页重新选择。" />;
   }
 
-  if (!ready) return <DataLoading label="正在整理错题…" />;
+  if (!ready) return <DataLoading label="正在整理错题…" failed={zhTopics.failed} onRetry={zhTopics.retry} />;
 
   return (
     <div className="stack stack--lg">

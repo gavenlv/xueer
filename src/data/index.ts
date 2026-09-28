@@ -84,6 +84,80 @@ function syncSubjectContainers(): void {
   }
 }
 
+/* ---------------------------- 加载进度 ---------------------------- */
+
+/**
+ * 数据加载进度：给「正在加载内容…」提供**真实数字**。
+ *
+ * 起因：手机上打开某一科或某个多模块页面时，要下载的整科内容有几百 KB 到数 MB，
+ * 而原来的占位只有一个静止的「正在加载内容…」——加载慢时看不出它究竟是在下载、
+ * 已经下了多少、还是已经卡死；更糟的是**任何一次 chunk 加载失败都会永远停在
+ * 这个占位上**（`useDataScope` 只在成功回调里置 ready，没有失败分支）。
+ *
+ * 因此数据层对外暴露一个小订阅源：分母是「本页要加载但尚未加载的模块数」，
+ * 分子是已完成数，由各学科加载器逐个回报（见 `loadModules` 的 report 参数）。
+ * 加载失败也记在这里，占位组件据此给出重试入口，而不是一直转圈。
+ */
+export type LoadProgress = {
+  /** 本轮要加载的模块数（已在内存里的不计） */
+  total: number;
+  /** 已完成数 */
+  done: number;
+  /**
+   * 容器是否已同步完成。**不能拿「进度到 100%」当就绪**：最后一块下载完时全局
+   * 容器还没 `syncSubjectContainers()`，此时渲染会查出空内容——页面必须等到
+   * 本字段为真才能放行（见 `useDataScope`）。
+   */
+  synced: boolean;
+  /** 本轮是否失败（网络中断、部署后旧 chunk 失效等） */
+  failed: boolean;
+  /** 本轮开始时间戳（毫秒），占位组件用它显示「已等待 N 秒」 */
+  startedAt: number;
+  /** 正在加载的范围名称，如「物理·力学基础」 */
+  labels: string[];
+  /** 失败时用于重试的原始范围 */
+  scope: DataScope[];
+};
+
+let progress: LoadProgress = {
+  total: 0,
+  done: 0,
+  synced: false,
+  failed: false,
+  startedAt: 0,
+  labels: [],
+  scope: [],
+};
+
+const progressListeners = new Set<() => void>();
+
+/** 当前进度快照（引用只在进度变化时更换，可直接给 useSyncExternalStore） */
+export function loadProgress(): LoadProgress {
+  return progress;
+}
+
+/** 订阅进度变化，返回取消函数 */
+export function subscribeLoadProgress(fn: () => void): () => void {
+  progressListeners.add(fn);
+  return () => progressListeners.delete(fn);
+}
+
+function emitProgress(patch: Partial<LoadProgress>): void {
+  progress = { ...progress, ...patch };
+  for (const fn of progressListeners) fn();
+}
+
+/** 模块 id → 「学科·模块」显示名（只看加载了哪几块内容） */
+const MODULE_LABELS = new Map<string, string>();
+for (const s of SUBJECTS) {
+  for (const m of s.modules) MODULE_LABELS.set(m.id, `${s.name}·${m.name}`);
+}
+
+function labelsOfScope(scope: DataScope[]): string[] {
+  const names = scope.map((s) => (s === 'extras' ? '导图与拓展' : MODULE_LABELS.get(s) ?? s));
+  return names.length > 3 ? [...names.slice(0, 3), `等 ${names.length} 项`] : names;
+}
+
 /** 数学模块 id 前缀 → 学科加载器 */
 const MATH_MODULE_IDS = new Set<string>(math.MATH_MODULE_IDS);
 /** 历史模块 id（八块：六册教材 + 中考专题 + 模拟考试） */
@@ -119,19 +193,55 @@ export function isScopeReady(scope: DataScope[]): boolean {
   );
 }
 
-/** 加载这些范围的数据 */
+/** 加载这些范围的数据（加载过程中持续上报进度，见 `loadProgress`） */
 export async function ensureModules(scope: DataScope[]): Promise<void> {
   const request = splitScope(scope);
-  await Promise.all([
-    chinese.loadModules(request.chinese),
-    history.loadModules(request.history),
-    english.loadModules(request.english),
-    politics.loadModules(request.politics),
-    physics.loadModules(request.physics),
-    chemistry.loadModules(request.chemistry),
-  ]);
-  if (request.math.length) await math.load();
-  syncSubjectContainers();
+  emitProgress({
+    total: 0,
+    done: 0,
+    synced: false,
+    failed: false,
+    startedAt: Date.now(),
+    labels: labelsOfScope(scope),
+    scope: [...scope],
+  });
+
+  /** 各学科并行加载，因此把回报按学科归拢后再汇总，避免分子分母互相覆盖 */
+  const units = new Map<string, { total: number; done: number }>();
+  const reporter = (subject: string) =>
+    function report(total: number, done: number): void {
+      units.set(subject, { total, done });
+      let t = 0;
+      let d = 0;
+      for (const u of units.values()) {
+        t += u.total;
+        d += u.done;
+      }
+      emitProgress({ total: t, done: d });
+    };
+
+  try {
+    await Promise.all([
+      chinese.loadModules(request.chinese, reporter('chinese')),
+      history.loadModules(request.history, reporter('history')),
+      english.loadModules(request.english, reporter('english')),
+      politics.loadModules(request.politics, reporter('politics')),
+      physics.loadModules(request.physics, reporter('physics')),
+      chemistry.loadModules(request.chemistry, reporter('chemistry')),
+    ]);
+    if (request.math.length) {
+      // 数学是整科一个 chunk，只能按「一块」上报
+      reporter('math')(1, 0);
+      await math.load();
+      reporter('math')(1, 1);
+    }
+    syncSubjectContainers();
+    // 同步完成才是真正的「可以查了」，见 LoadProgress.synced 的说明
+    emitProgress({ synced: true });
+  } catch (err) {
+    emitProgress({ failed: true });
+    throw err;
+  }
 }
 
 /** 把「页面声明的范围」分派给各学科的加载器 */

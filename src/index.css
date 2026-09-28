@@ -4431,3 +4431,247 @@ button.mm-label:hover {
     margin-left: 0;
   }
 }
+
+/* ------------------------ 语文 · 中考专题 · 改造 ------------------------ */
+/*
+ * 一个专题页原本一次铺开 12 个区块（「逐类讲透」最多 17 节 × 十几行），DOM 节点上万，
+ * 首屏之后的内容学生看不到却全都参与样式计算、布局与绘制。这一块做四件事：
+ *
+ *   ① 长区块（Fold）与每一节都能收起：收起时正文**不渲染**（不是 CSS 隐藏），真的少节点
+ *   ② 右下角浮起一组按钮，滚动超过一屏后淡入：回顶部 / 退回专题列表
+ *   ③ 离屏的长块交给浏览器跳过布局与绘制（content-visibility）
+ *   ④ 系统开了「减少动态效果」时不做平滑滚动与淡入
+ */
+
+/* ---- ① 长区块折叠：标题行整行可点，右侧给「展开 / 收起」的明确字眼 ---- */
+
+.zht-fold__head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 15px 18px;
+  text-align: left;
+  background: var(--c-surface);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  transition: background 0.16s;
+}
+
+.zht-fold__head:hover {
+  background: var(--c-surface-2);
+}
+
+/* 收起时标题行就是整张卡，四角都得圆，否则底部两个直角会露出卡片底色 */
+.zht-fold:not(.is-open) .zht-fold__head {
+  border-radius: var(--r-lg);
+}
+
+/* 展开时标题与正文之间要有分隔线（与 .card__head 一致） */
+.zht-fold.is-open .zht-fold__head {
+  border-bottom: 1px solid var(--c-line);
+}
+
+.zht-fold__hint {
+  font-size: 12.5px;
+  color: var(--c-ink-3);
+}
+
+/* 「展开 / 收起」胶囊：光有箭头不够明确，长区块收起来之后学生要找得回来 */
+.zht-fold__state {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 11px;
+  border: 1px solid var(--c-line-2);
+  border-radius: var(--r-full);
+  background: var(--c-primary-soft);
+  color: var(--c-primary-ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.zht-fold.is-open .zht-fold__state {
+  background: var(--c-surface-3);
+  border-color: var(--c-line);
+  color: var(--c-ink-2);
+}
+
+.zht-fold__caret {
+  flex: none;
+  font-size: 11px;
+  color: var(--c-ink-3);
+  transition: transform 0.22s;
+}
+
+.zht-fold.is-open .zht-fold__caret {
+  transform: rotate(180deg);
+}
+
+/* 「展开全部 / 收起全部」+ 规模说明：整块靠右，窄屏换行时占满一行 */
+.zht-secall {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.zht-secall__count {
+  font-size: 12.5px;
+  color: var(--c-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 区块标题行默认不换行，两个按钮会把标题挤扁：带这组按钮时允许换行 */
+.card__head:has(.zht-secall) {
+  flex-wrap: wrap;
+}
+
+/* ---- ①′ 逐类讲透：每一节只留节头，点开才渲染正文 ---- */
+
+/* 节头整块可点：序号 + 节名 + 本节有什么 + 箭头，右侧单独放题量与刷题入口 */
+.zht-sec__toggle {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  text-align: left;
+}
+
+/* 收起时的「本节里有什么」：不展开也能判断值不值得看 */
+.zht-sec__meta {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--c-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.zht-sec__caret {
+  margin-left: auto;
+  flex: none;
+  font-size: 11px;
+  color: var(--c-ink-3);
+  transition: transform 0.22s;
+}
+
+.zht-sec.is-open .zht-sec__caret {
+  transform: rotate(180deg);
+}
+
+/* 节头右侧：本节题量 +「刷这一节」，展开与否都常驻（入口与折叠无关） */
+.zht-sec__tools {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 收起时节头下的分隔线没有意义（下面没有东西），去掉免得把卡片切成两半 */
+.zht-sec:not(.is-open) .zht-sec__head {
+  padding-bottom: 0;
+  border-bottom-color: transparent;
+}
+
+/* ---- ② 浮动按钮：滚动超过一屏后淡入 ---- */
+
+.zht-float {
+  position: fixed;
+  right: 12px;
+  /* 落在底部标签栏（约 54px 高）之上：既不盖标签栏，也不压在正文最后一行上 */
+  bottom: calc(70px + env(safe-area-inset-bottom));
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  pointer-events: none;
+  /* visibility 延迟 0.2s 再变，是为了让「淡出」也看得见；淡入时立刻可见 */
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+}
+
+.zht-float.is-on {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  pointer-events: auto;
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s;
+}
+
+.zht-float__btn {
+  box-shadow: var(--sh-2);
+}
+
+/*
+ * 本页底部多留一段空白：浮动按钮 + 底部标签栏都不至于盖住正文与底部行动条。
+ * 用 :has() 只在这一页生效（只有这一页会渲染 .zht-float）。
+ */
+.app__main:has(.zht-float) {
+  padding-bottom: calc(210px + env(safe-area-inset-bottom));
+}
+
+/* ---- ③ 离屏跳过：长块与收起的节不参与离屏的布局与绘制 ---- */
+/*
+ * **只给离屏的长块加**：首屏可见的区块（攻破标准 / 章节索引 / 拿分逻辑 / 展开的那一节）
+ * 一律不加——容器先按占位高度排、随后又被真实内容撑开，表现就是滚动条乱跳。
+ * `auto <长度>` 里的 auto 让浏览器记住上次渲染出来的真实高度，第二屏之后就不再抖。
+ */
+.zht-cv {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 620px;
+}
+
+/* 收起的节只有节头一行，占位高度按节头给 */
+.zht-cv--sec {
+  contain-intrinsic-size: auto 72px;
+}
+
+/* ---- ④ 无障碍：系统开了「减少动态效果」就不做动画 ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  .zht-float,
+  .zht-float.is-on {
+    transition: none;
+    transform: none;
+  }
+
+  .zht-fold__caret,
+  .zht-sec__caret {
+    transition: none;
+  }
+
+  /* 展开正文时的淡入也去掉 */
+  .zht-fold .fade-in,
+  .zht-sec__body.fade-in {
+    animation: none;
+  }
+}
+
+/* 窄屏：浮动按钮收小、区块标题与「展开全部」各占一行，别把正文挤没 */
+@media (max-width: 560px) {
+  .zht-float {
+    right: 8px;
+    bottom: calc(66px + env(safe-area-inset-bottom));
+  }
+
+  .zht-float__btn {
+    padding: 6px 10px;
+    font-size: 12.5px;
+  }
+
+  .zht-fold__head {
+    padding: 13px 14px;
+  }
+
+  .zht-secall {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}

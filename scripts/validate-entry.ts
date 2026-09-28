@@ -14,12 +14,18 @@ import {
   allEntries,
   contentStats,
   entryIndex,
+  isScopeReady,
+  loadProgress,
   mindMaps,
   extensions,
   poemExamPoints,
+  subscribeLoadProgress,
   ensureAll,
+  ensureModules,
+  type LoadProgress,
 } from '../src/data';
-import { allPoems } from '../src/data/chinese';
+import { allPoems, isZhTopicReady, isZhTopicsReady, zhExamTopicItems } from '../src/data/chinese';
+import { ZH_TOPIC_IDS } from '../src/data/chinese/modules/zh-topics';
 import { allTopics, allPapers } from '../src/data/history';
 // allTopics 含 pol-exam 的「题型专题」（与整卷共用 pol-exam），allPapers 只含卷子：
 // 校验卷面结构必须从 allPapers 取，不能按 moduleId === 'pol-exam' 从条目里筛。
@@ -69,7 +75,39 @@ import type {
  * 内容数据已改为**按需加载**（见 `src/data/chinese/index.ts`）：
  * 页面各自声明需要的模块，而这里在校验开始前一次性把全部模块加载进来，
  * 之后所有同步查询 API 照旧可用——因此下面几百条断言完全不用改写。
+ *
+ * 加载进度管线放在 `ensureAll()` **之前**自测：那时内存里一个模块都没有，
+ * 才能观察到「0 / N → N / N → synced」的完整过程（见下面的 `bootErrors`）。
  */
+const bootErrors: string[] = [];
+{
+  const seen: LoadProgress[] = [];
+  const unsub = subscribeLoadProgress(() => seen.push(loadProgress()));
+  await ensureModules(['phy-mech', 'phy-light']);
+  unsub();
+
+  const last = seen[seen.length - 1];
+  if (!seen.some((p) => p.total === 2 && p.done === 1)) {
+    bootErrors.push(
+      '[加载进度] 没观察到「已加载 1 / 2 块」的中间态 → 加载器没有逐模块回报，占位又变成一句静止的「正在加载内容…」',
+    );
+  }
+  if (!last?.synced || last.failed) {
+    bootErrors.push(
+      '[加载进度] 加载完成后没有进入 synced 终态 → 页面会一直停在占位上或渲染出空内容',
+    );
+  }
+  if (!last?.labels?.length) {
+    bootErrors.push('[加载进度] 进度里没有范围名称 → 占位无法告诉学生正在下载哪一块');
+  }
+  if (!isScopeReady(['phy-mech'])) {
+    bootErrors.push('[加载进度] 加载完成后 isScopeReady 仍为假');
+  }
+  if (!allEntries.some((e) => e.moduleId === 'phy-mech')) {
+    bootErrors.push('[加载进度] 加载完成后全局容器里没有 phy-mech 的条目（syncSubjectContainers 没跑？）');
+  }
+}
+
 await ensureAll();
 
 /**
@@ -93,6 +131,9 @@ function err(msg: string) {
 function warn(msg: string) {
   warnings.push(msg);
 }
+
+// 加载进度管线的自测结果（必须在 ensureAll 之前跑，见上面的 bootErrors）
+for (const m of bootErrors) err(m);
 
 /* ------------------------ 题目结构校验 ------------------------ */
 
@@ -776,6 +817,140 @@ if (reviewKindTotal < 250) {
     const usesData = /from '\.\.\/data'|from '\.\.\/data\//.test(heavy);
     if (usesData && !src.includes('useDataScope')) {
       err(`[按需加载] src/pages/${f} 读取了内容数据却没有调用 useDataScope(...)，浏览器里会渲染成空列表`);
+    }
+  }
+}
+
+/**
+ * 学段：**学科页不得把「全局学段」当成「本页选过」写进模块链接**。
+ *
+ * 全局学段是用户级持久化设置（可能是很久以前在别处选的「九上」），一旦被写进
+ * `?grade=`，模块页就会把它当成权威选择，于是从任何一科进任何单册模块都被顶到那个
+ * 学段——「物理·力学基础」是人教版八上/八下内容，进来直接是空白页。
+ * 这类错只在浏览器里点才暴露（SSR 下全局学段与模块学段常常恰好一致），所以钉源码写法。
+ */
+{
+  const src = readFileSync('src/pages/SubjectPage.tsx', 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
+  if (!/const gradeQuery = picked \? `\?grade=\$\{picked\}` : ''/.test(src)) {
+    err(
+      '[学段] 学科页找不到「仅在本页显式选过时才带 ?grade=」的 gradeQuery 写法：' +
+        '模块链接可能又把全局学段（用户级设置）当成显式选择，会让单册模块撞空白页',
+    );
+  }
+  if (/\?grade=\$\{(grade|gradeFilter)\}/.test(src)) {
+    err(
+      '[学段] 学科页把全局学段直接写进了链接（?grade=${grade}/${gradeFilter}）：' +
+        '会把用户级设置当成本页的显式选择，从这一科进单册模块会被顶成空白页',
+    );
+  }
+}
+
+/**
+ * 「正在加载内容…」必须显示**真实进度**，并且失败要有出口。
+ *
+ * 手机上某一科的内容有几百 KB 到数 MB，慢的时候要好几分钟。原来只有一个静止的占位：
+ * 学生分不清是在下载、下了多少、还是已经卡死；更糟的是任意一次 chunk 加载失败都会
+ * **永远停在这个占位上**（`useDataScope` 只在成功回调里置 ready）。这两点都只能在
+ * 真机慢网下暴露，因此把「占位必须订阅进度 + 失败必须能重试」固化成规则。
+ */
+{
+  const src = readFileSync('src/lib/useData.tsx', 'utf8');
+  for (const [needle, why] of [
+    ['useSyncExternalStore', '占位必须订阅加载进度（useSyncExternalStore + loadProgress）'],
+    ['已等待', '占位必须显示已等待秒数，让学生分得清「在下载」与「卡死了」'],
+    ['p.failed', '占位必须区分「加载失败」，不能只当成功路径'],
+    ['重试', '加载失败必须给重试入口，否则失败后会一直停在占位上'],
+    ['synced', '就绪判定必须等到容器同步完成，不能拿「进度 100%」当就绪（会渲染出空内容）'],
+  ] as const) {
+    if (!src.includes(needle)) err(`[加载进度] src/lib/useData.tsx 缺少「${needle}」→ ${why}`);
+  }
+}
+
+/* ------------- 中考专题：一专题一块（骨架 / 正文 / 页面接线） ------------- */
+
+/**
+ * 语文「中考专题」曾经被拼成**一个 495 kB 的块**（gzip 455 kB，比首屏还大）：
+ * 学生只想看「古诗文默写」，也得先把写作、现代文、名著全部下载完。改造后是
+ * 「轻量骨架 + 一专题一块」，于是有四件事必须**自动化**守住——它们出问题时
+ * 页面都不会报错，只是「慢」或「静默少数据」，人工点几下根本发现不了：
+ *
+ *   ① 骨架与正文的一致性：模块列表页显示的是轻量清单里的副标题（「几节 · 多少题」），
+ *      正文装配出来的那条必须算出一模一样的字符串，否则点进去数字会变；
+ *   ② 加载器不许再静态 import 正文（那正是 495 kB 块的成因）；
+ *   ③ `ensureAll()` 之后七个专题的正文必须都在内存里——校验脚本与冒烟测试都靠它，
+ *      否则专题页会退化成加载占位、断言全红；
+ *   ④ 用到专题**题目**的页面（详情/练习/错题本/报告/考点）必须显式声明专题正文范围，
+ *      否则错题与考点会静默少掉一整块。
+ */
+{
+  // ① 骨架 vs 正文
+  const metaById = new Map(ENTRY_META.map((m) => [m.id, m]));
+  const zhEntries = allEntries.filter((e) => e.moduleId === 'zh-topics');
+  if (zhEntries.length !== ZH_TOPIC_IDS.length) {
+    err(
+      `[中考专题] 条目数为 ${zhEntries.length}，应为 ${ZH_TOPIC_IDS.length} 个 —— 骨架或正文装配有问题`,
+    );
+  }
+  for (const e of zhEntries) {
+    const m = metaById.get(e.id);
+    if (!m) continue; // 清单缺条目已由上面的 [轻量清单] 报过
+    if (m.subtitle !== e.subtitle) {
+      err(
+        `[中考专题] ${e.id} 的副标题与轻量清单不一致：` +
+          `列表页（骨架）显示「${m.subtitle}」，正文装配为「${e.subtitle}」→ 请运行 pnpm gen`,
+      );
+    }
+  }
+  // 七个专题的正文必须都在内存里（顺序 = 卷面顺序）
+  const notReady = ZH_TOPIC_IDS.filter((id) => !isZhTopicReady(id));
+  if (notReady.length) {
+    err(
+      `[中考专题] ensureAll() 之后仍有 ${notReady.length} 个专题的正文没被加载（${notReady.join('、')}）——` +
+        `校验与冒烟测试会看到空专题，专题页在浏览器里也会退化成加载占位`,
+    );
+  }
+  if (!isZhTopicsReady('all')) err('[中考专题] isZhTopicsReady("all") 在 ensureAll() 之后仍为假');
+  if (zhExamTopicItems.length !== ZH_TOPIC_IDS.length) {
+    err(
+      `[中考专题] 已加载的专题正文（zhExamTopicItems）有 ${zhExamTopicItems.length} 个，应为 ${ZH_TOPIC_IDS.length} 个`,
+    );
+  } else if (zhExamTopicItems.some((t, i) => t.id !== ZH_TOPIC_IDS[i])) {
+    err('[中考专题] 专题正文的顺序与卷面顺序不一致（ZH_TOPIC_IDS）');
+  }
+
+  // ② 加载器只许动态 import：静态 import 会把七块重新并成一个大 chunk
+  const loaderSrc = readFileSync('src/data/chinese/modules/zh-topics.ts', 'utf8');
+  // 先去掉注释：这个文件的文档注释里就写着「不要这样写」的反例，直接匹配会误报
+  const loaderCode = loaderSrc
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
+  const staticImports = [...loaderCode.matchAll(/from\s+'\.\.\/zh-topics\/[\w-]+'/g)].map((m) => m[0]);
+  if (staticImports.length) {
+    err(
+      `[中考专题] modules/zh-topics.ts 里出现了对专题正文的静态 import（${staticImports.join('、')}）：` +
+        `七个专题会被重新打进同一个 chunk（曾经是 495 kB），打开一个专题就要下载全部`,
+    );
+  }
+  for (const id of ZH_TOPIC_IDS) {
+    if (!loaderCode.includes(`'${id}'`)) {
+      err(`[中考专题] 加载器表里没有 ${id} 这一块 —— 这个专题将永远加载不出来`);
+    }
+  }
+
+  // ④ 用到专题题目的页面必须声明「要正文」
+  const ZH_BODY_PAGES: [string, string][] = [
+    ['src/pages/DetailPage.tsx', '详情页要渲染考情与讲解，正文没到会渲染成空白专题'],
+    ['src/pages/PracticePage.tsx', '练习页要按专题正文组卷，正文没到会组出一张空卷子'],
+    ['src/pages/WrongBook.tsx', '错题本按题目 id 反查题干，少一块就少一批错题'],
+    ['src/pages/StatsPage.tsx', '薄弱知识点按题目标签聚合，少一块就少一片考点'],
+    ['src/pages/ExamPage.tsx', '考点页按题目标签聚合，少一块就少一片考点'],
+  ];
+  for (const [file, why] of ZH_BODY_PAGES) {
+    const src = readFileSync(file, 'utf8');
+    if (!src.includes('useZhTopics')) {
+      err(`[中考专题] ${file} 没有声明专题正文范围（useZhTopics）→ ${why}`);
     }
   }
 }

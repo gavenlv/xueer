@@ -356,3 +356,15 @@ export function matchesKeyword(entry: Entry, kw: string): boolean {
   if (!kw) return true;
   return searchTextOf(entry).includes(kw) || entry.title.toLowerCase().includes(kw);
 }
+
+/**
+ * 丢掉这条内容记忆的检索文本。
+ *
+ * 一般条目装配完就不再变，记忆是安全的；但**中考专题**的条目是「先装骨架、
+ * 正文到了再原地补齐」（见 `data/chinese/index.ts` 的 `installZhTopic`）——
+ * 若骨架阶段算过一次检索文本，补齐后仍会命中那份缓存，于是按「病句」搜不到
+ * 「积累与运用」、专题页的关联也变少。补齐时必须显式失效。
+ */
+export function forgetSearchText(entry: Entry): void {
+  cache.delete(entry);
+}

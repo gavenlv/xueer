@@ -3,13 +3,13 @@
 import { useMemo } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { getModuleMeta } from '../data/subjects';
-import { allPoems } from '../data/chinese';
+import { allPoems, isZhTopicId, zhTopicIdOfQuestion } from '../data/chinese';
 import { filterEntries, getEntry, questionsOfModule } from '../data';
 import { useStudy } from '../store/StudyContext';
 import type { GradeId, ModuleId, QuizItem, QuizQuestion } from '../types';
 import { buildModuleQuiz, buildQuiz, makeReciteQuestions } from '../lib/quiz';
 import { shuffle } from '../lib/utils';
-import { useDataScope, DataLoading } from '../lib/useData';
+import { useDataScope, useZhTopics, DataLoading, type ZhTopicSpec } from '../lib/useData';
 import { QuizRunner } from '../components/QuizRunner';
 import { EmptyState, PageHeader } from '../components/common';
 
@@ -27,7 +27,7 @@ export default function PracticePage() {
   const [search] = useSearchParams();
   const { grade: studyGrade } = useStudy();
   // 只加载本模块数据（组卷只需要这一块）
-  const ready = useDataScope([moduleId as ModuleId]);
+  const moduleReady = useDataScope([moduleId as ModuleId]);
 
   const gradeParam = (search.get('grade') as GradeId | 'all' | null) ?? undefined;
   const grade: GradeId | 'all' = gradeParam ?? studyGrade;
@@ -38,6 +38,33 @@ export default function PracticePage() {
   const typeParam = (search.get('type') as QuizQuestion['type'] | null) ?? undefined;
   /** 中考考点专项：只出带该知识点标签的题 */
   const tagParam = search.get('tag') ?? undefined;
+
+  /**
+   * 语文「中考专题」：模块范围只装骨架，**题目在专题正文里**，
+   * 因此组卷之前必须先把它要的那几块下载完，否则卷子会是空的（页面不报错，只是没题）。
+   *
+   * 只下该下的那一块：
+   *   - 单条内容练习（含该条的 `?tag=` 定向组卷）→ 只这一块；
+   *   - 错题重做 `?ids=` → 只错题所属的那几块（题目 id 形如 `zht-<专题>-qNN`，
+   *     反推不出来时退回「全部」，宁可慢也不能少题）；
+   *   - 跨专题组卷（模块级 `?tag=`、整模块随机练习）→ 全部七块。
+   */
+  const zhSpec = useMemo<ZhTopicSpec | undefined>(() => {
+    if (moduleId !== 'zh-topics') return undefined;
+    if (itemId) return isZhTopicId(itemId) ? [itemId] : undefined;
+    if (idsParam) {
+      const topics = new Set<string>();
+      for (const qid of idsParam.split(',').filter(Boolean)) {
+        const t = zhTopicIdOfQuestion(qid);
+        if (!t) return 'all';
+        topics.add(t);
+      }
+      return topics.size ? [...topics] : 'all';
+    }
+    return 'all';
+  }, [moduleId, itemId, idsParam]);
+  const topic = useZhTopics(zhSpec);
+  const ready = moduleReady && topic.ready;
 
   const meta = getModuleMeta(moduleId);
   const moduleName = meta?.module.name ?? '练习';
@@ -89,7 +116,10 @@ export default function PracticePage() {
     });
   }, [moduleId, itemId, grade, countParam, idsParam, typeParam, tagParam, poemsParam, ready]);
 
-  if (!ready) return <DataLoading label="正在准备题目…" />;
+  if (!moduleReady) return <DataLoading label="正在准备题目…" />;
+  if (!topic.ready) {
+    return <DataLoading label="正在准备题目…" failed={topic.failed} onRetry={topic.retry} />;
+  }
 
   const backTo = itemId ? `/s/chinese/${moduleId}/${itemId}` : `/s/chinese/${moduleId}`;
   const title = tagParam

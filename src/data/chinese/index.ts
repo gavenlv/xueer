@@ -11,6 +11,24 @@
  * 因此每个模块的数据放在 `modules/*.ts` 里，由本文件**动态 import**：
  * 打开古诗词就只下载古诗词那一块，翻作文就只下载作文那一块。
  *
+ * ## 中考专题为什么要再拆一层
+ *
+ * `zh-topics` 一个模块里装着**七个专题**（积累与运用、默写、文言文、古诗词鉴赏、
+ * 现代文、名著、写作），正文合计 1.3 MB 源码。以前它们被拼成一个数组、打成
+ * **一个 495 kB 的大块**（gzip 455 kB，比首屏 index 还大）：学生只想看「古诗文默写」，
+ * 也得先把写作与名著全部下载完。于是这一块**再拆一层**：
+ *
+ *   - `LOADERS['zh-topics']` 只装**骨架**（stub）——id / 标题 / 副标题 / 学段 / 题量，
+ *     全部来自生成好的轻量清单 `summary.ts` 的 `ENTRY_META`，因此模块列表页、
+ *     检索、面包屑**一个专题正文都不用下载**；
+ *   - 正文由 `loadZhTopic(id)` 单独下载，回来后**原地补进已有 stub 条目**
+ *     （`entry.data` / `entry.questions` / `entry.subtitle`），不 push 同 id 的新条目
+ *     ——否则 `findEntryById` 会命中旧 stub，页面渲染不出内容；
+ *   - `isScopeReady(['zh-topics'])` 的语义仍是「**轻量清单已就绪**」（SSR 冒烟要能首帧
+ *     渲染），专题正文的就绪状态另问 `isZhTopicReady(id)`；
+ *   - 需要跨专题聚题的页面（错题本 / 学习报告 / 考点页）与校验脚本走
+ *     `loadAllZhTopics()`，保证「题目不静默少掉」。
+ *
  * ## 为什么对外仍然是「同步 API」
  *
  * 页面的渲染代码全都依赖 `allEntries` / `entriesOfModule` 这类同步查询。
@@ -45,7 +63,17 @@ import type {
   WritingEntry,
   WritingLesson,
 } from '../../types';
-import { matchesKeyword } from '../../lib/searchText';
+import { matchesKeyword, forgetSearchText } from '../../lib/searchText';
+import { forgetRel } from '../../lib/relNode';
+import { ENTRY_META, type EntryMeta } from '../summary';
+import {
+  ZH_TOPIC_IDS,
+  isZhTopicDataReady,
+  loadZhTopicData,
+  zhTopicIdOfQuestion,
+} from './modules/zh-topics';
+
+export { zhTopicIdOfQuestion };
 
 export const MODULE_IDS: ModuleId[] = [
   'poems',
@@ -96,8 +124,13 @@ export const literatureItems: LiteratureItem[] = [];
 export const vocabItems: VocabItem[] = [];
 export const writingLessons: WritingLesson[] = [];
 export const readingPassages: ReadingPassage[] = [];
-/** 七个中考专题（考情 + 讲解 + 专项训练题） */
-export const zhExamTopicItems: ChineseExamTopic[] = [];
+/**
+ * 七个中考专题的**正文**（考情 + 讲解 + 专项训练题）。
+ *
+ * 数组随加载进度增长（按卷面顺序），所以它只包含**已经下载完**的专题；
+ * 「一共有哪七个」请问 `entryIndex` / `entriesOfModule('zh-topics')`（骨架始终在位）。
+ */
+export { zhExamTopics as zhExamTopicItems } from './modules/zh-topics';
 
 /* ------------------------------------------------------------------ */
 /* 装配                                                                */
@@ -237,22 +270,104 @@ function buildLiteratureEntries(
 const buildZhExamEntries = (items: ChineseExamTopic[]): ChineseExamTopicEntry[] =>
   items.map((t) => {
     const qs = dedupeQuestions(t.questions);
-    const secs = t.sections?.length ?? 0;
     return {
       id: t.id,
       moduleId: 'zh-topics',
       title: t.title,
-      // 副标题 = 卷面定位 + 这一专题的规模：模块页一眼能看到「多少分、几节章节、多少题」，
-      // 「每个类目都拆开讲透、都有配套练习」这件事不该只写在说明里。
-      subtitle: secs
-        ? `${t.paper} · ${secs} 节逐类讲透 · ${qs.length} 题`
-        : `${t.paper} · ${qs.length} 题 · ${t.drills.length} 组训练`,
+      subtitle: zhTopicSubtitle(t, qs.length),
       grade: t.grade,
       tags: [t.title, '中考专题'],
       questions: qs,
       data: t,
     };
   });
+
+/**
+ * 专题副标题 = 卷面定位 + 这一专题的规模：模块页一眼能看到「多少分、几节章节、多少题」，
+ * 「每个类目都拆开讲透、都有配套练习」这件事不该只写在说明里。
+ *
+ * 抽成函数是因为它有**两个调用点**：正文装配（`buildZhExamEntries`）与骨架补齐
+ * （`installZhTopic`）。两处必须算出同一个字符串——模块列表页显示的是轻量清单里
+ * 生成好的那份，若算法不一致，列表页的规模会与详情页对不上。
+ */
+function zhTopicSubtitle(t: ChineseExamTopic, questionCount: number): string {
+  const secs = t.sections?.length ?? 0;
+  return secs
+    ? `${t.paper} · ${secs} 节逐类讲透 · ${questionCount} 题`
+    : `${t.paper} · ${questionCount} 题 · ${t.drills.length} 组训练`;
+}
+
+/* ------------------------------------------------------------------ */
+/* 中考专题的骨架（stub）：只加载轻量清单，正文按需补                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 轻量清单里的七个专题骨架。
+ *
+ * `ENTRY_META` 是 `pnpm gen` 从**真实条目**生成的（标题、副标题、学段、题量都在里面），
+ * 而且它本来就在首屏包里（首页/学习报告要用），所以模块列表页拿到它**不需要任何下载**。
+ * 清单过期由 `pnpm validate` 逐条比对（见 `scripts/validate-entry.ts` 的 `[轻量清单]`）。
+ */
+const ZH_TOPIC_META: EntryMeta[] = ENTRY_META.filter((m) => m.moduleId === 'zh-topics');
+
+/** 造一条专题骨架：字段形状与真条目一致，`data` 先给空壳，正文加载后原地替换 */
+function buildZhTopicStub(m: EntryMeta): ChineseExamTopicEntry {
+  return {
+    id: m.id,
+    moduleId: 'zh-topics',
+    title: m.title,
+    subtitle: m.subtitle,
+    grade: m.grade,
+    tags: [m.title, '中考专题'],
+    // 题目、正文都还没下载：这里如实留空，`isZhTopicReady(id)` 才是权威的就绪判据
+    questions: [],
+    data: {
+      id: m.id,
+      grade: m.grade,
+      title: m.title,
+      paper: '',
+      summary: '',
+      trends: [],
+      trendSummary: '',
+      angles: [],
+      steps: [],
+      drills: [],
+      questions: [],
+    },
+  };
+}
+
+/** 七个专题骨架（模块页、检索、面包屑都用它；正文另加载） */
+function buildZhTopicStubs(): ChineseExamTopicEntry[] {
+  return ZH_TOPIC_META.map(buildZhTopicStub);
+}
+
+/**
+ * 把加载回来的正文**原地补进已有骨架条目**。
+ *
+ * 关键在「原地」：`allEntries`（语文与全局两份）、`entryIndex` 都持有**同一个对象**，
+ * 只要改它的字段，所有同步查询立即看到内容；若改成 `push` 一条同 id 的新条目，
+ * `findEntryById` 会先命中旧骨架，页面渲染出空白——这正是这次改造最容易踩的坑。
+ *
+ * 另外两个派生缓存（检索文本、关联节点）是按对象记忆的，正文补齐后必须**失效**，
+ * 否则按「病句」搜不到积累与运用、专题页的「同一考点」也不出现。
+ */
+function installZhTopic(t: ChineseExamTopic): void {
+  const entry = entryIndex.get(t.id) as ChineseExamTopicEntry | undefined;
+  if (!entry || entry.moduleId !== 'zh-topics') return;
+  const qs = dedupeQuestions(t.questions);
+
+  entry.title = t.title;
+  entry.subtitle = zhTopicSubtitle(t, qs.length);
+  entry.grade = t.grade;
+  entry.tags = [t.title, '中考专题'];
+  entry.questions = qs;
+  entry.data = t;
+
+  forgetSearchText(entry);
+  forgetRel(entry);
+}
+
 
 /* ------------------------------------------------------------------ */
 /* 按需加载                                                            */
@@ -297,9 +412,12 @@ const LOADERS: Record<ChineseModuleId | 'extras', () => Promise<LoaderResult>> =
     return { entries: buildLiteratureEntries(m.literature, m.guangzhouQuestions, m.bookPlots) };
   },
   'zh-topics': async () => {
-    const m = await import('./modules/zh-topics');
-    zhExamTopicItems.push(...m.zhExamTopics);
-    return { entries: buildZhExamEntries(m.zhExamTopics) };
+    /**
+     * **只装骨架**，不 import 任何专题正文：模块列表页、检索、面包屑看到的
+     * 标题与「几节 · 多少题」全部来自 `summary.ts`，因此打开模块页是零下载。
+     * 正文由 `loadZhTopic(id)` / `loadAllZhTopics()` 单独下载后原地补齐。
+     */
+    return { entries: buildZhTopicStubs() };
   },
   extras: async () => {
     const m = await import('./modules/extras');
@@ -329,23 +447,30 @@ export function isScopeReady(scope: ChineseScope[]): boolean {
  * 要由需要的页面自己声明（详情页、知识拓展页），模块列表页与练习页用不到它，
  * 就不该为它买单。
  */
-export async function loadModules(scope: ChineseScope[]): Promise<void> {
+export async function loadModules(
+  scope: ChineseScope[],
+  report?: (total: number, done: number) => void,
+): Promise<void> {
   const need = [...new Set<string>(scope as string[])].filter((s) => !loaded.has(s));
   if (!need.length) return;
+  // 逐个模块回报：分母是「本次真的要下载几块」，分子是已完成数（见 data/index.ts 的 loadProgress）
+  report?.(need.length, 0);
 
+  let done = 0;
   await Promise.all(
     need.map((s) => {
       const running = pending.get(s);
-      if (running) return running;
-      const p = LOADERS[s as ChineseScope]()
-        .then((r) => {
-          if (r.entries.length) allEntries.push(...r.entries);
-          loaded.add(s);
-          rebuildEntryIndex();
-        })
-        .finally(() => pending.delete(s));
-      pending.set(s, p);
-      return p;
+      const p =
+        running ??
+        LOADERS[s as ChineseScope]()
+          .then((r) => {
+            if (r.entries.length) allEntries.push(...r.entries);
+            loaded.add(s);
+            rebuildEntryIndex();
+          })
+          .finally(() => pending.delete(s));
+      if (!running) pending.set(s, p);
+      return p.then(() => report?.(need.length, ++done));
     }),
   );
 }
@@ -353,6 +478,71 @@ export async function loadModules(scope: ChineseScope[]): Promise<void> {
 /** 加载语文全部模块（校验脚本与需要跨模块聚合的页面用） */
 export async function loadAll(): Promise<void> {
   await loadModules([...(MODULE_IDS as ChineseModuleId[]), 'extras']);
+  /**
+   * `loadModules` 只给 `zh-topics` 装骨架，这里必须把七个专题的**正文**补齐：
+   * 校验脚本（validate / smoke）与需要跨专题聚题的页面读的是 `entry.data` 与
+   * `entry.questions`，只装骨架会看到七个空专题（题目静默少掉 562 道）。
+   */
+  await loadAllZhTopics();
+}
+
+/* ---------------------- 中考专题：一专题一块 ---------------------- */
+
+/**
+ * 这一专题的正文是否已在内存里。
+ *
+ * 与 `isScopeReady(['zh-topics'])` 的分工：后者只代表**轻量清单已就绪**
+ * （SSR 冒烟要能首帧渲染模块页）；「能不能进详情页看讲解、能不能组卷」
+ * 要看这个函数。两者都真才是「专题可用」。
+ */
+export function isZhTopicReady(id: string): boolean {
+  return isZhTopicDataReady(id);
+}
+
+/** 这一组专题（或全部）的正文是否都已就绪 */
+export function isZhTopicsReady(ids: readonly string[] | 'all'): boolean {
+  return ids === 'all' ? ZH_TOPIC_IDS.every(isZhTopicReady) : ids.every(isZhTopicReady);
+}
+
+/**
+ * 这个 id 是不是七个中考专题之一。
+ *
+ * 页面在「按地址栏的 id 去下载正文」之前必须先问一句：手打的 / 过期的链接不该触发下载，
+ * 而应该照旧渲染「没有找到这条内容」。
+ */
+export function isZhTopicId(id: string): boolean {
+  return (ZH_TOPIC_IDS as readonly string[]).includes(id);
+}
+
+/**
+ * 加载**一个**专题的正文（详情页、单条内容组卷、模块页悬停预取走这里）。
+ *
+ * 只会下载这一块的 chunk，因此「打开古诗文默写」不再需要写作与现代文那几块。
+ * 正文回来后原地补进已有骨架条目，页面上的 `entry.data` / `entry.questions` 立即可用。
+ */
+export async function loadZhTopic(id: string): Promise<void> {
+  // 骨架可能还没装（例如模块页的悬停预取早于 useDataScope 的加载）：先保证条目在位
+  await loadModules(['zh-topics']);
+  installZhTopic(await loadZhTopicData(id));
+}
+
+/** 加载这几个专题（重复 id 会被去重；传 `'all'` 即全部七个） */
+export async function loadZhTopics(ids: readonly string[] | 'all'): Promise<void> {
+  await loadModules(['zh-topics']);
+  const list = ids === 'all' ? ZH_TOPIC_IDS : [...new Set(ids)];
+  const topics = await Promise.all(list.map((id) => loadZhTopicData(id)));
+  for (const t of topics) installZhTopic(t);
+}
+
+/**
+ * 加载全部七个专题（错题本 / 学习报告 / 考点页 / 校验脚本用）。
+ *
+ * 这些页面按**题目**聚合（错题反查题干、考点按标签统计），只要有一个专题没加载，
+ * 它的 562 道题就会**静默缺席**——页面照常渲染，只是数字变小、错题看不见。
+ * 所以宁可多下载一块，也不能少题。
+ */
+export async function loadAllZhTopics(): Promise<void> {
+  await loadZhTopics('all');
 }
 
 /* ------------------------- 思维导图 / 拓展阅读 ------------------------- */

@@ -176,22 +176,40 @@ export function isLoaded(moduleId: PhysicsModuleId): boolean {
   return loaded.has(moduleId);
 }
 
-/** 加载指定模块；同一模块的并发请求会合并成一次 import */
-export function loadModules(ids: PhysicsModuleId[]): Promise<void> {
-  const tasks = ids.map((id) => {
-    if (loaded.has(id)) return Promise.resolve();
+/** 加载指定模块；同一模块的并发请求会合并成一次 import
+ *
+ * `report` 逐个模块回报进度（分母=本次真要下载的块数，分子=已完成数），
+ * 供「正在加载内容…」占位显示真实进度，见 `src/data/index.ts` 的 loadProgress。
+ */
+export function loadModules(
+  ids: PhysicsModuleId[],
+  report?: (total: number, done: number) => void,
+): Promise<void> {
+  // 已经在内存里的模块不计入分母，否则进度条一上来就「虚高」
+  const need = ids.filter((id) => !loaded.has(id));
+  if (need.length) report?.(need.length, 0);
+  let done = 0;
+  const tasks = need.map((id) => {
     const running = pending.get(id);
-    if (running) return running;
-    const p = LOADERS[id]()
-      .then((r) => {
-        if (r.entries.length) allEntries.push(...(r.entries as PhysicsEntry[]));
-        loaded.add(id);
-      })
-      .finally(() => {
-        pending.delete(id);
-      });
-    pending.set(id, p);
-    return p;
+    const p =
+      running ??
+      LOADERS[id]()
+        .then((r) => {
+          if (r.entries.length) allEntries.push(...(r.entries as PhysicsEntry[]));
+          loaded.add(id);
+        })
+        .finally(() => {
+          pending.delete(id);
+        });
+    if (!running) pending.set(id, p);
+    /**
+     * 每完成一块就回报一次进度（分母 `need.length` 固定，分子自增）。
+     *
+     * 这里**必须用 `p.then(...)` 而不是写在 `LOADERS[id]().then(...)` 里面**：
+     * `running` 分支复用的是一个已在飞的 Promise，只有挂在最外层，
+     * 「本页要加载的每一块」才会各自回报一次，进度条不会停在 1/N 不动。
+     */
+    return p.then(() => report?.(need.length, ++done));
   });
   return Promise.all(tasks).then(() => undefined);
 }

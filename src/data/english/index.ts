@@ -160,22 +160,29 @@ export function isScopeReady(scope: EnglishModuleId[]): boolean {
   return scope.every((s) => loaded.has(s));
 }
 
-export async function loadModules(scope: EnglishModuleId[]): Promise<void> {
+export async function loadModules(
+  scope: EnglishModuleId[],
+  report?: (total: number, done: number) => void,
+): Promise<void> {
   const need = [...new Set<string>(scope)].filter((s) => !loaded.has(s));
   if (!need.length) return;
+  // 逐个模块回报：分母是「本次真的要下载几块」，分子是已完成数（见 data/index.ts 的 loadProgress）
+  report?.(need.length, 0);
 
+  let done = 0;
   await Promise.all(
     need.map((s) => {
       const running = pending.get(s);
-      if (running) return running;
-      const p = LOADERS[s as EnglishModuleId]()
-        .then((r) => {
-          if (r.entries.length) allEntries.push(...r.entries);
-          loaded.add(s);
-        })
-        .finally(() => pending.delete(s));
-      pending.set(s, p);
-      return p;
+      const p =
+        running ??
+        LOADERS[s as EnglishModuleId]()
+          .then((r) => {
+            if (r.entries.length) allEntries.push(...r.entries);
+            loaded.add(s);
+          })
+          .finally(() => pending.delete(s));
+      if (!running) pending.set(s, p);
+      return p.then(() => report?.(need.length, ++done));
     }),
   );
 }
