@@ -65,6 +65,21 @@ export interface ExamTopicRules {
   minSectionPitfalls: number;
   /** 讲解正文（`intro`）的字数下限 */
   minIntroChars: number;
+  /**
+   * `intro` 里必须出现的字样。
+   *
+   * 为什么要专门钉一句：加厚之后的每一节讲解都要收在「学完这一节，你应该能：①…②…③…」，
+   * 学生读完能自查会不会用。这句话一旦被谁删掉，光看字数看不出来，只能按字样钉住。
+   */
+  introMustInclude?: string;
+  /**
+   * 「跨节综合变式」例子的判据字样。
+   *
+   * 中考不会一次只考一个考点，所以每节至少要有**一条**例子把本节与相邻考点合起来考。
+   * 判据写成字样而不是精确格式，是为了让作者用顺手的说法（综合、合在一起…），
+   * 同时也接受「例子里点到同专题另一节的名称」这种更自然的写法。
+   */
+  variantMarkers?: string[];
   /** 近五年考情：恰好 5 条、年份必须覆盖这些值 */
   trendYears: string[];
   /** 每节的例子是「正误对照」（语文 ok/fix）还是「分步解答」（数学 steps/answer） */
@@ -349,6 +364,8 @@ export function validateExamTopicModule(opts: {
       `章节不足 ${rules.minSections} 节（现有 ${secs.length}）——每个类目都要有自己的章节`,
     );
     const sectionNames = new Set<string>();
+    // 判「跨节综合变式」时要能认出**同专题另一节**的名字，所以先把清单准备好
+    const allSectionNames = secs.map((s) => s.name).filter((n): n is string => Boolean(n?.trim()));
     for (const s of secs) {
       if (!s.name?.trim()) {
         bad += 1;
@@ -366,6 +383,12 @@ export function validateExamTopicModule(opts: {
         (s.intro?.trim().length ?? 0) >= rules.minIntroChars,
         `${s.name}: 讲解正文不足 ${rules.minIntroChars} 字（现有 ${s.intro?.trim().length ?? 0} 字）——要讲清「怎么判断 / 怎么下手」`,
       );
+      if (rules.introMustInclude && !(s.intro ?? '').includes(rules.introMustInclude)) {
+        bad += 1;
+        err(
+          `${s.name}: 讲解结尾缺少「${rules.introMustInclude}…」自查清单——讲完要让学生知道自己会不会用`,
+        );
+      }
       need((s.rules?.length ?? 0) >= rules.minRules, `${s.name}: ${rules.rulesWord}不足 ${rules.minRules} 条`);
       const exs = s.examples ?? [];
       need(
@@ -397,6 +420,19 @@ export function validateExamTopicModule(opts: {
         (s.pitfalls?.length ?? 0) >= rules.minSectionPitfalls,
         `${s.name}: 本节易错不足 ${rules.minSectionPitfalls} 条`,
       );
+      if (rules.variantMarkers?.length) {
+        const markers = rules.variantMarkers;
+        // 两种写法都算「跨节综合」：写明「综合／合在一起」，或在例子里点到同专题另一节的名称
+        const hasVariant = exs.some((ex) => {
+          const blob = `${ex.text ?? ''}\n${ex.analysis ?? ''}\n${(ex.steps ?? []).join('\n')}`;
+          if (markers.some((m) => blob.includes(m))) return true;
+          return allSectionNames.some((n) => n !== s.name && blob.includes(n));
+        });
+        need(
+          hasVariant,
+          `${s.name}: 缺一条跨节综合变式例子（把本节与相邻考点合在一起考）——中考不会一次只考一节`,
+        );
+      }
       for (const p of s.pitfalls ?? []) {
         if (typeof p === 'string') {
           need(p.trim().length >= 8, `${s.name}: 本节易错「${p.slice(0, 12)}…」太短，要写清「错在哪 → 怎么办」`);
@@ -512,8 +548,12 @@ export function validateExamTopicModule(opts: {
 /* ------------------------------------------------------------------ */
 
 /**
- * 语文中考专题（`zh-topics`）：原有的那套下限**一条都没有放宽**
- * （每节 ≥3 例、≥3 要点、≥4 题、章节 ≥6 节、每专题 ≥45 题、五年考情恰好 5 条…）。
+ * 语文中考专题（`zh-topics`）：下限按 `CONTENT-SPEC.md` 第八节「加厚」后的标准。
+ *
+ * 这一版把每节的门槛从「≥3 例 / ≥3 要点 / ≥4 题 / ≥60 字」提到
+ * 「≥4 例（含一条跨节综合变式）/ ≥4 要点 / ≥8 题 / ≥120 字 + 自查清单」，
+ * 并且**没有下调任何一条旧门槛**：81 节已经全部按新标准加厚，
+ * 门口抬到实际水平，后面谁再补一节就会被同一把尺子量。
  */
 export const ZH_TOPIC_RULES: ExamTopicRules = {
   label: '语文中考专题',
@@ -522,15 +562,17 @@ export const ZH_TOPIC_RULES: ExamTopicRules = {
   minSteps: 6,
   minDemos: 3,
   minSections: 6,
-  minExamples: 3,
-  minRules: 3,
-  minSectionQuestions: 4,
+  minExamples: 4,
+  minRules: 4,
+  minSectionQuestions: 8,
   minAngles: 6,
   minTemplates: 3,
   minScoring: 4,
   minPitfalls: 4,
   minSectionPitfalls: 2,
-  minIntroChars: 60,
+  minIntroChars: 120,
+  introMustInclude: '你应该能',
+  variantMarkers: ['综合变式', '综合运用', '合在一起', '跨节'],
   trendYears: ['2021', '2022', '2023', '2024', '2025'],
   exampleStyle: 'pair',
   exampleWord: '正误对照例子',

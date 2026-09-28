@@ -283,57 +283,128 @@ export function examplesCaptionFor(kind: ExampleKind, count: number): string {
  *   - `pair`（语文）：`✔ 规范例句` / `✘ 有问题的例句` + 「讲解：错在哪」+「改：改成什么」；
  *   - `solve`（数学）：题目 + 分步解答（编号）+ 答案 + 「怎么想到的」。
  *
+ * ## 为什么一条例子一个折叠（**默认只展开第一条**）
+ *
+ * 每节加厚到 4—6 条例子之后，把「题干 + 分步解答 / 讲解 + 改」全铺开，一节就是
+ * 十几段正文——用户当初提的「一个卡片展示东西太多，导致很长，页面展示不友好」
+ * 会原样回来。所以：
+ *
+ *   - **题干永远可见**：例子本身就是题目，藏起来学生就不知道该想什么；
+ *   - **讲解默认收在第一条**：第一条给样板（怎么读讲解），其余先让学生自己判一遍
+ *     再展开对答案——这类题只有这样读才长本事，先看讲解等于抄答案；
+ *   - **一行「展开全部讲解 / 收起全部」**：想通读的学生一次点开，不必逐条点。
+ *
+ * 折叠状态**不落 localStorage**：它是「这一遍怎么读」的临时状态，学生换一节就该
+ * 重新从「第一条展开」开始；记忆展开状态反而会让某几节一进来就是全铺开的。
+ *
  * 分步解答里的行内公式（`$…$`）交给现有的富文本渲染口径——这里是纯文本，
  * 数学公式由页面外层的渲染器处理（与其它数学页面一致）。
  */
 export function ExampleList({ examples, kind }: { examples: ExamExample[]; kind: ExampleKind }) {
+  /** 已展开的例子下标。初值 `[0]` 就是「默认只展开第一条」 */
+  const [open, setOpen] = useState<number[]>(() => (examples.length ? [0] : []));
+
   if (!examples.length) return null;
+
+  const allOpen = open.length >= examples.length;
+  const toggleOne = (k: number) =>
+    setOpen((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k].sort((a, b) => a - b)));
+  const toggleAll = () => setOpen(allOpen ? [] : examples.map((_, k) => k));
+
   return (
-    <div className="stack stack--sm" style={{ marginTop: 12 }}>
-      <div className="exam-ex__caption">{examplesCaptionFor(kind, examples.length)}</div>
+    <div className="stack stack--sm">
+      <div className="exam-ex__bar">
+        <span className="exam-ex__caption">{examplesCaptionFor(kind, examples.length)}</span>
+        <span className="spacer" />
+        <button
+          type="button"
+          className="btn btn--sm exam-ex__allbtn"
+          aria-expanded={allOpen}
+          onClick={toggleAll}
+        >
+          {allOpen ? '收起全部讲解' : '展开全部讲解'}
+        </button>
+      </div>
       {examples.map((ex, k) => {
         const ok = ex.ok === true;
         /** 逐条判断：一节里混着「正误对照」与「分步解答」也各按各的排版 */
         const steps = isStepExample(ex) ? (ex.steps ?? []) : [];
+        const isOpen = open.includes(k);
+        /** 讲解部分（数学的分步解答也算）—— 有没有东西可展开 */
+        const hasBody = Boolean(steps.length || ex.answer?.trim() || ex.analysis?.trim() || ex.fix?.trim());
+        const mark = steps.length ? `${k + 1}` : ok ? '✔' : '✘';
+        const label = steps.length ? '展开解答' : '展开讲解';
+
         return (
-          <div className={cn('exam-ex', ok ? 'is-ok' : 'is-bad')} key={k}>
-            <div className="exam-ex__row">
-              <span className="exam-ex__mark" aria-hidden>
-                {steps.length ? `${k + 1}` : ok ? '✔' : '✘'}
-              </span>
-              <span className="exam-ex__text">
-                <Emph text={ex.text} />
-              </span>
-            </div>
-
-            {/* 分步解答（数学）：一步一步做完，最后单列答案便于快速核对 */}
-            {steps.length ? (
-              <ol className="exam-ex__steps">
-                {steps.map((s, i) => (
-                  <li key={i}>
-                    <Emph text={s} />
-                  </li>
-                ))}
-              </ol>
-            ) : null}
-
-            {ex.answer ? (
-              <div className="exam-ex__answer">
-                <span className="exam-ex__label">答案：</span>
-                <Emph text={ex.answer} />
+          <div className={cn('exam-ex', ok ? 'is-ok' : 'is-bad', isOpen && 'is-open')} key={k}>
+            {hasBody ? (
+              /*
+               * 题干那一行就是开关（整行可点，手机上不必瞄准小按钮）。
+               * 用 <button> 而不是给 div 挂 onClick：键盘 Tab、回车、读屏的
+               * 「已展开 / 已折叠」都是白拿的。
+               */
+              <button
+                type="button"
+                className="exam-ex__head"
+                aria-expanded={isOpen}
+                onClick={() => toggleOne(k)}
+              >
+                <span className="exam-ex__mark" aria-hidden>
+                  {mark}
+                </span>
+                <span className="exam-ex__text">
+                  <Emph text={ex.text} />
+                </span>
+                <span className="exam-ex__state">{isOpen ? '收起' : label}</span>
+                <span className="exam-ex__caret" aria-hidden>
+                  ▼
+                </span>
+              </button>
+            ) : (
+              <div className="exam-ex__row">
+                <span className="exam-ex__mark" aria-hidden>
+                  {mark}
+                </span>
+                <span className="exam-ex__text">
+                  <Emph text={ex.text} />
+                </span>
               </div>
-            ) : null}
+            )}
 
-            <div className="exam-ex__analysis">
-              <span className="exam-ex__label">{steps.length ? '怎么想到的：' : '讲解：'}</span>
-              <Emph text={ex.analysis} />
-            </div>
+            {isOpen ? (
+              <div className="exam-ex__body fade-in">
+                {/* 分步解答（数学）：一步一步做完，最后单列答案便于快速核对 */}
+                {steps.length ? (
+                  <ol className="exam-ex__steps">
+                    {steps.map((s, i) => (
+                      <li key={i}>
+                        <Emph text={s} />
+                      </li>
+                    ))}
+                  </ol>
+                ) : null}
 
-            {/* 错例必须给「改成什么」：只指出错在哪，学生改的时候还是不会 */}
-            {ex.fix ? (
-              <div className="exam-ex__fix">
-                <span className="exam-ex__label">改：</span>
-                <Emph text={ex.fix} />
+                {ex.answer ? (
+                  <div className="exam-ex__answer">
+                    <span className="exam-ex__label">答案：</span>
+                    <Emph text={ex.answer} />
+                  </div>
+                ) : null}
+
+                {ex.analysis ? (
+                  <div className="exam-ex__analysis">
+                    <span className="exam-ex__label">{steps.length ? '怎么想到的：' : '讲解：'}</span>
+                    <Emph text={ex.analysis} />
+                  </div>
+                ) : null}
+
+                {/* 错例必须给「改成什么」：只指出错在哪，学生改的时候还是不会 */}
+                {ex.fix ? (
+                  <div className="exam-ex__fix">
+                    <span className="exam-ex__label">改：</span>
+                    <Emph text={ex.fix} />
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>

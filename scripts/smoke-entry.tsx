@@ -1309,7 +1309,7 @@ const zhSectionData = zhTopicWithSections?.data as
         name: string;
         intro?: string;
         rules?: string[];
-        examples?: { text?: string; fix?: string }[];
+        examples?: { text?: string; fix?: string; analysis?: string }[];
       }[];
     }
   | undefined;
@@ -1325,6 +1325,19 @@ const zhTopicBodyNeedles = [
   zhSectionData?.sections?.[0]?.rules?.[0],
   zhSectionData?.sections?.[0]?.examples?.[0]?.text,
 ].filter((x): x is string => typeof x === 'string' && x.length >= 8 && !/["'&<>]/.test(x));
+/**
+ * 第一 / 第二条例子的讲解正文（过滤口径同上）。
+ *
+ * 例子改成「逐条折叠、默认只展开第一条」之后，这两条针分别用来断言：
+ *   - 第一条的讲解**在首屏**（默认展开的那一条真渲染了，不是被折叠按钮吃掉）；
+ *   - 第二条的讲解**不在首屏**（其余例子默认收起，页面不会被 5 个例子铺满）。
+ * 少了这一对断言，折叠写反（全展开或全收起）都不会被发现。
+ */
+const zhSecExampleNeedles = [0, 1]
+  .map((k) => zhSectionData?.sections?.[0]?.examples?.[k]?.analysis)
+  .filter((x): x is string => typeof x === 'string' && x.length >= 8 && !/["'&<>]/.test(x));
+/** 第一条例子的 `fix`（错例的「改成什么」）：有没有决定要不要断言页面上的「改：」 */
+const zhFirstExampleFix = (zhSectionData?.sections?.[0]?.examples?.[0]?.fix ?? '').trim();
 const zhTopicChecks: [string, boolean][] = [
   ['语文中考专题共 7 个', zhTopicEntries.length === 7],
   ['专题页渲染出专题名', Boolean(zhTopic) && zhTopicHtml.includes(zhTopic.title)],
@@ -1372,7 +1385,23 @@ const zhTopicChecks: [string, boolean][] = [
       zhSecOverHtml.includes('这一节不存在') &&
       zhSecOverHtml.includes('回到章节清单'),
   ],
-  ['章节页里渲染出修改后的句子', zhSecPageHtml.includes('改：')],
+  [
+    // 例子逐条折叠：第一条默认展开（讲解与「改」都在首屏），其余默认收起
+    '章节页第一条例子默认展开（讲解与「改」都在首屏）',
+    zhSecExampleNeedles.length > 0 &&
+      zhSecPageHtml.includes(zhSecExampleNeedles[0]) &&
+      zhSecPageHtml.includes('讲解：') &&
+      // 「改」只在第一条例子**本来就有** fix 时才要求（数据里没有就不该凭空出现）
+      (!zhFirstExampleFix || zhSecPageHtml.includes('改：')),
+  ],
+  [
+    '其余例子默认折叠（页面不会被五个例子铺满，可「展开全部讲解」）',
+    Boolean(zhTopicWithSections) &&
+      zhSecExampleNeedles.length > 1 &&
+      !zhSecPageHtml.includes(zhSecExampleNeedles[1]) &&
+      zhSecPageHtml.includes('展开讲解') &&
+      zhSecPageHtml.includes('展开全部讲解'),
+  ],
   [
     '模块页列出七个专题与章节规模',
     zhTopicEntries.every((e) => zhModuleHtml.includes(e.title)) && zhModuleHtml.includes('节逐类讲透'),

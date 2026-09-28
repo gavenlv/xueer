@@ -19,8 +19,9 @@
  *
  *   ① 面包屑          —— 首页 → 科目 → 模块 → 专题 → 本节（第 N 节 / 共 M 节）
  *   ② 节标题 + 题量    —— `N. 节名`，右侧「✍️ 刷这一节（N 题）」主按钮与「← 回到章节清单」
- *   ③ 本节正文         —— `intro`（讲解）→ `rules`（判定要点 / 解题套路）→
- *                        `examples`（正误对照或分步解答）→ `pitfalls`（本节易错）
+ *   ③ 本节正文         —— 拆成三张卡：`intro`（📖 本节讲解）→ `rules`（判定要点 / 解题套路）→
+ *                        `examples`（正误对照或分步解答，**逐条折叠、默认只展开第一条**）→
+ *                        `pitfalls`（本节易错）
  *   ④ 上一节 / 下一节   —— 到底了就禁用；旁边常驻「← 回到章节清单」
  *   ⑤ 底部             —— 本节练习入口（带本节过关进度）+「下一节」推荐
  *   ⑥ 浮动按钮         —— 滚动一段距离后淡入：回顶部 / 回章节清单
@@ -306,8 +307,14 @@ export default function ExamTopicSectionPage() {
         }
       />
 
-      {/* ③ 本节正文：讲解 → 要点 → 例子 → 易错（一页只讲这一节，不再折叠） */}
+      {/*
+        ③ 本节正文：拆成**三张卡**——讲解 / 正误对照 / 本节易错。
+        一页只讲一节解决的是「17 节挤一页」，但一节里「550 字讲解 + 5 条要点 +
+        5 个例子 + 易错」再全塞进一张卡，用户说的「一个卡片展示东西太多、太长」
+        就又回来了。三张卡各有各的小标题，扫一眼就知道哪块是什么，也能单独折叠浏览。
+      */}
       <section className="card card--pad exam-secpage">
+        <div className="exam-secpage__title">📖 本节讲解</div>
         <div className="exam-secpage__intro">
           <Emph text={section.intro} />
         </div>
@@ -325,13 +332,24 @@ export default function ExamTopicSectionPage() {
             </ol>
           </div>
         ) : null}
-
-        {/* 例子：语文是正误对照（✔ / ✘ + 改），数学是分步解答（步骤 + 答案） */}
-        <ExampleList examples={section.examples ?? []} kind={kind} />
-
-        {/* 本节易错：与专题级同一套三行写法（✘ 常犯 / ✔ 正确 / 为什么容易错） */}
-        <PitfallList items={section.pitfalls} />
       </section>
+
+      {/*
+        例子：语文是正误对照（✔ / ✘ + 改），数学是分步解答（步骤 + 答案）。
+        **逐条折叠、默认只展开第一条**——理由写在 `ExampleList` 的注释里。
+      */}
+      {section.examples?.length ? (
+        <section className="card card--pad exam-secpage">
+          <ExampleList examples={section.examples} kind={kind} />
+        </section>
+      ) : null}
+
+      {/* 本节易错：与专题级同一套三行写法（✘ 常犯 / ✔ 正确 / 为什么容易错） */}
+      {section.pitfalls?.length ? (
+        <section className="card card--pad exam-secpage">
+          <PitfallList items={section.pitfalls} />
+        </section>
+      ) : null}
 
       {/*
         ④ 上一节 / 下一节：读完一节顺着往下走，不必回清单再找。

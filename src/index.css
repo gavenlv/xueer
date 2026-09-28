@@ -4764,7 +4764,16 @@ button.mm-label:hover {
   margin-top: 9px;
 }
 
-/* ---- ② 章节页正文：一页只讲一节，所以正文不再折叠，读起来是连续的一段 ---- */
+/* ---- ② 章节页正文：一页只讲一节；一节再拆成「讲解 / 例子 / 易错」三张卡 ---- */
+
+/* 卡片小标题：三张卡各有一行说明，扫一眼就知道哪块是什么 */
+.exam-secpage__title {
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  color: var(--c-ink-3);
+}
 
 .exam-secpage__intro {
   font-size: 15.5px;
@@ -4776,6 +4785,18 @@ button.mm-label:hover {
 }
 
 /* ---- ③ 例子 / 要点 / 易错：语文与数学共用一套排版 ---- */
+
+/* 例子区块的表头：标题在左、「展开全部讲解」在右 */
+.exam-ex__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.exam-ex__allbtn {
+  flex: none;
+}
 
 .exam-ex__caption {
   font-size: 13px;
@@ -4797,6 +4818,53 @@ button.mm-label:hover {
 .exam-ex.is-bad {
   border-color: rgba(210, 79, 61, 0.26);
   background: var(--c-red-soft);
+}
+
+/*
+ * 题干那一行就是折叠开关（整行可点，手机上不必瞄准小按钮）。
+ * 按钮去掉浏览器默认外观，但保留键盘焦点圈——否则 Tab 过来看不见焦点在哪。
+ */
+.exam-ex__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.exam-ex__head:focus-visible {
+  outline: 2px solid var(--c-primary);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+.exam-ex__state {
+  flex: none;
+  align-self: center;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  color: var(--c-primary-ink);
+  white-space: nowrap;
+}
+
+.exam-ex__caret {
+  flex: none;
+  align-self: center;
+  font-size: 10px;
+  color: var(--c-ink-3);
+  transition: transform 0.18s ease;
+}
+
+.exam-ex.is-open .exam-ex__caret {
+  transform: rotate(180deg);
 }
 
 .exam-ex__row {
@@ -5136,11 +5204,13 @@ button.mm-label:hover {
     transform: none;
   }
 
-  .exam-fold__caret {
+  .exam-fold__caret,
+  .exam-ex__caret {
     transition: none;
   }
 
-  .exam-fold .fade-in {
+  .exam-fold .fade-in,
+  .exam-ex__body.fade-in {
     animation: none;
   }
 }
