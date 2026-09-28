@@ -334,6 +334,22 @@ export function validateExamTopicModule(opts: {
         bad += 1;
         err(`${at}: ${q.id} 只有 ${tags.length} 个标签，应 ≥2（第一个是训练分组名）`);
       }
+      /**
+       * 断句填空题的答案里必须带 `/`。
+       *
+       * 这不是格式洁癖：`lib/utils.ts` 的 `answerModeFor` 就是拿「答案里有没有 `/`」
+       * 当断句的唯一判据——有 `/` 走 `strict`（保留 `/`，学生不敲斜杠判错）；
+       * 答案若写成「，」，这题会按 `loose` 判，标点当成空白剥掉，**完全不断句也算对**。
+       * 判据取「题干要求用 / 断句」（题干里同时出现「断句」与 `/`），
+       * 避免误伤「先断句再翻译」这类答案是译文的题。
+       */
+      const askSlash = /断句/.test(q.stem ?? '') && /[/／]/.test(q.stem ?? '');
+      if (q.type === 'fill' && askSlash && !/[/／]/.test(q.answer ?? '')) {
+        bad += 1;
+        err(
+          `${at}: ${q.id} 题干要求用「/」断句，但答案里没有「/」——判分会退回 loose，学生不断句也被判对；答案要写成「甲/乙/丙」`,
+        );
+      }
       const group = tags[0];
       if (!group || !drillNames.includes(group)) {
         bad += 1;
