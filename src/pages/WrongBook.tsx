@@ -189,11 +189,24 @@ export default function WrongBook() {
                           : question.type === 'short'
                             ? question.answer
                             : question.answer.split('|')[0];
+                      /*
+                       * 记录里存的是字母，而选项顺序可能被调整过（为打散答案位置）：
+                       * 原来错选 B、重排后 B 成了正确项，页面上就会出现
+                       * 「你选了 B. 正确的话」和「正确 B. 正确的话」自相矛盾的两行。
+                       *
+                       * 判据很干净：**错题记录里的字母不可能等于当时的正确答案**
+                       * （等于就不会记成错题），所以「存的字母 = 现在的正确答案」只可能是
+                       * 期间调整过选项顺序。这时不硬解释，直说并引导学生重做（重做一次即恢复）。
+                       */
+                      const optionOrderChanged =
+                        question.type === 'choice' && wrong.lastAnswer === question.answer;
                       const userText =
                         question.type === 'choice'
-                          ? `${wrong.lastAnswer}. ${
-                              question.options?.[OPTION_KEYS.indexOf(wrong.lastAnswer as 'A')] ?? ''
-                            }`
+                          ? optionOrderChanged
+                            ? '（本题选项顺序已调整，这次作答的字母已不可比——重做一次即可恢复）'
+                            : `${wrong.lastAnswer}. ${
+                                question.options?.[OPTION_KEYS.indexOf(wrong.lastAnswer as 'A')] ?? ''
+                              }`
                           : wrong.lastAnswer || '（空）';
                       return (
                         <div className="review-item" key={wrong.questionId}>

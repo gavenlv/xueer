@@ -486,7 +486,59 @@ export function validateExamTopicModule(opts: {
     }
 
     /**
-     * ⑤ 与内容规范（`TOPICS-SPEC.md`）的章节清单对一下：**只告警**。
+     * ⑤ 选择题答案分布：**逐个专题查**，而不只是整个模块查。
+     *
+     * 为什么要细到专题：练习是**按节组卷**的，学生一节课做的题只来自这一个专题；
+     * 整个模块 aggregate 起来分布正常，不代表某个专题里没有「一半答案都是 D」。
+     * 实测过：语文「古诗词鉴赏」47 道选择题里 D 占 25 道（53%），
+     * 学生一路选 D 就能蒙对一半——选择题的区分度等于白送。
+     * 只告警不报错：偶尔缺一个字母可能真是内容决定的，但必须有人看见。
+     */
+    const choiceQs = qs.filter((q) => q.type === 'choice');
+    if (choiceQs.length >= 8 && warn) {
+      const counts = new Map<string, number>();
+      for (const q of choiceQs) counts.set((q.answer ?? '').trim(), (counts.get((q.answer ?? '').trim()) ?? 0) + 1);
+      const missing = ['A', 'B', 'C', 'D'].filter((k) => !counts.has(k));
+      const [topLetter, topCount] = [...counts].sort((a, b) => b[1] - a[1])[0] ?? ['-', 0];
+      const ratio = topCount / choiceQs.length;
+      if (missing.length || ratio > 0.45) {
+        warn(
+          `${at}：${choiceQs.length} 道选择题里「${topLetter}」占 ${Math.round(ratio * 100)}%` +
+            `${missing.length ? `，且没有 ${missing.join('/')}` : ''}` +
+            `——学生按位置蒙也能对，请打乱选项顺序（改答案字母后记得同步解析里的「X 项」）`,
+        );
+      }
+    }
+
+    /**
+     * ⑤′ 每一节**内部**也要分散：学生是一节一节刷的。
+     *
+     * 专题整体配平之后，仍可能出现「某一节 5 道选择题里 4 道都是 D」——
+     * 那一节点进去照样能靠位置蒙。只查选择题 ≥4 道的节（不足 4 道时要求四个字母
+     * 齐备是不可能的），阈值取 60%：留一点余量，只抓真正扎堆的那几节。
+     */
+    if (warn) {
+      for (const s of secs) {
+        const list = qs.filter((q) => q.type === 'choice' && (q.tags ?? [])[0] === s.name);
+        if (list.length < 4) continue;
+        const counts = new Map<string, number>();
+        for (const q of list) {
+          const k = (q.answer ?? '').trim();
+          counts.set(k, (counts.get(k) ?? 0) + 1);
+        }
+        const [topLetter, topCount] = [...counts].sort((a, b) => b[1] - a[1])[0] ?? ['-', 0];
+        const ratio = topCount / list.length;
+        if (ratio > 0.6) {
+          warn(
+            `${at}·${s.name}：这一节 ${list.length} 道选择题里「${topLetter}」占 ${Math.round(ratio * 100)}%` +
+              `——学生一节一节刷，按位置蒙就能过半，请把选项顺序打散`,
+          );
+        }
+      }
+    }
+
+    /**
+     * ⑥ 与内容规范（`TOPICS-SPEC.md`）的章节清单对一下：**只告警**。
      * 章节名的硬校验是「= 分组名 = 题目标签」，那一条已经能拦住「点进去是空组」；
      * 规范清单对不上说明内容与规范文件有了偏差，需要人去看一眼，但不该直接判失败。
      */
