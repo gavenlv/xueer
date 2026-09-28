@@ -316,14 +316,17 @@ export function ExampleList({ examples, kind }: { examples: ExamExample[]; kind:
       <div className="exam-ex__bar">
         <span className="exam-ex__caption">{examplesCaptionFor(kind, examples.length)}</span>
         <span className="spacer" />
-        <button
-          type="button"
-          className="btn btn--sm exam-ex__allbtn"
-          aria-expanded={allOpen}
-          onClick={toggleAll}
-        >
-          {allOpen ? '收起全部讲解' : '展开全部讲解'}
-        </button>
+        {/* 只有一个例子时不给「全部展开」：多一个按钮反而让人以为还有别的东西 */}
+        {examples.length > 1 ? (
+          <button
+            type="button"
+            className="btn btn--sm exam-ex__allbtn"
+            aria-expanded={allOpen}
+            onClick={toggleAll}
+          >
+            {allOpen ? '收起全部讲解' : '展开全部讲解'}
+          </button>
+        ) : null}
       </div>
       {examples.map((ex, k) => {
         const ok = ex.ok === true;

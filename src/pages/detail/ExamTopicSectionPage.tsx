@@ -340,7 +340,12 @@ export default function ExamTopicSectionPage() {
       */}
       {section.examples?.length ? (
         <section className="card card--pad exam-secpage">
-          <ExampleList examples={section.examples} kind={kind} />
+          {/*
+            `key` 用节名：例子列表自己记着「哪几条展开着」，从第 3 节点「下一节」到第 4 节时
+            组件实例是同一个，不加 key 状态会被带过去——学生在第 3 节点了「展开全部讲解」，
+            第 4 节一进来就是全铺开的。换节即重挂，保证每节都从「只展开第一条」开始。
+          */}
+          <ExampleList key={section.name} examples={section.examples} kind={kind} />
         </section>
       ) : null}
 
