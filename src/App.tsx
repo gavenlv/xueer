@@ -15,6 +15,7 @@ import Home from './pages/Home';
 import SubjectPage from './pages/SubjectPage';
 import ModulePage from './pages/ModulePage';
 import DetailPage from './pages/DetailPage';
+import ExamTopicSectionPage from './pages/detail/ExamTopicSectionPage';
 import PracticePage from './pages/PracticePage';
 import WrongBook from './pages/WrongBook';
 import StatsPage from './pages/StatsPage';
@@ -52,6 +53,17 @@ export default function App() {
         <Route path="s/:subjectId/exam" element={<SubjectExamRoute />} />
         <Route path="s/:subjectId/extras" element={<ExtrasPage />} />
         <Route path="s/:subjectId/:moduleId" element={<ModulePage />} />
+        {/*
+          题型专题的**章节页**：一页只讲一节（`/sec/<第几节>`）。
+          必须排在 `s/:subjectId/:moduleId/:itemId` **之前**：它多一段路径，
+          react-router v6 本来就会按「更具体优先」选中它，但把更具体的写在前面，
+          读代码的人一眼就能看出「四段路由不会被三段路由吞掉」，不必去回忆排序规则。
+          这一页自己加载专题正文，所以**直接刷新 / 直接分享链接**都能打开。
+        */}
+        <Route
+          path="s/:subjectId/:moduleId/:itemId/sec/:sectionNo"
+          element={<ExamTopicSectionPage />}
+        />
         <Route path="s/:subjectId/:moduleId/:itemId" element={<DetailPage />} />
         <Route path="practice/:moduleId" element={<PracticePage />} />
         <Route path="practice/:moduleId/:itemId" element={<PracticePage />} />

@@ -14,6 +14,7 @@
 
 import type { Entry } from '../types';
 import type { SpeechSegment } from './speech';
+import { isExamTopicData } from './examTopic';
 
 /**
  * 段落文本是否值得朗读。
@@ -47,6 +48,41 @@ function pushList(
 
 export function speechSegmentsOf(entry: Entry): SpeechSegment[] {
   const out: SpeechSegment[] = [];
+
+  /**
+   * 「题型专题」形态（`trends` + `drills`）：**按数据形状识别，不按 moduleId**。
+   *
+   * 整页朗读读的就是**讲解本身**——拿分逻辑 → 五年考情（逐年）→ 趋势结论 →
+   * 命题角度 → 分步讲解（含示范）→ 模板 → 评分点 → 易错失分。专题没有「原文」，
+   * 所以按「先讲这一块怎么考、再讲怎么做」的顺序读；训练分组只读说明（不读题号），
+   * 题目留给练习页，避免整页朗读变成念题库。
+   *
+   * 语文（`zh-topics`）与数学（`math-topics`）共用这一段：写成 `case 'zh-topics'`
+   * 时数学专题会落到下面的数学分支，整页朗读只剩一句「本节要点」，等于没有朗读。
+   */
+  if (isExamTopicData(entry.data)) {
+    const z = entry.data;
+    push(out, 'summary', z.summary, `${z.title}·拿分逻辑`);
+    (z.trends ?? []).forEach((t, i) => push(out, `trend-${i}`, t.note, `${t.year} 年考情`));
+    push(out, 'trendSummary', z.trendSummary, '五年趋势结论');
+    (z.angles ?? []).forEach((a, i) =>
+      push(out, `angle-${i}`, `${a.angle}${a.years ? `（${a.years}）` : ''}。${a.detail}`, `命题角度·第 ${i + 1} 条`),
+    );
+    (z.steps ?? []).forEach((s, i) => {
+      push(out, `step-${i}-head`, s.heading, `第 ${i + 1} 步`);
+      push(out, `step-${i}-body`, s.body, `第 ${i + 1} 步讲解`);
+      push(out, `step-${i}-demo`, s.demo, `第 ${i + 1} 步示范`);
+    });
+    (z.templates ?? []).forEach((g, i) =>
+      pushList(out, `tpl-${i}`, (j) => `${g.name}·第 ${j + 1} 条`, g.items),
+    );
+    pushList(out, 'scoring', (i) => `评分点·第 ${i + 1} 条`, z.scoring);
+    (z.pitfalls ?? []).forEach((p, i) =>
+      push(out, `pitfall-${i}`, `常见错误：${p.wrong}。正确做法：${p.right}。为什么容易错：${p.why}`, `易错失分·第 ${i + 1} 条`),
+    );
+    (z.drills ?? []).forEach((d, i) => push(out, `drill-${i}`, `${d.name}：${d.note}`, `训练分组·第 ${i + 1} 组`));
+    return out;
+  }
 
   switch (entry.moduleId) {
     case 'poems': {
@@ -122,37 +158,9 @@ export function speechSegmentsOf(entry: Entry): SpeechSegment[] {
     }
 
     /**
-     * 语文「中考专题」：整页朗读读的就是**讲解本身**——
-     * 拿分逻辑 → 五年考情（逐年）→ 趋势结论 → 命题角度 → 分步讲解（含示范）
-     * → 答题模板 → 评分点 → 易错失分。
-     *
-     * 专题没有「原文」，所以按「先讲这一块怎么考、再讲怎么做」的顺序读；
-     * 训练分组只读说明（不读题号），题目留给练习页，避免整页朗读变成念题库。
+     * 「题型专题」（语文 `zh-topics` / 数学 `math-topics`）不在这里：它由函数开头的
+     * `isExamTopicData` 分支按**数据形状**处理，两个学科共用同一段朗读段落。
      */
-    case 'zh-topics': {
-      const z = entry.data;
-      push(out, 'summary', z.summary, `${z.title}·拿分逻辑`);
-      (z.trends ?? []).forEach((t, i) => push(out, `trend-${i}`, t.note, `${t.year} 年考情`));
-      push(out, 'trendSummary', z.trendSummary, '五年趋势结论');
-      (z.angles ?? []).forEach((a, i) =>
-        push(out, `angle-${i}`, `${a.angle}${a.years ? `（${a.years}）` : ''}。${a.detail}`, `命题角度·第 ${i + 1} 条`),
-      );
-      (z.steps ?? []).forEach((s, i) => {
-        push(out, `step-${i}-head`, s.heading, `第 ${i + 1} 步`);
-        push(out, `step-${i}-body`, s.body, `第 ${i + 1} 步讲解`);
-        push(out, `step-${i}-demo`, s.demo, `第 ${i + 1} 步示范`);
-      });
-      (z.templates ?? []).forEach((g, i) =>
-        pushList(out, `tpl-${i}`, (j) => `${g.name}·第 ${j + 1} 条`, g.items),
-      );
-      pushList(out, 'scoring', (i) => `评分点·第 ${i + 1} 条`, z.scoring);
-      (z.pitfalls ?? []).forEach((p, i) =>
-        push(out, `pitfall-${i}`, `常见错误：${p.wrong}。正确做法：${p.right}。为什么容易错：${p.why}`, `易错失分·第 ${i + 1} 条`),
-      );
-      (z.drills ?? []).forEach((d, i) => push(out, `drill-${i}`, `${d.name}：${d.note}`, `训练分组·第 ${i + 1} 组`));
-      break;
-    }
-
     default: {
       /**
        * 物理：按**理解顺序**读——问题 → 理解的关键 → 逐步讲解（含图的文字描述）

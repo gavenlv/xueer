@@ -11,11 +11,10 @@ import type {
   PoliticsPaperEntry,
   PoliticsTopicEntry,
 } from '../types';
-import { findEntryById } from '../data';
-import { isZhTopicId } from '../data/chinese';
+import { asExamTopicEntry, findEntryById, isLazyEntryModule, lazyEntrySpecFor } from '../data';
 import { getModuleMeta } from '../data/subjects';
 import { useStudy } from '../store/StudyContext';
-import { useDataScope, useZhTopics, DataLoading } from '../lib/useData';
+import { useDataScope, useLazyEntries, DataLoading } from '../lib/useData';
 import { EmptyState } from '../components/common';
 import { PoemDetail } from './detail/PoemDetail';
 import { VocabDetail } from './detail/VocabDetail';
@@ -24,6 +23,7 @@ import { ReadingDetail } from './detail/ReadingDetail';
 import { WritingDetail } from './detail/WritingDetail';
 import { LiteratureDetail } from './detail/LiteratureDetail';
 import { ChineseExamTopicDetail } from './detail/ChineseExamTopicDetail';
+import { ExamTopicDetail } from './detail/ExamTopicDetail';
 import { HistoryDetail } from './detail/HistoryDetail';
 import { HistoryPaperDetail } from './detail/HistoryPaperDetail';
 import { EnglishDetail } from './detail/EnglishDetail';
@@ -65,23 +65,28 @@ export default function DetailPage() {
   /**
    * 本条内容所属模块的数据；`extras`（思维导图 + 拓展阅读）是详情页底部要用的。
    *
-   * **语文「中考专题」不加载 `extras`**：这一模块既没有课时导图也没有拓展阅读
-   * （`mindmaps-*.ts` / `extensions-*.ts` 里没有任何 `zht-*` 数据），
-   * 而 `extras` 有 125 kB（gzip 约 127 kB）——看一个专题却要白下这些，
-   * 是这一页最不该付的代价。专题页底部因此不会出现导图/拓展区块（本来就该没有内容），
-   * 关联学习与学一补多依赖的是 `relations.ts` 与已加载条目，不受影响。
-   * 请不要「顺手」把它补回来。
+   * **「按条目懒加载」的模块不加载 `extras`**（语文中考专题、数学中考题型专题）：
+   * 这两块既没有课时导图也没有拓展阅读（`mindmaps-*.ts` / `extensions-*.ts` 里没有
+   * 任何 `zht-*` / `mth-*` 数据），而 `extras` 有 125 kB（gzip 约 127 kB）——
+   * 看一个专题却要白下这些，是这一页最不该付的代价。专题页底部因此不会出现导图/拓展
+   * 区块（本来就该没有内容），关联学习与学一补多依赖的是 `relations.ts` 与已加载条目，
+   * 不受影响。请不要「顺手」把它补回来。
    */
-  const needExtras = moduleId !== 'zh-topics';
+  const needExtras = !isLazyEntryModule(moduleId);
   const moduleReady = useDataScope(
     needExtras ? [moduleId as ModuleId, 'extras'] : [moduleId as ModuleId],
   );
   /**
-   * 语文「中考专题」是**一专题一块**：模块范围只装骨架（模块列表页因此零下载），
+   * 「中考专题」是**一条一块**：模块范围只装骨架（模块列表页因此零下载），
    * 正文要按本条内容点名下载。少了这一步，详情页会拿着骨架渲染出空白的考情与讲解
    * ——那比停在加载中更糟：学生以为「这个专题没内容」。
+   *
+   * 范围由注册表算：`lazyEntrySpecFor` 先同步判断「这个 id 是不是这一块的条目」
+   * （手打的 / 过期的链接不该触发下载），不是就返回 `undefined`（本页不需要正文）。
+   * 语文与数学共用这一段，模块 id 一个都不用出现。
    */
-  const topic = useZhTopics(moduleId === 'zh-topics' && isZhTopicId(itemId) ? [itemId] : undefined);
+  const lazySpec = lazyEntrySpecFor(moduleId, itemId);
+  const topic = useLazyEntries(lazySpec);
   const ready = moduleReady && topic.ready;
   const entry = useMemo(() => findEntryById(itemId), [itemId, ready]);
   const counted = useRef<string | null>(null);
@@ -129,6 +134,19 @@ export default function DetailPage() {
       // + 专项训练分组），数据形状与教材六块完全不同，所以单列一个渲染器。
       case 'zh-topics':
         return <ChineseExamTopicDetail entry={entry} moduleName={meta?.module.name ?? '中考专题'} />;
+      // 数学「中考题型专题」：与语文**同一套形态**（ExamTopic），因此走同一个通用渲染器，
+      // 学科差异只有两处——文案措辞（解题模板 / 步骤分）与例子的渲染方式（分步解答），
+      // 由 `ExamTopicDetail` 内部按数据形状与 `subjectId` 自动处理。
+      case 'math-topics':
+        return (
+          <ExamTopicDetail
+            entry={asExamTopicEntry(entry)}
+            subjectId="math"
+            moduleName={meta?.module.name ?? '中考题型专题'}
+            storageKeyPrefix="mth"
+          />
+        );
+
       // 历史：模拟卷走「整卷考试」那一套渲染，其余八块（六册 + 中考专题）共用备考版详情页
       case 'hist-exam':
         return <HistoryPaperDetail entry={entry} moduleName={meta?.module.name ?? '模拟考试'} />;

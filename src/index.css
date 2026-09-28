@@ -4675,3 +4675,511 @@ button.mm-label:hover {
     justify-content: flex-start;
   }
 }
+
+/* ==================== 题型专题：专题页瘦身 + 章节页（.exam-* 通用） ==================== */
+/*
+ * 起因：专题页原来把 12 个区块（其中「逐类讲透」最多 17 节 × 讲解 + 要点 + 例子 + 易错）
+ * 全铺在一页上——用户的原话是「一个卡片展示东西太多，导致很长，页面展示不友好」。
+ * 现在拆成两级：专题页只留总览 + 章节清单，章节页（`/sec/<N>`）一页只讲一节。
+ *
+ * 这一块只**追加**通用类，不动任何既有样式（语文的 `.zht-*` 原样保留）：
+ *   ① .exam-secitem  章节清单里的紧凑卡片：一节三四行，一眼看完 17 节
+ *   ② .exam-secpage  章节页正文卡：讲解 → 要点 → 例子 → 易错
+ *   ③ .exam-nav      上一节 / 下一节（到底了禁用而不是消失）
+ *   ④ .exam-cta / .exam-next  底部练习入口与「下一节」推荐
+ *   ⑤ .exam-fold     可折叠长区块（专题页用，与 .zht-fold 同一套观感）
+ *   ⑥ .exam-float    浮动按钮：回顶部 / 回清单
+ *   ⑦ .exam-ex / .exam-rules / .exam-traps  例子、要点、易错（语文数学共用一套排版）
+ */
+
+/* ---- ① 章节清单：一节一张紧凑卡片 ---- */
+
+.exam-secitem {
+  padding: 11px 13px;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-lg);
+  background: var(--c-surface);
+  /* 学生刚从这一节的章节页回来：整张卡描边强调，免得在十几节里找不到自己刚才看的那一节 */
+  scroll-margin-top: 78px;
+}
+
+.exam-secitem:hover {
+  border-color: var(--c-line-2);
+}
+
+.exam-secitem.is-current {
+  border-color: var(--c-primary);
+  background: var(--c-primary-soft);
+}
+
+.exam-secitem__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.exam-secitem__no {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--c-primary-soft);
+  color: var(--c-primary-ink);
+  font-size: 12.5px;
+  font-weight: 750;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.exam-secitem.is-current .exam-secitem__no {
+  background: var(--c-primary);
+  color: #fff;
+}
+
+.exam-secitem__name {
+  font-size: 15.5px;
+  font-weight: 750;
+  line-height: 1.6;
+}
+
+/* 一句话要点：`intro` 首句截断。**最多两行**，再长就把卡片的「紧凑」吃掉了 */
+.exam-secitem__hint {
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--c-ink-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.exam-secitem__acts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+}
+
+/* ---- ② 章节页正文：一页只讲一节，所以正文不再折叠，读起来是连续的一段 ---- */
+
+.exam-secpage__intro {
+  font-size: 15.5px;
+  line-height: 2;
+}
+
+.exam-secpage__meta {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- ③ 例子 / 要点 / 易错：语文与数学共用一套排版 ---- */
+
+.exam-ex__caption {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-ink-3);
+}
+
+.exam-ex {
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+}
+
+.exam-ex.is-ok {
+  border-color: rgba(26, 154, 108, 0.28);
+  background: var(--c-jade-soft);
+}
+
+.exam-ex.is-bad {
+  border-color: rgba(210, 79, 61, 0.26);
+  background: var(--c-red-soft);
+}
+
+.exam-ex__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* 正误对照用 ✔ / ✘，分步解答用题号——都是同一个位置，所以宽度给足两位数 */
+.exam-ex__mark {
+  flex: none;
+  min-width: 20px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.75;
+  color: var(--c-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.exam-ex.is-ok .exam-ex__mark {
+  color: var(--c-jade);
+}
+
+.exam-ex.is-bad .exam-ex__mark {
+  color: var(--c-red);
+}
+
+.exam-ex__text {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-kai);
+  font-size: 15.5px;
+  font-weight: 600;
+  line-height: 1.9;
+}
+
+/* 分步解答（数学）：一步一步做完，编号与正文分开 */
+.exam-ex__steps {
+  margin: 8px 0 0 26px;
+  padding-left: 20px;
+  font-size: 14.5px;
+  line-height: 1.95;
+  color: var(--c-ink-2);
+}
+
+.exam-ex__steps li + li {
+  margin-top: 4px;
+}
+
+.exam-ex__steps li::marker {
+  color: var(--c-primary);
+  font-weight: 700;
+}
+
+.exam-ex__answer {
+  margin: 8px 0 0 26px;
+  padding: 7px 10px;
+  border-left: 3px solid var(--c-jade);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: rgba(26, 154, 108, 0.1);
+  font-size: 14.5px;
+  line-height: 1.9;
+}
+
+.exam-ex__analysis {
+  margin-top: 6px;
+  padding-left: 26px;
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--c-ink-2);
+}
+
+.exam-ex__fix {
+  margin: 6px 0 0 26px;
+  padding: 7px 10px;
+  border-left: 3px solid var(--c-jade);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: rgba(26, 154, 108, 0.1);
+  font-family: var(--font-kai);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.9;
+}
+
+.exam-ex__label {
+  display: inline-block;
+  margin-right: 6px;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  color: var(--c-ink-3);
+}
+
+.exam-ex__fix .exam-ex__label,
+.exam-ex__answer .exam-ex__label {
+  color: var(--c-jade);
+}
+
+/* 判定要点 / 解题套路：紫色小块，编号列出「怎么一眼看出来」 */
+.exam-rules {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(115, 85, 207, 0.22);
+  border-radius: var(--r-md);
+  background: var(--c-purple-soft);
+}
+
+.exam-rules__title {
+  margin-bottom: 5px;
+  font-size: 12.5px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  color: var(--c-purple);
+}
+
+.exam-rules__items {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--c-ink-2);
+}
+
+.exam-rules__items li + li {
+  margin-top: 3px;
+}
+
+.exam-rules__items li::marker {
+  color: var(--c-purple);
+  font-weight: 700;
+}
+
+/* 本节易错：金色小块，每条「错在哪 → 怎么办」 */
+.exam-traps {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(189, 138, 37, 0.22);
+  border-radius: var(--r-md);
+  background: var(--c-gold-soft);
+}
+
+.exam-traps__title {
+  margin-bottom: 5px;
+  font-size: 12.5px;
+  font-weight: 750;
+  color: #8d6410;
+}
+
+.exam-trap {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #6b4d0d;
+}
+
+.exam-trap__mark {
+  flex: none;
+  color: var(--c-gold);
+}
+
+/* ---- ④ 上一节 / 下一节 ---- */
+
+.exam-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* 到底了**禁用而不是隐藏**：按钮消失会让人以为页面坏了，灰着放在原位一眼就懂 */
+.exam-nav__btn {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 禁用态真的不可点（也不再进键盘 Tab 序，见页面里的 `tabIndex={-1}`） */
+.exam-nav__btn.is-off {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ---- ⑤ 底部：本节练习入口 + 下一节推荐 ---- */
+
+.exam-cta__title {
+  font-size: 15.5px;
+  font-weight: 750;
+}
+
+.exam-next {
+  border-color: var(--c-line-2);
+  background: var(--c-surface-2);
+}
+
+.exam-next__label {
+  font-size: 12.5px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  color: var(--c-ink-3);
+}
+
+.exam-next__name {
+  margin-top: 4px;
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.65;
+}
+
+.exam-next__hint {
+  margin-top: 4px;
+  line-height: 1.8;
+}
+
+/* ---- ⑥ 可折叠长区块（与 .zht-fold 同一套观感，通用前缀给语文/数学共用） ---- */
+
+.exam-fold__head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 15px 18px;
+  text-align: left;
+  background: var(--c-surface);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  transition: background 0.16s;
+}
+
+.exam-fold__head:hover {
+  background: var(--c-surface-2);
+}
+
+/* 收起时标题行就是整张卡，四角都得圆，否则底部两个直角会露出卡片底色 */
+.exam-fold:not(.is-open) .exam-fold__head {
+  border-radius: var(--r-lg);
+}
+
+.exam-fold.is-open .exam-fold__head {
+  border-bottom: 1px solid var(--c-line);
+}
+
+.exam-fold__hint {
+  font-size: 12.5px;
+  color: var(--c-ink-3);
+}
+
+.exam-fold__state {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 11px;
+  border: 1px solid var(--c-line-2);
+  border-radius: var(--r-full);
+  background: var(--c-primary-soft);
+  color: var(--c-primary-ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.exam-fold.is-open .exam-fold__state {
+  background: var(--c-surface-3);
+  border-color: var(--c-line);
+  color: var(--c-ink-2);
+}
+
+.exam-fold__caret {
+  flex: none;
+  font-size: 11px;
+  color: var(--c-ink-3);
+  transition: transform 0.22s;
+}
+
+.exam-fold.is-open .exam-fold__caret {
+  transform: rotate(180deg);
+}
+
+/* ---- ⑦ 浮动按钮：滚动超过一屏后淡入 ---- */
+
+.exam-float {
+  position: fixed;
+  right: 12px;
+  /* 落在底部标签栏（约 54px 高）之上：既不盖标签栏，也不压在正文最后一行上 */
+  bottom: calc(70px + env(safe-area-inset-bottom));
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+}
+
+.exam-float.is-on {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  pointer-events: auto;
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s;
+}
+
+.exam-float__btn {
+  box-shadow: var(--sh-2);
+}
+
+/* 有浮动按钮的页面底部多留一段空白，免得按钮与标签栏盖住正文 */
+.app__main:has(.exam-float) {
+  padding-bottom: calc(210px + env(safe-area-inset-bottom));
+}
+
+/* ---- 离屏跳过：长区块不参与离屏的布局与绘制 ---- */
+/*
+ * `auto <长度>` 里的 auto 让浏览器记住上次渲染出来的真实高度，第二屏之后就不再抖。
+ * 只给离屏的长块加（首屏可见的区块不加，否则占位高度与真实高度打架会造成滚动跳动）。
+ */
+.exam-cv {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 620px;
+}
+
+/* ---- 无障碍：系统开了「减少动态效果」就不做动画 ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  .exam-float,
+  .exam-float.is-on {
+    transition: none;
+    transform: none;
+  }
+
+  .exam-fold__caret {
+    transition: none;
+  }
+
+  .exam-fold .fade-in {
+    animation: none;
+  }
+}
+
+/* ---- 窄屏：卡片收紧，例子的讲解与「改」不再缩进（缩进会把正文挤成一行三四个字） ---- */
+
+@media (max-width: 560px) {
+  .exam-secitem {
+    padding: 10px 12px;
+  }
+
+  .exam-ex__analysis,
+  .exam-ex__steps,
+  .exam-ex__answer,
+  .exam-ex__fix {
+    margin-left: 0;
+    padding-left: 0;
+  }
+
+  .exam-ex__answer,
+  .exam-ex__fix {
+    padding: 7px 10px;
+  }
+
+  .exam-nav__btn {
+    flex: 1 1 100%;
+  }
+
+  .exam-float {
+    right: 8px;
+    bottom: calc(66px + env(safe-area-inset-bottom));
+  }
+
+  .exam-float__btn {
+    padding: 6px 10px;
+    font-size: 12.5px;
+  }
+
+  .exam-fold__head {
+    padding: 13px 14px;
+  }
+}

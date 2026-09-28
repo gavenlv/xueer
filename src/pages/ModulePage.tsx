@@ -3,8 +3,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { getModuleMeta, getSubject } from '../data/subjects';
-import { filterTagsOfModule, entriesOfModule } from '../data';
-import { loadZhTopic } from '../data/chinese';
+import { filterTagsOfModule, entriesOfModule, lazyEntryModuleOf } from '../data';
 import { ENTRY_META } from '../data/summary';
 import { useStudy } from '../store/StudyContext';
 import type { GradeId, ModuleId } from '../types';
@@ -24,21 +23,25 @@ import {
 /**
  * 条目 id → 轻量清单里的题量。
  *
- * 「中考专题」是**一专题一块**：进模块页只装骨架（零下载），题目还没到手。
- * 让列表上的「多少道配套题」回落清单里的数字，学生看到的规模与内容一致；
- * 正文加载之后 `e.questions.length` 就是权威值，两边由 `pnpm validate` 保证相等。
+ * 「按条目懒加载」的模块（语文中考专题 / 数学中考题型专题）：进模块页只装骨架
+ * （零下载），题目还没到手。让列表上的「多少道配套题」回落清单里的数字，
+ * 学生看到的规模与内容一致；正文加载之后 `e.questions.length` 就是权威值，
+ * 两边由 `pnpm validate` 保证相等。
  */
 const META_QUESTIONS = new Map(ENTRY_META.map((m) => [m.id, m.questions]));
 
 /**
- * 预取某一专题的正文。
+ * 预取某一条的正文。
  *
- * 只在「中考专题」模块里做事，其余模块直接返回（它们的正文本来就随模块一起下载）。
- * 失败**不提示**：预取只是加速，学生点进去时详情页会走正规加载，失败时给出重试入口。
+ * 只对「按条目懒加载」的模块做事（其余模块的正文本来就随模块一起下载），
+ * 因此这里不必认识任何具体模块 id——注册表（`data/lazyEntries.ts`）说这一块走懒加载，
+ * 这里就按条预取。失败**不提示**：预取只是加速，学生点进去时详情页会走正规加载，
+ * 失败时给出重试入口。
  */
-function prefetchZhTopic(moduleId: string, entryId: string): void {
-  if (moduleId !== 'zh-topics') return;
-  void loadZhTopic(entryId).catch(() => undefined);
+function prefetchLazyEntry(moduleId: string, entryId: string): void {
+  const mod = lazyEntryModuleOf(moduleId);
+  if (!mod || !mod.has(entryId)) return;
+  void mod.loadEntry(entryId).catch(() => undefined);
 }
 
 export default function ModulePage() {
@@ -363,15 +366,15 @@ export default function ModulePage() {
                   className="list-item__main"
                   to={`/s/${subject.id}/${moduleId}/${e.id}`}
                   /**
-                   * 悬停 / 触摸 / 聚焦即预取这一专题的正文（只对中考专题生效）。
+                   * 悬停 / 触摸 / 聚焦即预取这一条的正文（只对「按条目懒加载」的模块生效）。
                    * 学生从「看一眼标题」到「点进去」通常有几百毫秒，足够把那一块下载完，
-                   * 点进去就是秒开——而真正决定下载与否的仍是「有没有打开这个专题」，
-                   * 模块页本身一个专题正文都不会下载。重复进入不会重复请求
+                   * 点进去就是秒开——而真正决定下载与否的仍是「有没有打开这一条」，
+                   * 模块页本身一条正文都不会下载。重复进入不会重复请求
                    * （加载器按 id 复用同一个 Promise）。
                    */
-                  onMouseEnter={() => prefetchZhTopic(moduleId, e.id)}
-                  onFocus={() => prefetchZhTopic(moduleId, e.id)}
-                  onTouchStart={() => prefetchZhTopic(moduleId, e.id)}
+                  onMouseEnter={() => prefetchLazyEntry(moduleId, e.id)}
+                  onFocus={() => prefetchLazyEntry(moduleId, e.id)}
+                  onTouchStart={() => prefetchLazyEntry(moduleId, e.id)}
                 >
                   <span className="list-item__title">
                     {e.title}

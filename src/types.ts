@@ -369,7 +369,15 @@ export interface BookPlot {
  * 学生考场上需要的是「第一步先判定文体，第二步再定读法」这样的动作序列，
  * 因此每一步都必须有 `heading`（这一步做什么）。`demo` 是可选的「做一遍给你看」。
  */
-export interface ChineseExamStep {
+/**
+ * 备考型「题型专题」的通用类型（语文中考专题与数学中考专题共用）。
+ *
+ * 为什么做成**学科无关**：语文这套「专题 → 章节（逐类讲透）→ 同名专项训练」
+ * 是用户明确认可的形态（「每一种类型都有独立的章节讲透，有讲解、有例子、有练习」），
+ * 数学要的是同一套东西。抽成通用类型后，两科共用同一份渲染器、同一套折叠与
+ * 按块懒加载，新增第三科时只需写数据。
+ */
+export interface ExamStep {
   /** 这一步做什么，如「先判定文体，再决定读法」 */
   heading: string;
   /** 讲解正文 */
@@ -385,7 +393,7 @@ export interface ChineseExamStep {
  * 真题的原题与材料有版权，而且学生真正需要的是「这几年都在考什么形态」，
  * 不是再读一遍某年的具体题目。
  */
-export interface ChineseExamTrend {
+export interface ExamTrend {
   /** 年份，如「2025」 */
   year: string;
   /** 这一年的考查形态、分值区间与选材倾向 */
@@ -393,99 +401,114 @@ export interface ChineseExamTrend {
 }
 
 /**
- * 一个「中考专题」。**按广州中考语文卷面题型**设专题（与卷面板块一一对应），
- * 内容是「考情归纳 + 专门讲解 + 专项训练」三件套。
+ * 章节里的一个**例子讲解**。
+ *
+ * 设计成两种用法都装得下：
+ * - **语文**靠「正误对照」讲透——`ok: false`（默认）表示这是一个错例，
+ *   `analysis` 说清错在哪、属于哪一类，`fix` 给改后的句子；`ok: true` 放规范例句对照。
+ * - **数学**靠「一道题完整做一遍」讲透——`text` 写题目，`steps` 给分步解答（每步一行，
+ *   行内公式用 `$…$`），`answer` 给答案，`analysis` 写「怎么想到的、为什么这样入手」。
+ *
+ * 因此除 `text` 与 `analysis` 外的字段都是可选的：写哪科用哪科。
+ */
+export interface ExamExample {
+  /** 例子主体：语文是例句（对句/错句），数学是题目 */
+  text: string;
+  /** 是否是规范例句（语文用；省略即「有问题的例子」） */
+  ok?: boolean;
+  /** 讲解：为什么对／为什么错；数学写「怎么想到的、关键在哪一步」 */
+  analysis: string;
+  /** 语文：修改后的句子（错例建议都给） */
+  fix?: string;
+  /** 数学：分步解答（每步一行，可含 $…$ 行内公式） */
+  steps?: string[];
+  /** 数学：答案（可与 `steps` 末步重复，便于快速核对） */
+  answer?: string;
+}
+
+/**
+ * 一个**章节**：专题之下的一个类目或子类（如语文的「病句·搭配不当」、
+ * 数学的「二次函数图象与系数关系」）。
+ *
+ * 用户的要求是「每个类别都要讲透：每一种类型都有独立的章节，有讲解、有例子、有练习」。
+ * 所以章节是**讲练一体的最小单位**：
+ *   `intro` + `rules` 讲清方法 → `examples` 逐例拆解（正误对照或完整解答）→
+ *   同名的训练分组（`drills`）让学生在**刚学完的这一节**上立刻练。
+ *
+ * 因此 `name` 必须同时是：章节标题、`drills[].name`、以及该节题目的首个标签。
+ */
+export interface ExamSection {
+  /** 章节名，如「病句·搭配不当」——同时是训练分组名与题目标签 */
+  name: string;
+  /** 这一节讲什么、怎么判断（讲解正文，可以是一段或多段） */
+  intro: string;
+  /** 判定要点／口诀／解题套路，逐条（写「怎么一眼看出来」而不是复述定义） */
+  rules?: string[];
+  /** 例子讲解（语文 ≥3 条正误对照；数学 ≥3 道例题带分步解答） */
+  examples: ExamExample[];
+  /**
+   * 本节易错。**两种写法都接受**，页面上分别渲染：
+   *   - 字符串：一句话写「错在哪 → 怎么办」（最省地方，适合只说一个坑）；
+   *   - 三行对象：与专题级 `pitfalls` 同一套 `{ wrong, right, why }`（信息更全，推荐）。
+   */
+  pitfalls?: (string | { wrong: string; right: string; why: string })[];
+}
+
+/* 兼容别名：语文中考专题的数据文件与渲染器沿用带 Chinese 前缀的老名字，无需改动 */
+export type ChineseExamStep = ExamStep;
+export type ChineseExamTrend = ExamTrend;
+export type ChineseExamExample = ExamExample;
+export type ChineseExamSection = ExamSection;
+
+/**
+ * 一个「题型专题」。**按广州卷面题型**设专题，内容是
+ * 「考情归纳 + 专门讲解 + 逐类章节 + 专项训练」四件套。
  *
  * 为什么按题型而不是按知识点设专题：卷面板块本身就是命题单位，学生拿到卷子
  * 也是按这几块分配时间的；「逐个攻破」的单位必须是题型，攻破才有可验证的终点。
  * 按知识点聚合的那套仍然由「考点」页（`/s/:subjectId/exam`）负责，两者互补。
  */
-/**
- * 章节里的一个**例子讲解**。
- *
- * 为什么例子要带 `ok` 与 `analysis` 两件事：语文的题型讲解靠「正误对照」才讲得透——
- * 只给一个正确例句，学生学不会判断；给一个错例 + 错在哪 + 怎么改，才会自己做判断。
- * 因此 `ok: false`（默认）表示这是一句**有问题的例子**（`fix` 给修改后的句子），
- * `ok: true` 表示规范的例句（通常用来和错例对照）。
- */
-export interface ChineseExamExample {
-  /** 例句原文 */
-  text: string;
-  /** 是否是规范例句（省略即「有问题的例子」，需要靠 `analysis` 说清错在哪） */
-  ok?: boolean;
-  /** 讲解：这一句为什么对／为什么错，错在哪个成分、属于哪种类型 */
-  analysis: string;
-  /** 修改后的句子（错例建议都给） */
-  fix?: string;
-}
-
-/**
- * 一个**章节**：专题之下的一个类目或子类（如「病句·搭配不当」）。
- *
- * 用户的要求是「每个类别都要讲透：每一种类型都有独立的章节，有讲解、有例子、有练习」。
- * 所以章节是**讲练一体的最小单位**：
- *   `intro` + `rules` 讲清判定方法 → `examples` 正误对照逐句分析 →
- *   同名的训练分组（`drills`）让学生在**刚学完的这一节**上立刻练（≥4 题）。
- *
- * 因此 `name` 必须同时是：章节标题、`drills[].name`、以及该节题目的首个标签。
- */
-export interface ChineseExamSection {
-  /** 章节名，如「病句·搭配不当」——同时是训练分组名与题目标签 */
-  name: string;
-  /** 这一节讲什么、怎么判断（讲解正文，可以是一段或多段） */
-  intro: string;
-  /** 判定要点／口诀，逐条（写「怎么一眼看出来」而不是复述定义） */
-  rules?: string[];
-  /** 例子讲解：正误对照 + 逐句分析（≥3 条） */
-  examples: ChineseExamExample[];
-  /**
-   * 本节易错。**两种写法都接受**，页面上分别渲染：
-   *   - 字符串：一句话写「错在哪 → 怎么办」（最省地方，适合只说一个坑）；
-   *   - 三行对象：与专题级 `pitfalls` 同一套 `{ wrong, right, why }`（信息更全，推荐）。
-   * 之所以容两种：章节数量多（80+ 节），一节一两个坑时硬套三行反而啰嗦；
-   * 但坑比较绕时，三行能把「常犯的样子 / 正确做法 / 为什么容易错」分开说清。
-   */
-  pitfalls?: (string | { wrong: string; right: string; why: string })[];
-}
-
-export interface ChineseExamTopic {
+export interface ExamTopic {
   id: string;
   /** 一律 `'all'`：专题是初三总复习内容，不归属某一册 */
   grade: GradeOrAll;
-  /** 专题名，如「古诗文默写」 */
+  /** 专题名，如「古诗文默写」「函数与几何综合」 */
   title: string;
   /** 卷面定位，如「第二大题之一 · 古诗文积累与默写（约 8—10 分）」 */
   paper: string;
   /** 一句话：这个专题在考什么、拿分靠什么 */
   summary: string;
   /** 近 5 年考情（恰好 5 条，一年一条） */
-  trends: ChineseExamTrend[];
+  trends: ExamTrend[];
   /** 五年趋势结论：一句话说清「现在怎么考、往哪走」 */
   trendSummary: string;
   /** 命题角度（与历史/道法共用同一套：angle + years + detail） */
   angles: HistoryExamAngle[];
-  /** 分步讲解 */
-  steps: ChineseExamStep[];
-  /** 答题模板：可直接背下来套用 */
+  /** 分步讲解（怎么做这一类题的整体流程） */
+  steps: ExamStep[];
+  /** 答题／解题模板：可直接背下来套用 */
   templates?: { name: string; items: string[] }[];
-  /** 评分点／踩分点：写成「写到什么才给分」 */
+  /** 评分点／踩分点：写成「写到什么才给分」（数学写步骤分） */
   scoring?: string[];
   /** 易错与失分 */
   pitfalls?: { wrong: string; right: string; why: string }[];
   /**
    * **章节（逐类讲透）**：把本专题的类目与子类一个不漏地拆开讲——
-   * 每一节都要有判定要点、正误对照的例子（≥3 条）与同名训练分组（≥4 题），
+   * 每一节都要有讲解、要点、例子（≥3 条）与同名训练分组（≥4 题），
    * 学生「看完这一节就刷这一节」，一节一节把这一块吃下来。
    */
-  sections?: ChineseExamSection[];
+  sections?: ExamSection[];
   /**
    * 专项训练分组。`name` **同时是题目上的标签**：分组刷题走
-   * `/practice/zh-topics/<条目 id>?tag=<name>`，不再另建一套组的 id 与路由。
+   * `/practice/<moduleId>/<条目 id>?tag=<name>`，不再另建一套组的 id 与路由。
    */
   drills: { name: string; note: string }[];
   /** 专项训练题库（每题至少带一个 `drills` 里的标签） */
   questions: QuizQuestion[];
 }
+
+/** 兼容别名：语文中考专题的数据文件、渲染器与校验器沿用带 Chinese 前缀的老名字 */
+export type ChineseExamTopic = ExamTopic;
 
 /* ------------------------------------------------------------------ */
 /* 学习进度                                                            */
@@ -673,7 +696,14 @@ export type MathModuleId =
   | 'math-stats'
   | 'math-formula'
   | 'math-model'
-  | 'math-exam';
+  | 'math-exam'
+  /**
+   * 「中考题型专题」：按 2027 年 150 分卷面题型设 5 个专题、35 节逐类讲透，
+   * 条目数据是 `ExamTopic`（与语文 `zh-topics` 同一形态），走「轻量清单 + 按条目懒加载」
+   * （见 `src/data/lazyEntries.ts` 与 `src/data/math/modules/math-topics.ts`）。
+   * 与 `math-exam`（策略型专题：试卷结构与时间分配）是两块不同的模块。
+   */
+  | 'math-topics';
 
 /**
  * 历史学科模块 id。

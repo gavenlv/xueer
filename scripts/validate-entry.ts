@@ -24,20 +24,23 @@ import {
   ensureModules,
   type LoadProgress,
 } from '../src/data';
-import { allPoems, isZhTopicReady, isZhTopicsReady, zhExamTopicItems } from '../src/data/chinese';
-import { ZH_TOPIC_IDS } from '../src/data/chinese/modules/zh-topics';
+import { allPoems } from '../src/data/chinese';
+// 「按条目懒加载」的注册表：题型专题的骨架 / 正文 / 页面接线都由它统一校验
+// （语文中考专题与数学中考题型专题登记在同一张表里，见 src/data/lazyEntries.ts）
+import { lazyEntryModules } from '../src/data/lazyEntries';
 import { allTopics, allPapers } from '../src/data/history';
 // allTopics 含 pol-exam 的「题型专题」（与整卷共用 pol-exam），allPapers 只含卷子：
 // 校验卷面结构必须从 allPapers 取，不能按 moduleId === 'pol-exam' 从条目里筛。
 import { allPapers as polPapers, allTopics as polTopics } from '../src/data/politics';
 import { validateChemistry } from './validate-chemistry';
-import { validateChineseTopics } from './validate-chinese-topics';
+import { validateAllExamTopics } from './validate-exam-topics';
 import { validatePhysics } from './validate-physics';
 import type { EnglishKnowledge, EnglishPaper, PoliticsPaper } from '../src/types';
 import { BOOK_EXAM_POINT_TAGS } from '../src/lib/bookExams';
 import { DAILY_LINES, ENTRY_META, MODULE_TOTALS } from '../src/data/summary';
 import { lessonMindMap } from '../src/lib/lessonMaps';
 import { searchTextOf } from '../src/lib/searchText';
+import { isExamTopicData } from '../src/lib/examTopic';
 import { SUBJECTS } from '../src/data/subjects';
 import { makeReciteQuestions } from '../src/lib/quiz';
 import { relatedEntries, supplementsOf, litMatchIndex } from '../src/lib/relations';
@@ -302,6 +305,13 @@ for (const entry of allEntries as Entry[]) {
     default: {
       // 数学学科（moduleId 以 math- 开头）
       if (String(entry.moduleId).startsWith('math-')) {
+        /**
+         * 「中考题型专题」（`math-topics`）是**另一种形状**（`ExamTopic`：章节 / 训练 /
+         * 考情，没有 `concepts` 这个字段），它的下限由 `validate-exam-topics.ts`
+         * 逐项校验。这里必须先分流，否则会为每个专题刷一条「缺少核心概念 concepts」的假错
+         * ——**不是内容缺失，而是拿错了尺子**。
+         */
+        if (isExamTopicData(entry.data)) break;
         const t = entry.data as import('../src/types').MathTopic;
         if (!t.summary?.trim()) err(`${where}: 缺少 summary`);
         if (!t.concepts?.length) err(`${where}: 缺少核心概念 concepts`);
@@ -868,89 +878,127 @@ if (reviewKindTotal < 250) {
   }
 }
 
-/* ------------- 中考专题：一专题一块（骨架 / 正文 / 页面接线） ------------- */
+/* --------- 题型专题：按条目懒加载（骨架 / 正文 / 页面接线 / 清单一致） --------- */
 
 /**
  * 语文「中考专题」曾经被拼成**一个 495 kB 的块**（gzip 455 kB，比首屏还大）：
  * 学生只想看「古诗文默写」，也得先把写作、现代文、名著全部下载完。改造后是
- * 「轻量骨架 + 一专题一块」，于是有四件事必须**自动化**守住——它们出问题时
+ * 「轻量骨架 + 一条一块」，数学的「中考题型专题」用的是同一套机制
+ * （`data/lazyEntries.ts` 的注册表）。于是有四件事必须**自动化**守住——它们出问题时
  * 页面都不会报错，只是「慢」或「静默少数据」，人工点几下根本发现不了：
  *
- *   ① 骨架与正文的一致性：模块列表页显示的是轻量清单里的副标题（「几节 · 多少题」），
- *      正文装配出来的那条必须算出一模一样的字符串，否则点进去数字会变；
- *   ② 加载器不许再静态 import 正文（那正是 495 kB 块的成因）；
- *   ③ `ensureAll()` 之后七个专题的正文必须都在内存里——校验脚本与冒烟测试都靠它，
+ *   ① 清单 / 骨架 / 正文三者一致：模块列表页显示的是轻量清单里的副标题
+ *      （「几节 · 多少题」），正文装配出来的那条必须算出一模一样的字符串，
+ *      否则点进去数字会变；
+ *   ② 加载器不许静态 import 正文（那正是 495 kB 块的成因）；
+ *   ③ `ensureAll()` 之后**每一条**的正文都必须已在内存里——校验脚本与冒烟测试都靠它，
  *      否则专题页会退化成加载占位、断言全红；
- *   ④ 用到专题**题目**的页面（详情/练习/错题本/报告/考点）必须显式声明专题正文范围，
- *      否则错题与考点会静默少掉一整块。
+ *   ④ 用到正文的页面（详情 / 章节 / 练习 / 错题本 / 报告 / 考点）必须显式声明
+ *      懒加载范围，否则错题与考点会静默少掉一整块。
+ *
+ * 这一段**遍历注册表**，因此语文、数学（以及以后任何一块）自动被覆盖。
  */
 {
-  // ① 骨架 vs 正文
-  const metaById = new Map(ENTRY_META.map((m) => [m.id, m]));
-  const zhEntries = allEntries.filter((e) => e.moduleId === 'zh-topics');
-  if (zhEntries.length !== ZH_TOPIC_IDS.length) {
-    err(
-      `[中考专题] 条目数为 ${zhEntries.length}，应为 ${ZH_TOPIC_IDS.length} 个 —— 骨架或正文装配有问题`,
-    );
-  }
-  for (const e of zhEntries) {
-    const m = metaById.get(e.id);
-    if (!m) continue; // 清单缺条目已由上面的 [轻量清单] 报过
-    if (m.subtitle !== e.subtitle) {
-      err(
-        `[中考专题] ${e.id} 的副标题与轻量清单不一致：` +
-          `列表页（骨架）显示「${m.subtitle}」，正文装配为「${e.subtitle}」→ 请运行 pnpm gen`,
-      );
-    }
-  }
-  // 七个专题的正文必须都在内存里（顺序 = 卷面顺序）
-  const notReady = ZH_TOPIC_IDS.filter((id) => !isZhTopicReady(id));
-  if (notReady.length) {
-    err(
-      `[中考专题] ensureAll() 之后仍有 ${notReady.length} 个专题的正文没被加载（${notReady.join('、')}）——` +
-        `校验与冒烟测试会看到空专题，专题页在浏览器里也会退化成加载占位`,
-    );
-  }
-  if (!isZhTopicsReady('all')) err('[中考专题] isZhTopicsReady("all") 在 ensureAll() 之后仍为假');
-  if (zhExamTopicItems.length !== ZH_TOPIC_IDS.length) {
-    err(
-      `[中考专题] 已加载的专题正文（zhExamTopicItems）有 ${zhExamTopicItems.length} 个，应为 ${ZH_TOPIC_IDS.length} 个`,
-    );
-  } else if (zhExamTopicItems.some((t, i) => t.id !== ZH_TOPIC_IDS[i])) {
-    err('[中考专题] 专题正文的顺序与卷面顺序不一致（ZH_TOPIC_IDS）');
-  }
-
-  // ② 加载器只许动态 import：静态 import 会把七块重新并成一个大 chunk
-  const loaderSrc = readFileSync('src/data/chinese/modules/zh-topics.ts', 'utf8');
-  // 先去掉注释：这个文件的文档注释里就写着「不要这样写」的反例，直接匹配会误报
-  const loaderCode = loaderSrc
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/^\s*\/\/.*$/gm, '');
-  const staticImports = [...loaderCode.matchAll(/from\s+'\.\.\/zh-topics\/[\w-]+'/g)].map((m) => m[0]);
-  if (staticImports.length) {
-    err(
-      `[中考专题] modules/zh-topics.ts 里出现了对专题正文的静态 import（${staticImports.join('、')}）：` +
-        `七个专题会被重新打进同一个 chunk（曾经是 495 kB），打开一个专题就要下载全部`,
-    );
-  }
-  for (const id of ZH_TOPIC_IDS) {
-    if (!loaderCode.includes(`'${id}'`)) {
-      err(`[中考专题] 加载器表里没有 ${id} 这一块 —— 这个专题将永远加载不出来`);
-    }
-  }
-
-  // ④ 用到专题题目的页面必须声明「要正文」
-  const ZH_BODY_PAGES: [string, string][] = [
+  // ④ 用到正文的页面必须声明范围（`useLazyEntries` 是唯一的声明方式）
+  const LAZY_BODY_PAGES: [string, string][] = [
     ['src/pages/DetailPage.tsx', '详情页要渲染考情与讲解，正文没到会渲染成空白专题'],
     ['src/pages/PracticePage.tsx', '练习页要按专题正文组卷，正文没到会组出一张空卷子'],
-    ['src/pages/WrongBook.tsx', '错题本按题目 id 反查题干，少一块就少一批错题'],
-    ['src/pages/StatsPage.tsx', '薄弱知识点按题目标签聚合，少一块就少一片考点'],
-    ['src/pages/ExamPage.tsx', '考点页按题目标签聚合，少一块就少一片考点'],
+    ['src/pages/WrongBook.tsx', '错题本按题目 id 反查题干，少一条就少一批错题'],
+    ['src/pages/StatsPage.tsx', '薄弱知识点按题目标签聚合，少一条就少一片考点'],
+    ['src/pages/ExamPage.tsx', '考点页按题目标签聚合，少一条就少一片考点'],
+    [
+      'src/pages/detail/ExamTopicSectionPage.tsx',
+      '章节页要自己把这一条的正文下载下来（直接刷新 / 分享链接打开也要能看）',
+    ],
   ];
-  for (const [file, why] of ZH_BODY_PAGES) {
+  for (const [file, why] of LAZY_BODY_PAGES) {
     const src = readFileSync(file, 'utf8');
-    if (!src.includes('useZhTopics')) {
-      err(`[中考专题] ${file} 没有声明专题正文范围（useZhTopics）→ ${why}`);
+    if (!src.includes('useLazyEntries')) {
+      err(`[题型专题] ${file} 没有声明懒加载正文范围（useLazyEntries）→ ${why}`);
+    }
+  }
+
+  const metaById = new Map(ENTRY_META.map((m) => [m.id, m]));
+
+  for (const mod of lazyEntryModules()) {
+    const at = `[题型专题·${mod.moduleId}]`;
+    const ids = [...mod.ids()];
+    const list = allEntries.filter((e) => e.moduleId === mod.moduleId);
+
+    // ① 清单 ↔ 骨架 ↔ 正文：三者必须说同一件事
+    const manifest = await mod.manifest();
+    const byId = new Map(manifest.map((m) => [m.id, m]));
+    if (manifest.length !== ids.length) {
+      err(`${at} 轻量清单有 ${manifest.length} 条，条目 id 有 ${ids.length} 个 —— 骨架或清单装配有问题`);
+    }
+    if (list.length !== ids.length) {
+      err(`${at} 条目数为 ${list.length}，应为 ${ids.length} 个 —— 骨架或正文装配有问题`);
+    }
+    for (const id of ids) {
+      const m = byId.get(id);
+      const entry = list.find((e) => e.id === id);
+      if (!m) {
+        err(`${at} 轻量清单里没有 ${id} —— 模块页会少列一条内容`);
+        continue;
+      }
+      if (!entry) {
+        err(`${at} 清单里有 ${id}，但条目容器里没有它 —— 学生点进去会看到「没有找到这条内容」`);
+        continue;
+      }
+      /**
+       * 副标题必须与正文装配算出来的**完全一致**：模块列表页显示的是清单里那份
+       * 「几节逐类讲透 · 多少题」，正文到位后条目会被原地补成真实数字，
+       * 两者一旦不同，学生点进去会发现列表页的数字是错的。
+       *
+       * 清单里根本没有这一条时（内容刚写、还没跑 `pnpm gen`）跳过——
+       * 那种情况由上面的 `[轻量清单]` 逐条检查统一报「请运行 pnpm gen」，不必重复刷屏。
+       */
+      const meta = metaById.get(id);
+      if (meta && meta.subtitle !== entry.subtitle) {
+        err(
+          `${at} ${id} 的副标题与轻量清单不一致：` +
+            `列表页（骨架）显示「${meta.subtitle}」，正文装配为「${entry.subtitle}」→ 请运行 pnpm gen`,
+        );
+      }
+    }
+
+    // ③ ensureAll() 之后每一条的正文都必须在内存里（顺序 = 清单顺序）
+    const notReady = ids.filter((id) => !mod.isReady(id));
+    if (notReady.length) {
+      err(
+        `${at} ensureAll() 之后仍有 ${notReady.length} 条的正文没被加载（${notReady.join('、')}）——` +
+          `校验与冒烟测试会看到空内容，页面在浏览器里也会退化成加载占位`,
+      );
+    }
+    const loaded = [...mod.loadedIds()];
+    if (loaded.length !== ids.length) {
+      err(`${at} 已加载的正文有 ${loaded.length} 条，应为 ${ids.length} 条`);
+    } else if (loaded.some((id, i) => id !== ids[i])) {
+      err(`${at} 已加载正文的顺序与清单顺序（卷面顺序）不一致`);
+    }
+
+    // ② 加载器只许动态 import / glob：静态 import 会把全部正文并成一个大 chunk
+    const loaderCode = readFileSync(mod.sourceFile, 'utf8')
+      // 先去掉注释：这些文件的文档注释里就写着「不要这样写」的反例，直接匹配会误报
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '');
+    const dirName = mod.contentDir.split('/').pop() ?? '';
+    const staticImports = [...loaderCode.matchAll(/from\s+'([^']+)'/g)]
+      .map((m) => m[1])
+      .filter((p) => p.includes(`/${dirName}/`) || p.startsWith(`../${dirName}/`));
+    if (staticImports.length) {
+      err(
+        `${at} ${mod.sourceFile} 里出现了对正文的静态 import（${staticImports.join('、')}）：` +
+          `全部内容会被重新打进同一个 chunk（曾经是 495 kB），打开一条就要下载全部`,
+      );
+    }
+    if (!/import\.meta\.glob|import\(/.test(loaderCode)) {
+      err(`${at} ${mod.sourceFile} 里找不到 import() / import.meta.glob —— 正文只能按需加载，不能静态并进来`);
+    }
+    for (const id of ids) {
+      if (!loaderCode.includes(`'${id}'`)) {
+        err(`${at} 加载器表里没有 ${id} 这一条 —— 它将永远加载不出来`);
+      }
     }
   }
 }
@@ -1224,6 +1272,26 @@ function inlineTexOf(s: string | undefined): string[] {
 let texTotal = 0;
 const texFailures: string[] = [];
 
+/**
+ * 「反斜杠被 JS 字符串转义吃掉」的**静默变体**：`\f` / `\t` / `\b` 会变成控制字符，
+ * KaTeX 直接报错（上面那条检查能抓到）；但 `\angle` → `angle`、`\circ` → `circ`、
+ * `\sqrt` → `sqrt` 这类**反斜杠只是被丢掉**，KaTeX 照样能解析，只是渲染成一串
+ * 斜体字母（学生看到的是「a n g l e PEF」而不是 ∠PEF）。
+ *
+ * 也就是说：把 `\frac` 写成单反斜杠的内容，**只有一部分会被 KaTeX 报错抓住**，
+ * 剩下的静默渲染成错符号。这里按专题汇总一次（而不是逐处刷屏），
+ * 提示作者把 `\xxx` 写成 `\\xxx`。
+ *
+ * 判据是「这个命令名前面既不是反斜杠也不是字母」：
+ *   - 正确写法 `\frac`（运行时字符串里就是 `\frac`）→ `rac` 前面是字母 `f`，不匹配；
+ *   - 被吃掉的写法（运行时字符串里是「换页符 + rac」）→ `rac` 前面既不是 `\` 也不是字母，命中。
+ * 用「前面不是字母」而不是只判「前面不是反斜杠」，是因为 `\frac` 的反斜杠与 `rac` 之间
+ * 隔着一个 `f`——只判反斜杠会把**正确**的公式全部误报（这个坑本文件自己踩过一次）。
+ */
+const EATEN_BACKSLASH =
+  /(?<![\\A-Za-z])(?:rac\{|imes|riangle|ecause|herefore|angle|circ|sqrt|perp|parallel|cdot|neq|geq|leq)/;
+const eatenBackslashByTopic = new Map<string, { n: number; sample: string }>();
+
 function checkTex(tex: string, where: string) {
   texTotal += 1;
   try {
@@ -1235,35 +1303,118 @@ function checkTex(tex: string, where: string) {
 
 for (const entry of allEntries) {
   if (!String(entry.moduleId).startsWith('math-')) continue;
-  const t = entry.data as import('../src/types').MathTopic;
-  const where = `[${entry.moduleId}] ${t.id}`;
+  const where = `[${entry.moduleId}] ${entry.id}`;
 
-  const fields: [string, string | undefined][] = [['summary', t.summary]];
-  (t.concepts ?? []).forEach((c, i) => fields.push([`concepts[${i}]`, c.explain]));
-  (t.formulas ?? []).forEach((f, i) => {
-    if (f.tex) checkTex(f.tex, `${where}.formulas[${i}].tex`);
-    fields.push([`formulas[${i}].text`, f.text], [`formulas[${i}].note`, f.note]);
-  });
-  (t.examples ?? []).forEach((x, i) => {
-    fields.push([`examples[${i}].stem`, x.stem], [`examples[${i}].answer`, x.answer], [`examples[${i}].tip`, x.tip]);
-    (x.steps ?? []).forEach((s, j) => fields.push([`examples[${i}].steps[${j}]`, s]));
-  });
-  (t.pitfalls ?? []).forEach((p, i) => fields.push([`pitfalls[${i}]`, p]));
-  (t.methods ?? []).forEach((m, i) => fields.push([`methods[${i}]`, m]));
-  (t.questions ?? []).forEach((q, i) => {
-    fields.push([`questions[${i}].stem`, q.stem], [`questions[${i}].explanation`, q.explanation]);
-    if (q.type !== 'choice') fields.push([`questions[${i}].answer`, String(q.answer)]);
-    (q.options ?? []).forEach((o) => fields.push([`questions[${i}].option`, o]));
-    (q.rubric ?? []).forEach((r, j) => fields.push([`questions[${i}].rubric[${j}]`, r]));
-  });
+  /**
+   * 数学的「中考题型专题」（`math-topics`）与知识点条目**形状不同**：
+   * 它的 `pitfalls` 是三行对象 `{wrong,right,why}`（知识点是字符串数组）、
+   * 例题在 `sections[].examples` 里且是**分步解答**（`steps` + `answer`）。
+   * 若照 `MathTopic` 去读，`pitfalls` 里的对象会被当成字符串交给 `$` 配对检查，
+   * **校验脚本自己先崩**（`value.match is not a function`）——这也是一处「内容写了却没人校验」
+   * 的入口，所以两类字段分别收集，然后跑同一套公式检查。
+   */
+  const fields: [string, string | undefined][] = [];
+
+  if (isExamTopicData(entry.data)) {
+    const t = entry.data;
+    fields.push(['paper', t.paper], ['summary', t.summary], ['trendSummary', t.trendSummary]);
+    (t.trends ?? []).forEach((x, i) => fields.push([`trends[${i}].note`, x.note]));
+    (t.angles ?? []).forEach((a, i) =>
+      fields.push([`angles[${i}].angle`, a.angle], [`angles[${i}].years`, a.years], [`angles[${i}].detail`, a.detail]),
+    );
+    (t.steps ?? []).forEach((s, i) =>
+      fields.push([`steps[${i}].heading`, s.heading], [`steps[${i}].body`, s.body], [`steps[${i}].demo`, s.demo]),
+    );
+    (t.templates ?? []).forEach((g, i) =>
+      g.items.forEach((it, k) => fields.push([`templates[${i}].items[${k}]`, it])),
+    );
+    (t.scoring ?? []).forEach((s, i) => fields.push([`scoring[${i}]`, s]));
+    (t.pitfalls ?? []).forEach((p, i) =>
+      fields.push([`pitfalls[${i}].wrong`, p.wrong], [`pitfalls[${i}].right`, p.right], [`pitfalls[${i}].why`, p.why]),
+    );
+    (t.sections ?? []).forEach((s, i) => {
+      fields.push([`sections[${i}].intro`, s.intro], [`sections[${i}].name`, s.name]);
+      (s.rules ?? []).forEach((r, k) => fields.push([`sections[${i}].rules[${k}]`, r]));
+      (s.examples ?? []).forEach((ex, k) => {
+        fields.push(
+          [`sections[${i}].examples[${k}].text`, ex.text],
+          [`sections[${i}].examples[${k}].answer`, ex.answer],
+          [`sections[${i}].examples[${k}].analysis`, ex.analysis],
+          [`sections[${i}].examples[${k}].fix`, ex.fix],
+        );
+        (ex.steps ?? []).forEach((st, j) => fields.push([`sections[${i}].examples[${k}].steps[${j}]`, st]));
+      });
+      // 本节易错：字符串与三行对象两种写法都允许（见 types.ts 的 ExamSection）
+      (s.pitfalls ?? []).forEach((p, k) => {
+        if (typeof p === 'string') fields.push([`sections[${i}].pitfalls[${k}]`, p]);
+        else {
+          fields.push(
+            [`sections[${i}].pitfalls[${k}].wrong`, p?.wrong],
+            [`sections[${i}].pitfalls[${k}].right`, p?.right],
+            [`sections[${i}].pitfalls[${k}].why`, p?.why],
+          );
+        }
+      });
+    });
+    (t.drills ?? []).forEach((d, i) =>
+      fields.push([`drills[${i}].name`, d.name], [`drills[${i}].note`, d.note]),
+    );
+    (t.questions ?? []).forEach((q, i) => {
+      fields.push([`questions[${i}].stem`, q.stem], [`questions[${i}].explanation`, q.explanation]);
+      if (q.type !== 'choice') fields.push([`questions[${i}].answer`, String(q.answer)]);
+      (q.options ?? []).forEach((o) => fields.push([`questions[${i}].option`, o]));
+      (q.rubric ?? []).forEach((r, j) => fields.push([`questions[${i}].rubric[${j}]`, r]));
+    });
+  } else {
+    const t = entry.data as import('../src/types').MathTopic;
+    fields.push(['summary', t.summary]);
+    (t.concepts ?? []).forEach((c, i) => fields.push([`concepts[${i}]`, c.explain]));
+    (t.formulas ?? []).forEach((f, i) => {
+      if (f.tex) checkTex(f.tex, `${where}.formulas[${i}].tex`);
+      fields.push([`formulas[${i}].text`, f.text], [`formulas[${i}].note`, f.note]);
+    });
+    (t.examples ?? []).forEach((x, i) => {
+      fields.push([`examples[${i}].stem`, x.stem], [`examples[${i}].answer`, x.answer], [`examples[${i}].tip`, x.tip]);
+      (x.steps ?? []).forEach((s, j) => fields.push([`examples[${i}].steps[${j}]`, s]));
+    });
+    (t.pitfalls ?? []).forEach((p, i) => fields.push([`pitfalls[${i}]`, p]));
+    (t.methods ?? []).forEach((m, i) => fields.push([`methods[${i}]`, m]));
+    (t.questions ?? []).forEach((q, i) => {
+      fields.push([`questions[${i}].stem`, q.stem], [`questions[${i}].explanation`, q.explanation]);
+      if (q.type !== 'choice') fields.push([`questions[${i}].answer`, String(q.answer)]);
+      (q.options ?? []).forEach((o) => fields.push([`questions[${i}].option`, o]));
+      (q.rubric ?? []).forEach((r, j) => fields.push([`questions[${i}].rubric[${j}]`, r]));
+    });
+  }
 
   for (const [name, value] of fields) {
     if (!value) continue;
+    // 非字符串（例如误把对象塞进来）会让下面的 `.match` 直接抛错，先挡住并报出来
+    if (typeof value !== 'string') {
+      err(`${where}.${name}: 字段不是字符串（${typeof value}），公式检查无法进行`);
+      continue;
+    }
     // 未配对的 $ 会吞掉后续内容，也是常见错误
     const dollars = (value.match(/\$/g) ?? []).length;
     if (dollars % 2 !== 0) err(`${where}.${name}: $ 符号个数为奇数（${dollars}），行内公式未闭合`);
-    for (const sub of inlineTexOf(value)) checkTex(sub, `${where}.${name}`);
+    for (const sub of inlineTexOf(value)) {
+      checkTex(sub, `${where}.${name}`);
+      // 专题正文里的行内公式按规范必须是 `$…$` 包裹的 KaTeX 源码，因此可以放心按形状查
+      if (isExamTopicData(entry.data) && EATEN_BACKSLASH.test(sub)) {
+        const cur = eatenBackslashByTopic.get(entry.id) ?? { n: 0, sample: sub.slice(0, 40) };
+        cur.n += 1;
+        eatenBackslashByTopic.set(entry.id, cur);
+      }
+    }
   }
+}
+
+for (const [topicId, info] of eatenBackslashByTopic) {
+  err(
+    `[math-topics] ${topicId}: 有 ${info.n} 处 LaTeX 命令的反斜杠被 JS 字符串转义吃掉` +
+      `（例如「${info.sample}」）——在单引号/双引号字符串里必须写两个反斜杠（$\\angle ABC$），` +
+      `否则 KaTeX 虽然不报错，却会把 ∠ 渲染成一串斜体字母，学生看到的是「angle ABC」`,
+  );
 }
 
 /* ------------------------ 进度更新规则自测 ------------------------ */
@@ -2363,12 +2514,15 @@ validatePhysics({ err, allEntries });
 validateChemistry({ err, allEntries });
 
 /**
- * 语文「中考专题」：2027 卷面口径下的七个题型专题——
+ * 「题型专题」模块（语文中考专题 / 数学中考题型专题…）：2027 卷面口径下的题型专题——
  * 「详细讲解」（五年考情 / 分步讲解含示范 / 模板 / 评分点 / 易错失分）
  * 与「大量训练」（每专题 ≥45 题、每个训练分组都要有题、题目标签与分组必须对得上）。
- * 同样单独成文件，这里只调用一次并打印报告。
+ *
+ * 规则本体在 `scripts/validate-exam-topics.ts`，这里**遍历懒加载注册表**跑一遍：
+ * 语文与数学（以及以后任何一块题型专题）自动被覆盖，不需要有人记得回来加一行。
+ * 语文的下限常量仍由 `validate-chinese-topics.ts` 导出（旧调用点不受影响）。
  */
-validateChineseTopics({ err, allEntries });
+validateAllExamTopics({ err, warn, allEntries });
 
 /* ------------------------ 汇总报告 ------------------------ */
 

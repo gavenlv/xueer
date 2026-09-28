@@ -65,11 +65,19 @@ import type {
 } from '../../types';
 import { matchesKeyword, forgetSearchText } from '../../lib/searchText';
 import { forgetRel } from '../../lib/relNode';
+import { examTopicSubtitle } from '../../lib/examTopic';
 import { ENTRY_META, type EntryMeta } from '../summary';
+import {
+  registerLazyEntryModule,
+  isLazyEntriesReady,
+  loadLazyEntries,
+  type ManifestItem,
+} from '../lazyEntries';
 import {
   ZH_TOPIC_IDS,
   isZhTopicDataReady,
   loadZhTopicData,
+  zhExamTopics,
   zhTopicIdOfQuestion,
 } from './modules/zh-topics';
 
@@ -289,12 +297,12 @@ const buildZhExamEntries = (items: ChineseExamTopic[]): ChineseExamTopicEntry[] 
  * 抽成函数是因为它有**两个调用点**：正文装配（`buildZhExamEntries`）与骨架补齐
  * （`installZhTopic`）。两处必须算出同一个字符串——模块列表页显示的是轻量清单里
  * 生成好的那份，若算法不一致，列表页的规模会与详情页对不上。
+ *
+ * 实现已挪到 `lib/examTopic.ts` 的 `examTopicSubtitle`：数学的同名模块要用**同一个**
+ * 算法（否则数学列表页与详情页会各说一套），所以这里只留一个薄封装。
  */
 function zhTopicSubtitle(t: ChineseExamTopic, questionCount: number): string {
-  const secs = t.sections?.length ?? 0;
-  return secs
-    ? `${t.paper} · ${secs} 节逐类讲透 · ${questionCount} 题`
-    : `${t.paper} · ${questionCount} 题 · ${t.drills.length} 组训练`;
+  return examTopicSubtitle(t, questionCount);
 }
 
 /* ------------------------------------------------------------------ */
@@ -340,6 +348,25 @@ function buildZhTopicStub(m: EntryMeta): ChineseExamTopicEntry {
 /** 七个专题骨架（模块页、检索、面包屑都用它；正文另加载） */
 function buildZhTopicStubs(): ChineseExamTopicEntry[] {
   return ZH_TOPIC_META.map(buildZhTopicStub);
+}
+
+/**
+ * 轻量清单（注册表里的 `manifest`）：只有骨架字段，一个专题的正文都不下载。
+ *
+ * 与 `buildZhTopicStubs()` 是**同一份数据**的两种形态（一个是 `Entry`、一个是清单项），
+ * `pnpm validate` 会逐条比对两者（见 `scripts/validate-entry.ts` 的「清单 vs 骨架」），
+ * 因此不存在「清单说 116 题、骨架说 0 题」这种漂移。
+ */
+function zhTopicManifest(): ManifestItem[] {
+  return ZH_TOPIC_META.map((m) => ({
+    id: m.id,
+    moduleId: m.moduleId,
+    title: m.title,
+    subtitle: m.subtitle,
+    grade: m.grade,
+    questions: m.questions,
+    tags: m.tags,
+  }));
 }
 
 /**
@@ -501,7 +528,9 @@ export function isZhTopicReady(id: string): boolean {
 
 /** 这一组专题（或全部）的正文是否都已就绪 */
 export function isZhTopicsReady(ids: readonly string[] | 'all'): boolean {
-  return ids === 'all' ? ZH_TOPIC_IDS.every(isZhTopicReady) : ids.every(isZhTopicReady);
+  // 薄封装：真正的判定在通用注册表里（`data/lazyEntries.ts`），这样数学的同名模块
+  // 与聚合页面的写法完全一致，也不会出现「两套就绪语义各写一遍、慢慢走样」。
+  return isLazyEntriesReady(ids === 'all' ? [...ZH_TOPIC_IDS] : ids);
 }
 
 /**
@@ -509,6 +538,9 @@ export function isZhTopicsReady(ids: readonly string[] | 'all'): boolean {
  *
  * 页面在「按地址栏的 id 去下载正文」之前必须先问一句：手打的 / 过期的链接不该触发下载，
  * 而应该照旧渲染「没有找到这条内容」。
+ *
+ * 注册表里 zh 模块的 `has` 用的就是下面这份静态列表，所以这里直接判列表：
+ * 纯查询不依赖注册时机，任何调用点（含在模块初始化期间跑的）都能拿到正确答案。
  */
 export function isZhTopicId(id: string): boolean {
   return (ZH_TOPIC_IDS as readonly string[]).includes(id);
@@ -526,12 +558,15 @@ export async function loadZhTopic(id: string): Promise<void> {
   installZhTopic(await loadZhTopicData(id));
 }
 
-/** 加载这几个专题（重复 id 会被去重；传 `'all'` 即全部七个） */
+/**
+ * 加载这几个专题（重复 id 会被去重；传 `'all'` 即全部七个）。
+ *
+ * 薄封装：走通用注册表（`loadLazyEntries`）——它按模块归拢、复用正在进行的 Promise，
+ * 与数学的同名模块行为一致。
+ */
 export async function loadZhTopics(ids: readonly string[] | 'all'): Promise<void> {
   await loadModules(['zh-topics']);
-  const list = ids === 'all' ? ZH_TOPIC_IDS : [...new Set(ids)];
-  const topics = await Promise.all(list.map((id) => loadZhTopicData(id)));
-  for (const t of topics) installZhTopic(t);
+  await loadLazyEntries(ids === 'all' ? [...ZH_TOPIC_IDS] : ids);
 }
 
 /**
@@ -675,3 +710,35 @@ export const CONTENT_STATS = {
     return literatureItems.length;
   },
 };
+
+/* ------------------------------------------------------------------ */
+/* 注册到「按条目懒加载」注册表                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 把语文「中考专题」登记进通用注册表（`data/lazyEntries.ts`）。
+ *
+ * **放在文件末尾**是有意的：注册对象的字段要引用上面的常量与函数（`ZH_TOPIC_META`、
+ * `loadZhTopic`、`isZhTopicDataReady`…），写在中间会出现 TDZ 风险；注册本身是幂等的
+ * Map 写入，任何时刻只用到「取值时」的闭包，所以放最后最安全。
+ *
+ * 页面侧从此只认识注册表的四个动作（清单 / 一条 / 全部 / 就绪判定）：
+ * `DetailPage`、`PracticePage`、`ModulePage`、错题本、学习报告、考点页都通过
+ * `useLazyEntries` 与 `lazyEntrySpecFor` / `lazyEntryIdsOfModules` 声明范围，
+ * 数学的同名模块接上时这些页面一行都不用改。
+ */
+registerLazyEntryModule({
+  moduleId: 'zh-topics',
+  label: '语文中考专题',
+  sourceFile: 'src/data/chinese/modules/zh-topics.ts',
+  contentDir: 'src/data/chinese/zh-topics',
+  ids: () => ZH_TOPIC_IDS,
+  has: (id) => (ZH_TOPIC_IDS as readonly string[]).includes(id),
+  isReady: isZhTopicDataReady,
+  loadedIds: () => zhExamTopics.map((t) => t.id),
+  entryIdOfQuestion: zhTopicIdOfQuestion,
+  manifest: async () => zhTopicManifest(),
+  loadEntry: (id) => loadZhTopic(id),
+  loadAll: () => loadAllZhTopics(),
+});
+

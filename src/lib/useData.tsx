@@ -20,12 +20,14 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import {
   ensureModules,
+  isLazyEntriesReady,
   isScopeReady,
+  loadLazyEntries,
   loadProgress,
   subscribeLoadProgress,
   type DataScope,
 } from '../data';
-import { isZhTopicsReady, loadZhTopics } from '../data/chinese';
+import { ZH_TOPIC_IDS } from '../data/chinese/modules/zh-topics';
 import { ProgressBar } from '../components/common';
 
 export function useDataScope(scope: DataScope[]): boolean {
@@ -146,54 +148,62 @@ export function DataLoading({
   );
 }
 
-/* ---------------------- 中考专题正文（一专题一块） ---------------------- */
+/* ---------------- 按条目懒加载的模块（中考专题 / 中考题型专题） ---------------- */
 
 /**
- * 本页要哪几块专题正文：
- *   - `undefined`：本页**不需要**专题正文（例如看的是别的模块）；
- *   - `'all'`：需要全部七块（错题本 / 学习报告 / 考点页这类按题目聚合的页面）；
- *   - `['zht-moxie', …]`：只这几块（详情页、单条内容组卷、错题重做）。
+ * 本页要哪几块**按条目懒加载**的正文：
+ *   - `undefined`：本页**不需要**任何这类正文（例如看的是别的模块）；
+ *   - `'all'`：注册表里的全部条目（错题本 / 学习报告 / 考点页这类按题目聚合的页面）；
+ *   - `['zht-moxie', 'mth-algebra', …]`：只这几条（详情页、单条内容组卷、错题重做）。
+ *
+ * 范围本身由数据层的两个函数算出来，页面不自己判断「哪些模块走懒加载」：
+ *   - 详情页 / 单条练习：`lazyEntrySpecFor(moduleId, entryId)`；
+ *   - 聚合页：`lazyEntryIdsOfModules(moduleIds)`。
  */
-export type ZhTopicSpec = readonly string[] | 'all';
+export type LazyEntrySpec = readonly string[] | 'all';
 
-export interface ZhTopicsState {
+export interface LazyEntriesState {
   ready: boolean;
   failed: boolean;
-  /** 失败出口：重新下载本页要的那几块 */
+  /** 失败出口：重新下载本页要的那几条 */
   retry: () => void;
 }
 
 /**
- * 等「中考专题」的正文到位，语义与 `useDataScope` **完全一致**：
+ * 等「按条目懒加载」的正文到位，语义与 `useDataScope` **完全一致**：
  *
  * 1. **先同步判断**：已加载的直接放行——SSR 冒烟脚本在渲染前 `await ensureAll()`，
  *    因此首帧就是就绪态，页面直接渲染真实内容（占位不会出现在冒烟 HTML 里）；
- * 2. **再异步加载**：只下载本页点名的那几块，加载完原地补齐条目后自动放行；
+ * 2. **再异步加载**：只下载本页点名的那几条，加载完原地补齐条目后自动放行；
  * 3. **失败给出口**：下载失败时返回 `failed`，页面用 `DataLoading` 的重试按钮再试一次，
  *    而不是永远停在「正在加载内容…」上。
  *
  * 为什么不能只靠 `useDataScope(['zh-topics'])`：那个范围代表的是「**轻量清单**已就绪」
- * （模块列表页要能首帧渲染），专题正文是另外一层，必须由用到正文的页面显式声明。
+ * （模块列表页要能首帧渲染），正文是另外一层，必须由用到正文的页面显式声明。
+ *
+ * 语文（`zh-topics`）与数学（`math-topics`）走的是同一个钩子：学科的差别只在
+ * 「范围怎么算」，而范围由注册表给出——所以再新增一块懒加载模块，页面一行都不用改。
  */
-export function useZhTopics(spec: ZhTopicSpec | undefined): ZhTopicsState {
+export function useLazyEntries(spec: LazyEntrySpec | undefined): LazyEntriesState {
   // 稳定键：数组每次渲染都是新对象，直接进依赖会反复触发加载
   const key = spec === undefined ? '' : spec === 'all' ? 'all' : [...new Set(spec)].sort().join(',');
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
-  const ids = key === 'all' ? 'all' : (key.split(',').filter(Boolean) as string[]);
+  const ids: LazyEntrySpec = key === 'all' ? 'all' : key.split(',').filter(Boolean);
   // 同步判断（见文件头第 1 点）：这一步让「已就绪」的页面不必先渲染一帧占位
-  const ready = key === '' || isZhTopicsReady(ids);
+  const ready = key === '' || isLazyEntriesReady(ids);
 
   useEffect(() => {
     if (key === '') return;
-    if (isZhTopicsReady(key === 'all' ? 'all' : key.split(',').filter(Boolean))) {
+    const want: LazyEntrySpec = key === 'all' ? 'all' : key.split(',').filter(Boolean);
+    if (isLazyEntriesReady(want)) {
       setFailed(false);
       return;
     }
     let alive = true;
     setFailed(false);
-    loadZhTopics(key === 'all' ? 'all' : key.split(',').filter(Boolean)).then(
+    loadLazyEntries(want).then(
       // 加载完成后推一次渲染：上面的同步判断随即为真，页面切到真实内容
       () => alive && setAttempt((n) => n + 1),
       () => alive && setFailed(true),
@@ -206,4 +216,21 @@ export function useZhTopics(spec: ZhTopicSpec | undefined): ZhTopicsState {
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
   return { ready, failed, retry };
+}
+
+/** 语文「中考专题」的条目 id → 范围（`'all'` 指七个专题，不含其它学科的懒加载条目） */
+export type ZhTopicSpec = readonly string[] | 'all';
+
+/** 语文「中考专题」的就绪状态（与 `LazyEntriesState` 同一个形状） */
+export type ZhTopicsState = LazyEntriesState;
+
+/**
+ * 语文「中考专题」的薄封装：**只把范围收窄到七个语文专题**，其余逻辑一律走
+ * `useLazyEntries`。保留这个钩子是为了不动语文各页面的调用点，也因为语义上
+ * 「`'all'` = 七个专题」比「全部懒加载条目」更贴近调用方的意图。
+ */
+export function useZhTopics(spec: ZhTopicSpec | undefined): ZhTopicsState {
+  // `'all'` 在这里必须收敛成「七个语文专题」而不是「注册表里的全部条目」：
+  // 语文页面不该顺手把数学的专题正文也下载下来。
+  return useLazyEntries(spec === undefined ? undefined : spec === 'all' ? [...ZH_TOPIC_IDS] : spec);
 }

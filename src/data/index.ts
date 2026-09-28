@@ -38,6 +38,16 @@ import * as chemistry from './chemistry';
 import * as physics from './physics';
 import * as politics from './politics';
 import * as math from './math';
+import { loadAllLazyEntries } from './lazyEntries';
+
+/**
+ * 「按条目懒加载」的注册表（语文中考专题 / 数学中考题型专题…）。
+ *
+ * 页面与校验脚本从这里拿 `lazyEntryModuleOf` / `lazyEntrySpecFor` /
+ * `lazyEntryIdsOfModules` / `loadAllLazyEntries` 这些**学科无关**的能力：
+ * 新增一块懒加载模块时，页面一行都不用改（详见 `data/lazyEntries.ts`）。
+ */
+export * from './lazyEntries';
 
 /* ------------------------------ 聚合 ------------------------------ */
 
@@ -289,6 +299,13 @@ export async function ensureAll(): Promise<void> {
     chemistry.loadAll(),
   ]);
   await math.load();
+  /**
+   * 懒加载模块的**正文**要另外补齐：`load()` / `loadModules()` 对它们只装轻量清单骨架，
+   * 而校验脚本与冒烟测试读的是 `entry.data` 与 `entry.questions`——只装骨架会看到
+   * 一批空专题（语文会少 562 道题、数学少掉整块训练），而且**页面照常渲染**，
+   * 只是数字变小、错题看不见。所以这里统一按注册表全部加载（幂等，已加载的直接返回）。
+   */
+  await loadAllLazyEntries();
   syncSubjectContainers();
 }
 

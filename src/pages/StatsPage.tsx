@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { subjectOfModule, findQuestion } from '../data';
+import { subjectOfModule, findQuestion, lazyEntryIdsOfModules } from '../data';
 import { SUBJECTS } from '../data/subjects';
 import { getModuleMeta } from '../data/subjects';
 import { ENTRY_META, MODULE_TOTALS } from '../data/summary';
@@ -13,7 +13,7 @@ import { isCloudConfigured } from '../lib/supabase';
 import { dateKey, formatDuration, pct, shiftDate } from '../lib/utils';
 import { isMastered } from '../lib/recite';
 import { entryIdOfCard } from '../lib/reciteCards';
-import { useDataScope, useZhTopics, DataLoading } from '../lib/useData';
+import { useDataScope, useLazyEntries, DataLoading } from '../lib/useData';
 import { EmptyState, PageHeader, ProgressBar, SectionTitle, Stat, Tag } from '../components/common';
 
 const DAYS = 14;
@@ -37,13 +37,15 @@ export default function StatsPage() {
     return [...ids] as ModuleId[];
   }, [state.wrong]);
   /**
-   * 薄弱知识点要靠题目上的标签聚合，语文「中考专题」的题目在专题正文里
-   * （一专题一块，模块范围只装骨架）：只要错题里出现过 zh-topics，
-   * 就必须把七个专题的正文都加载进来，否则这几个专题的错题会**静默不算**，
+   * 薄弱知识点要靠题目上的标签聚合，而「按条目懒加载」的模块（语文中考专题 /
+   * 数学中考题型专题）正文不在模块范围里（那一层只装骨架）：只要错题里出现过这些模块，
+   * 就必须把本科这些模块的正文全部加载进来，否则这几块的错题会**静默不算**，
    * 「薄弱知识点」凭空少一截，而页面看不出任何异常。
+   * 范围由注册表算（`lazyEntryIdsOfModules`），所以语文、数学都是同一段代码。
    */
-  const zhTopics = useZhTopics(wrongModuleIds.includes('zh-topics') ? 'all' : undefined);
-  const ready = useDataScope(wrongModuleIds) && zhTopics.ready;
+  const lazyIds = useMemo(() => lazyEntryIdsOfModules(wrongModuleIds), [wrongModuleIds]);
+  const lazy = useLazyEntries(lazyIds);
+  const ready = useDataScope(wrongModuleIds) && lazy.ready;
 
   /* summary 骨架索引 */
   const metaById = useMemo(() => new Map(ENTRY_META.map((e) => [e.id, e])), []);
@@ -188,7 +190,7 @@ export default function StatsPage() {
 
   if (!ready) {
     return (
-      <DataLoading label="正在汇总学习数据…" failed={zhTopics.failed} onRetry={zhTopics.retry} />
+      <DataLoading label="正在汇总学习数据…" failed={lazy.failed} onRetry={lazy.retry} />
     );
   }
 

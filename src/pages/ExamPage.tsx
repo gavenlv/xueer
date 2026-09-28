@@ -8,14 +8,14 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { examPointsByModule, findQuestion, moduleIdsOfSubject, poemExamPoints } from '../data';
+import { examPointsByModule, findQuestion, lazyEntryIdsOfModules, moduleIdsOfSubject, poemExamPoints } from '../data';
 import { allPoems } from '../data/chinese';
 import { getModuleMeta, getSubject } from '../data/subjects';
 import { useStudy } from '../store/StudyContext';
 import type { ModuleId } from '../types';
 import { makeReciteQuestions } from '../lib/quiz';
 import { cn } from '../lib/utils';
-import { useDataScope, useZhTopics, DataLoading } from '../lib/useData';
+import { useDataScope, useLazyEntries, DataLoading } from '../lib/useData';
 import {
   EmptyState,
   PageHeader,
@@ -37,12 +37,14 @@ export default function ExamPage() {
   /** 考点要从**本科全部**题目的知识点标签聚合出来，因此这一页需要加载本科全部数据 */
   const moduleIds = useMemo(() => moduleIdsOfSubject(subjectId), [subjectId]);
   /**
-   * 语文「中考专题」的题目在专题正文里（一专题一块，模块范围只装骨架）。
-   * 考点页正是**按题目标签**聚合的，少加载一块就少一整片考点：
-   * 页面照常渲染，只是「字音」「一词多义」这些考点凭空不见。所以这里全部加载。
+   * 「按条目懒加载」的模块（语文中考专题 / 数学中考题型专题）：模块范围只装骨架，
+   * 题目在正文里。考点页正是**按题目标签**聚合的，少加载一条就少一整片考点：
+   * 页面照常渲染，只是「字音」「二次函数」这些考点凭空不见。所以这里全部加载，
+   * 范围由注册表算（`lazyEntryIdsOfModules`）——本科有几块懒加载模块就加载几块。
    */
-  const zhTopics = useZhTopics(moduleIds.includes('zh-topics') ? 'all' : undefined);
-  const ready = useDataScope(moduleIds) && zhTopics.ready;
+  const lazyIds = useMemo(() => lazyEntryIdsOfModules(moduleIds), [moduleIds]);
+  const lazy = useLazyEntries(lazyIds);
+  const ready = useDataScope(moduleIds) && lazy.ready;
   /**
    * 考点总数已经 600+，一次全铺出来会把页面撑到近 400 KB HTML、手机上必卡。
    * 因此每个模块先只显示前若干个，点「展开全部」再看剩下的；
@@ -160,7 +162,7 @@ export default function ExamPage() {
   }
 
   if (!ready) {
-    return <DataLoading label="正在汇总考点…" failed={zhTopics.failed} onRetry={zhTopics.retry} />;
+    return <DataLoading label="正在汇总考点…" failed={lazy.failed} onRetry={lazy.retry} />;
   }
 
   return (

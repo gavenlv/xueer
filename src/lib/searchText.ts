@@ -12,6 +12,7 @@
  */
 
 import type { Entry } from '../types';
+import { examTopicSearchParts, isExamTopicData } from './examTopic';
 
 const cache = new WeakMap<Entry, string>();
 
@@ -31,6 +32,25 @@ export function searchTextOf(entry: Entry): string {
   if (hit !== undefined) return hit;
 
   let text = '';
+
+  /**
+   * 「题型专题」形态（`trends` + `drills`）：**按数据形状识别，不按 moduleId**。
+   *
+   * 以前这段写死在 `case 'zh-topics'` 里，于是数学的「中考题型专题」（`math-topics`）
+   * 会落到下面的数学分支——那里读的是 `concepts`，而专题数据根本没有这个概念，
+   * `searchTextOf` 会直接抛 TypeError，专题详情页底部的「关联学习 / 学一补多」
+   * 随之整页白屏（页面渲染本身不报错，学生只看到一片空白）。
+   *
+   * 专题是靠「考情 + 讲解 + 训练」三件套拿分的，所以检索文本把五年考情、命题角度、
+   * 分步讲解（含示范）、模板、评分点、易错失分、章节与训练分组全部收进来——
+   * 学生按「病句」「二次函数」「步骤分」这些词应该能直接搜到专题。
+   */
+  if (isExamTopicData(entry.data)) {
+    text = join(examTopicSearchParts(entry.data));
+    cache.set(entry, text);
+    return text;
+  }
+
   switch (entry.moduleId) {
     case 'poems': {
       const p = entry.data;
@@ -297,32 +317,10 @@ export function searchTextOf(entry: Entry): string {
       break;
     }
     /**
-     * 语文「中考专题」：专题是靠「考情 + 讲解 + 训练」三件套拿分的，所以检索文本要把
-     * 五年考情、命题角度、分步讲解（含示范）、答题模板、评分点、易错失分与训练分组
-     * 全部收进来——学生按「病句」「一词多义」「情境语言运用」这些词，应该能直接搜到专题。
-     *
-     * 这个分支**不能省**：少了它就会落到下面的 `default`（数学）分支，而专题数据里
-     * 根本没有 `concepts`，`searchTextOf` 会直接抛 TypeError——专题详情页底部的
-     * 「关联学习 / 学一补多」正是通过它算关联的，整页会白屏。
+     * 「题型专题」（语文 `zh-topics` / 数学 `math-topics`）不在这里：它由函数开头的
+     * `isExamTopicData` 分支按**数据形状**处理，两个学科共用同一段检索文本拼装
+     * （见 `lib/examTopic.ts` 的 `examTopicSearchParts`）。
      */
-    case 'zh-topics': {
-      const z = entry.data;
-      text = join([
-        z.title,
-        z.paper,
-        z.summary,
-        z.trendSummary,
-        z.trends.map((x) => `${x.year}${x.note}`),
-        z.angles.map((x) => `${x.angle}${x.years ?? ''}${x.detail}`),
-        z.steps.map((s) => `${s.heading}${s.body}${s.demo ?? ''}`),
-        z.templates?.map((g) => `${g.name}${g.items.join('')}`),
-        z.scoring,
-        z.pitfalls?.map((p) => `${p.wrong}${p.right}${p.why}`),
-        z.drills.map((d) => `${d.name}${d.note}`),
-        z.questions.map((q) => `${q.stem}${(q.options ?? []).join('')}`),
-      ]);
-      break;
-    }
     default: {
       // 数学：${...}$ 公式源码也进检索文本，学生可以按符号找知识点
       const m = entry.data as {

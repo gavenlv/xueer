@@ -31,8 +31,21 @@ export const MASTERY_RATE = 0.8;
  * 语文的中考专题不同型：**模块 id 是 `zh-topics`，题目 id 才是 `zht-<专题>-qNN`**，
  * 两个都要列——调用方（`ModulePage` / `QuizRunner` / `isMastered`）传的是模块 id，
  * 而按条目的题目 id 前缀判断的调用点也存在（条目 id 形如 `zht-jilei`）。
+ *
+ * 数学的中考**题型**专题同理，而且前缀更绕一层：模块 id 是 `math-topics`，
+ * 题目 id 与条目 id 都是 `mth-<专题短名>-qNN` / `mth-<专题短名>`
+ * （见 `data/math/TOPICS-SPEC.md`），所以 `math-topics` 与 `mth-` 也都要列。
+ * 漏一个的后果是「攻破标准」静默降级成答对率：页面写着「每题都答对才算攻破」，
+ * 判定却按 80% 正确率放行。
  */
-export const ALL_QUESTIONS_PREFIXES = ['phy-', 'chem-', 'zh-topics', 'zht-'];
+export const ALL_QUESTIONS_PREFIXES = [
+  'phy-',
+  'chem-',
+  'zh-topics',
+  'zht-',
+  'math-topics',
+  'mth-',
+];
 
 /** 掌握判定策略 */
 export type MasteryPolicy = 'rate' | 'all-questions';

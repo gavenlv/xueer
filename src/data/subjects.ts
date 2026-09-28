@@ -40,7 +40,7 @@ export const SUBJECTS: Subject[] = [
     icon: '📐',
     color: '#1a9a6c',
     score: 150,
-    desc: '数与代数·图形与几何·统计与概率·公式定理·应用题·中考专题',
+    desc: '数与代数·图形与几何·统计与概率·公式定理·应用题·中考专题·中考题型专题',
     available: true,
     examNote: '闭卷笔试 · 不得使用计算器',
     modules: [
@@ -90,6 +90,14 @@ export const SUBJECTS: Subject[] = [
         icon: '🎯',
         desc: '广州中考高频题型、压轴题与应试策略',
         color: '#0f7b8a',
+        available: true,
+      },
+      {
+        id: 'math-topics',
+        name: '中考题型专题',
+        icon: '🧭',
+        desc: '按 2027 年 150 分卷面题型设 5 个专题、35 节逐类讲透：近五年考情、解题模板与步骤分，每专题再配 45+ 题专项训练',
+        color: '#b0532f',
         available: true,
       },
     ],

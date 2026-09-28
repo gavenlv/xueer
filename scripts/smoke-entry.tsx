@@ -1277,8 +1277,26 @@ const renderZhTopic = (id: string) =>
       <AppWithProviders />
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
+/**
+ * 章节页（`/sec/<第几节>`）：**专题页瘦身之后，章节正文搬到了这一页**。
+ *
+ * 专题页现在只留「总览 + 章节清单（每节一张紧凑卡片）」，讲解、判定要点、正误对照例子
+ * 与本节易错都在章节页里。因此原来落在专题页上的那几条内容断言改为落在这里——
+ * **判断口径一个字没改**（同一批关键词、同样的「每一节都要能练」），只是换了页面看。
+ * 少了这一页或少了某条渲染分支，学生点「看讲解」进去就是一片空白。
+ */
+const renderZhSection = (id: string, no: number) =>
+  renderToString(
+    <MemoryRouter initialEntries={[`/s/chinese/zh-topics/${id}/sec/${no}`]}>
+      <AppWithProviders />
+    </MemoryRouter>,
+  ).replace(/<!--[\s\S]*?-->/g, '');
 const zhTopicHtml = zhTopic ? renderZhTopic(zhTopic.id) : '';
 const zhSectionHtml = zhTopicWithSections ? renderZhTopic(zhTopicWithSections.id) : '';
+/** 第一节的章节页：正文与「上一节 / 下一节」都在这里断言 */
+const zhSecPageHtml = zhTopicWithSections ? renderZhSection(zhTopicWithSections.id, 1) : '';
+/** 越界节号（99）：必须给友好提示与回清单的出口，而不是崩溃或空白 */
+const zhSecOverHtml = zhTopicWithSections ? renderZhSection(zhTopicWithSections.id, 99) : '';
 /** 模块页：七个专题与「几节逐类讲透 · 多少题」都要看得见 */
 const zhModuleHtml = renderToString(
   <MemoryRouter initialEntries={['/s/chinese/zh-topics']}>
@@ -1286,9 +1304,27 @@ const zhModuleHtml = renderToString(
   </MemoryRouter>,
 ).replace(/<!--[\s\S]*?-->/g, '');
 const zhSectionData = zhTopicWithSections?.data as
-  | { sections?: { name: string; examples?: unknown[] }[] }
+  | {
+      sections?: {
+        name: string;
+        intro?: string;
+        rules?: string[];
+        examples?: { text?: string; fix?: string }[];
+      }[];
+    }
   | undefined;
 const zhSectionNames = (zhSectionData?.sections ?? []).map((s) => s.name);
+/**
+ * 第一节课文的代表性文本（判定要点的一条 + 第一个例子的题干）。
+ *
+ * 用来断言「章节正文只在章节页」：直接拿**正文本身**去专题页的 HTML 里找，
+ * 比找「判定要点」这类小标题字眼可靠——说明文案里也可能出现这些词，而正文不会。
+ * 带引号/尖括号的句子先排除：React 会把它们转义，原样 `includes` 会假阴性。
+ */
+const zhTopicBodyNeedles = [
+  zhSectionData?.sections?.[0]?.rules?.[0],
+  zhSectionData?.sections?.[0]?.examples?.[0]?.text,
+].filter((x): x is string => typeof x === 'string' && x.length >= 8 && !/["'&<>]/.test(x));
 const zhTopicChecks: [string, boolean][] = [
   ['语文中考专题共 7 个', zhTopicEntries.length === 7],
   ['专题页渲染出专题名', Boolean(zhTopic) && zhTopicHtml.includes(zhTopic.title)],
@@ -1299,10 +1335,12 @@ const zhTopicChecks: [string, boolean][] = [
   ['训练分组与「刷这一组」入口', zhTopicHtml.includes('刷这一组') && zhTopicHtml.includes('?tag=')],
   [
     '逐类讲透：章节区块与正误对照',
+    // 「逐类讲透」的**清单**在专题页，正文（正误对照 + 判定要点）在章节页——
+    // 两页都要在，缺一边学生就只看到一个空区块或点进去空白。
     Boolean(zhTopicWithSections) &&
       zhSectionHtml.includes('逐类讲透') &&
-      zhSectionHtml.includes('正误对照') &&
-      zhSectionHtml.includes('判定要点'),
+      zhSecPageHtml.includes('正误对照') &&
+      zhSecPageHtml.includes('判定要点'),
   ],
   [
     '每一节都能点「刷这一节」',
@@ -1310,7 +1348,31 @@ const zhTopicChecks: [string, boolean][] = [
       zhSectionNames.every((n) => zhSectionHtml.includes(encodeURIComponent(n))) &&
       zhSectionHtml.includes('刷这一节'),
   ],
-  ['章节里渲染出修改后的句子', zhSectionHtml.includes('改：')],
+  [
+    '章节页：一节一页（正文 + 上一节 / 下一节 + 自带 ?tag= 的「刷这一节」）',
+    Boolean(zhTopicWithSections) &&
+      zhSectionNames.length > 1 &&
+      zhSecPageHtml.includes(zhSectionNames[0]) &&
+      zhSecPageHtml.includes('上一节') &&
+      zhSecPageHtml.includes('下一节') &&
+      zhSecPageHtml.includes(`/sec/2`) &&
+      zhSecPageHtml.includes(`?tag=${encodeURIComponent(zhSectionNames[0])}`),
+  ],
+  [
+    // 专题页瘦身的核心：正文不再内联（这一页以前就是因为「一张卡什么都装」才太长）
+    '专题页不再内联章节正文（要点 / 例子只在章节页）',
+    Boolean(zhTopicWithSections) &&
+      zhSectionNames.every((n) => zhSectionHtml.includes(n)) &&
+      zhTopicBodyNeedles.length > 0 &&
+      zhTopicBodyNeedles.every((needle) => !zhSectionHtml.includes(needle)),
+  ],
+  [
+    '章节页：越界节号不崩，给「回章节清单」的出口',
+    Boolean(zhTopicWithSections) &&
+      zhSecOverHtml.includes('这一节不存在') &&
+      zhSecOverHtml.includes('回到章节清单'),
+  ],
+  ['章节页里渲染出修改后的句子', zhSecPageHtml.includes('改：')],
   [
     '模块页列出七个专题与章节规模',
     zhTopicEntries.every((e) => zhModuleHtml.includes(e.title)) && zhModuleHtml.includes('节逐类讲透'),
