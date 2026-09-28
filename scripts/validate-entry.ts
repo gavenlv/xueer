@@ -2520,7 +2520,6 @@ validateChemistry({ err, allEntries });
  *
  * 规则本体在 `scripts/validate-exam-topics.ts`，这里**遍历懒加载注册表**跑一遍：
  * 语文与数学（以及以后任何一块题型专题）自动被覆盖，不需要有人记得回来加一行。
- * 语文的下限常量仍由 `validate-chinese-topics.ts` 导出（旧调用点不受影响）。
  */
 validateAllExamTopics({ err, warn, allEntries });
 

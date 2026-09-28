@@ -22,6 +22,7 @@ import type {
   GradeOrAll,
   GradeId,
   MathEntry,
+  MathExamTopicEntry,
   MathModuleId,
   MathTopic,
   MindMap,
@@ -223,17 +224,17 @@ export function mathTopicManifest(): ManifestItem[] {
  * `findEntryById` 会先命中旧骨架，页面渲染出空白——这正是最容易踩的坑
  * （与语文 `data/chinese/index.ts` 的 `installZhTopic` 同一套做法）。
  */
-function buildMathTopicStub(m: ManifestItem): MathEntry {
+function buildMathTopicStub(m: ManifestItem): MathExamTopicEntry {
   const spec = mathTopicSpecOf(m.id);
   /**
    * 专题数据是 `ExamTopic` 形态（trends / angles / steps / drills…），
-   * 而 `types.ts` 的 `MathEntry.data` 声明的是 `MathTopic`——`MathModuleId` 覆盖了
-   * `math-topics`，但它并不知道这一块换了数据形状。这里如实转换一次（并注明原因），
-   * 渲染与校验读的是 `ExamTopic` 的字段（见 `data/lazyEntries.ts` 的 `ExamTopicEntryLike`）。
+   * 与知识点形态的 `MathTopic` 不同，因此条目类型是 `MathExamTopicEntry`
+   * （见 `types.ts` 的说明）——不再需要 `as unknown as MathTopic` 这种硬转。
+   * 骨架阶段只填清单里已知的字段，正文由 `loadMathTopic` 原地补进来。
    */
-  const data = {
+  const data: ExamTopic = {
     id: m.id,
-    grade: 'all' as GradeOrAll,
+    grade: 'all',
     title: m.title,
     paper: spec?.paper ?? '',
     summary: spec?.summary ?? '',
@@ -243,7 +244,7 @@ function buildMathTopicStub(m: ManifestItem): MathEntry {
     steps: [],
     drills: [],
     questions: [],
-  } as unknown as MathTopic;
+  };
 
   return {
     id: m.id,
@@ -259,14 +260,13 @@ function buildMathTopicStub(m: ManifestItem): MathEntry {
 }
 
 /** 全部专题骨架（模块列表页、检索、面包屑都用它；正文另加载） */
-function buildMathTopicStubs(): MathEntry[] {
+function buildMathTopicStubs(): MathExamTopicEntry[] {
   return mathTopicManifest().map(buildMathTopicStub);
 }
 
 /** 把加载回来的正文装配成一条完整条目（只在骨架缺席时才用得到） */
-function buildMathTopicEntry(t: ExamTopic): MathEntry {
+function buildMathTopicEntry(t: ExamTopic): MathExamTopicEntry {
   const questions = t.questions ?? [];
-  const data = t as unknown as MathTopic;
   return {
     id: t.id,
     moduleId: 'math-topics',
@@ -275,7 +275,7 @@ function buildMathTopicEntry(t: ExamTopic): MathEntry {
     grade: t.grade,
     tags: [t.title, '中考题型专题'],
     questions,
-    data,
+    data: t,
   };
 }
 
@@ -287,7 +287,10 @@ function buildMathTopicEntry(t: ExamTopic): MathEntry {
  */
 function installMathTopic(id: string, t: ExamTopic): void {
   const questions = t.questions ?? [];
-  const entry = allEntries.find((e) => e.id === id && e.moduleId === 'math-topics');
+  const found = allEntries.find((e) => e.id === id && e.moduleId === 'math-topics');
+  // 这一块的条目类型是 `MathExamTopicEntry`（`data` 就是 `ExamTopic`），
+  // 所以这里**不需要**任何硬转：装配与读取都按真实形状走。
+  const entry = found as MathExamTopicEntry | undefined;
   if (!entry) {
     // 骨架缺席（例如这个 id 不在清单里）：宁可多一条真条目，也不能把内容丢掉
     allEntries.push(buildMathTopicEntry({ ...t, id }));
@@ -298,7 +301,7 @@ function installMathTopic(id: string, t: ExamTopic): void {
   entry.grade = t.grade;
   entry.tags = [t.title, '中考题型专题'];
   entry.questions = questions;
-  entry.data = t as unknown as MathTopic;
+  entry.data = t;
 
   forgetSearchText(entry);
   forgetRel(entry);

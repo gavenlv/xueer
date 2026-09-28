@@ -27,13 +27,25 @@
  * ## 与内容工程师的并发约定（重要）
  *
  * `src/data/math/topics/*.ts` 由另外四位工程师并行撰写，**本文件交付时那些文件可能
- * 一个都还不存在**。所以这里：
+ * 一个都还不存在**。协调方固定的契约是「一个专题一个文件、导出名固定」：
  *
- *   1. 用 `import.meta.glob` 在**构建期**发现文件 —— 文件一落地就自动出现在
- *      `DATA_FILES` 里，本文件一行都不用改，也不需要任何人来"接线"；
- *   2. 文件名允许 `mth-algebra.ts` / `algebra.ts` / `t1-algebra.ts` 等写法
- *      （按专题短名匹配，见 `loaderForId`）；导出的变量名也不限，按**数据形状**
- *      识别（见 `topicOfNamespace`，判据是 `lib/examTopic.ts` 的 `isExamTopicData`）；
+ * | 文件 | 导出名 | 专题 id |
+ * | --- | --- | --- |
+ * | `topics/mth-algebra.ts` | `mthAlgebra` | `mth-algebra` |
+ * | `topics/mth-geometry.ts` | `mthGeometry` | `mth-geometry` |
+ * | `topics/mth-stats.ts` | `mthStats` | `mth-stats` |
+ * | `topics/mth-model.ts` | `mthModel` | `mth-model` |
+ * | `topics/mth-exam.ts` | `mthExam` | `mth-exam` |
+ *
+ * 加载器**优先**照这张表取（见 `TOPIC_FILES` 与 `loaderForId`：一个专题 → 一个单文件
+ * `import()` → 只下载那一块），同时三层容错保证「缺文件也不阻塞」：
+ *
+ *   1. 用 `import.meta.glob` 在**构建期**发现文件（不是写死 5 条 `import()`）——
+ *      文件不在就只是少一个键，**构建与类型检查都不受影响**；文件一落地就自动生效，
+ *      本文件一行都不用改，也不需要任何人来"接线"；
+ *   2. 名字没照契约写也能救回来：`algebra.ts` / `t1-algebra.ts` 按专题短名兜底匹配，
+ *      导出名写歪（`default`、数组、别的名字）则按**数据形状**识别
+ *      （`topicOfNamespace`，判据是 `lib/examTopic.ts` 的 `isExamTopicData`）；
  *   3. 一个文件都没有时清单为空：模块页渲染空态、详情页渲染「没有找到这条内容」，
  *      **不报错、不白屏**，`pnpm check` 照样全绿。
  *
@@ -161,13 +173,48 @@ const META_IDS: string[] = ENTRY_META.filter((m) => m.moduleId === 'math-topics'
 export const MATH_TOPIC_CONTENT_DIR = 'src/data/math/topics';
 
 /**
- * 目录下的数据文件表。
+ * **协调方固定的契约表**：专题 id → 数据文件与导出名。
+ *
+ * | 文件 | 导出名 | 专题 id |
+ * | --- | --- | --- |
+ * | `topics/mth-algebra.ts` | `mthAlgebra` | `mth-algebra` |
+ * | `topics/mth-geometry.ts` | `mthGeometry` | `mth-geometry` |
+ * | `topics/mth-stats.ts` | `mthStats` | `mth-stats` |
+ * | `topics/mth-model.ts` | `mthModel` | `mth-model` |
+ * | `topics/mth-exam.ts` | `mthExam` | `mth-exam` |
+ *
+ * 每个文件导出的是一个 `ExamTopic` **对象**（不是数组）。加载器**优先**按这张表的
+ * 「一个专题一个单文件 import + 固定导出名」取数——这正是「打开一个专题只下载那一块」
+ * 的依据；表里没有的写法再走下面的兜底匹配（见 `loaderForId`）。
+ */
+const TOPIC_FILES: Record<string, { file: string; exportName: string }> = {
+  'mth-algebra': { file: 'mth-algebra', exportName: 'mthAlgebra' },
+  'mth-geometry': { file: 'mth-geometry', exportName: 'mthGeometry' },
+  'mth-stats': { file: 'mth-stats', exportName: 'mthStats' },
+  'mth-model': { file: 'mth-model', exportName: 'mthModel' },
+  'mth-exam': { file: 'mth-exam', exportName: 'mthExam' },
+};
+
+/**
+ * 契约表（导出给校验脚本用）：`scripts/validate-exam-topics.ts` 会拿它逐条核对
+ * 「清单里的专题 ↔ 数据文件 ↔ 固定导出名」是否还一致（名字漂移时给一条告警，
+ * 因为形状兜底仍能打开，但契约一旦漂移，后面的人就会踩坑）。
+ */
+export const MATH_TOPIC_FILES: Record<string, { file: string; exportName: string }> = TOPIC_FILES;
+
+/**
+ * 目录下的数据文件表（**按需**：键是路径，值才是 `import()`，取到值才真的下载）。
  *
  * `import.meta.glob` 是**构建期**展开的：文件在构建时存在就会被收进来，因此内容
  * 工程师把 `mth-algebra.ts` 写进 `src/data/math/topics/` 之后，**不需要改任何加载器**
- * 就自动生效（重新构建即可）。文件不存在时这里就是空对象，一切照旧、不报错。
+ * 就自动生效（重新构建即可）。文件不存在时这里就没有那个键，一切照旧、不报错。
  *
- * 这里**只允许写 glob / `import()`**：写成 `import { t1 } from '../topics/mth-algebra'`
+ * 为什么用 glob 而不是写死 5 条 `import('./topics/mth-algebra')`：写死的路径在文件
+ * 还不存在时会**直接构建失败**（「Could not resolve …」），而契约明确要求
+ * 「五个文件可能只存在一部分（甚至一个都没建）时，类型检查与 `pnpm check` 必须绿」。
+ * glob 把「文件在不在」变成构建期的键有无，缺文件 = 少一个键，编译与校验都不受影响。
+ *
+ * 这里**只允许写 glob / `import()`**：写成 `import { mthAlgebra } from '../topics/mth-algebra'`
  * 会把 5 个专题重新并回同一个 chunk（`pnpm validate` 会直接报错拦住）。
  */
 const DATA_FILES = import.meta.glob('../topics/*.ts') as Record<
@@ -175,7 +222,7 @@ const DATA_FILES = import.meta.glob('../topics/*.ts') as Record<
   () => Promise<Record<string, unknown>>
 >;
 
-/** 文件名（去目录、去扩展名）：`../topics/t1-algebra.ts` → `t1-algebra` */
+/** 文件名（去目录、去扩展名）：`../topics/mth-algebra.ts` → `mth-algebra` */
 function stemOf(file: string): string {
   return (file.split('/').pop() ?? file).replace(/\.tsx?$/, '');
 }
@@ -184,12 +231,11 @@ function stemOf(file: string): string {
 const NON_TOPIC_STEMS = new Set(['index', 'shared', 'common', 'utils', 'types', 'spec']);
 
 /**
- * 这一专题的数据文件加载器。
+ * 这一专题的数据文件加载器（**一个专题一个文件**，取到才下载）。
  *
- * 命名由四位内容工程师决定，因此按**专题短名**匹配，依次尝试：
- * `mth-algebra.ts` → `algebra.ts` → `t1-algebra.ts` / `m1_algebra.ts` → 含 `algebra` 的文件。
- * 都没命中就返回 `undefined`（当作"这个专题还没写"），而不是抛错——
- * 一个专题缺席不该让整块模块打不开。
+ * 按契约表精确匹配 `topics/<专题 id>.ts`；若内容工程师用了别的命名
+ * （`algebra.ts` / `t1-algebra.ts` …），再按专题短名兜底。都没命中就返回 `undefined`
+ * （当作「这个专题还没写」），而不是抛错——一个专题缺席不该让整块模块打不开。
  */
 function loaderForId(
   id: string,
@@ -197,10 +243,13 @@ function loaderForId(
 ): (() => Promise<Record<string, unknown>>) | undefined {
   const spec = MATH_TOPIC_SPECS.find((s) => s.id === id);
   const short = spec?.short ?? id.replace(/^mth-/, '');
+  const contracted = TOPIC_FILES[id]?.file;
   const files = Object.entries(DATA_FILES).filter(([f]) => !NON_TOPIC_STEMS.has(stemOf(f)));
   const pick = (pred: (stem: string) => boolean) => files.find(([f]) => pred(stemOf(f)));
 
   return (
+    // ① 契约：topics/<专题 id>.ts → 一个专题一个单文件 import
+    (contracted ? pick((s) => s === contracted) : undefined) ??
     pick((s) => s === id) ??
     pick((s) => s === short) ??
     pick((s) => s.endsWith(`-${short}`) || s.endsWith(`_${short}`)) ??
@@ -209,14 +258,27 @@ function loaderForId(
 }
 
 /**
- * 从数据文件里取出专题对象：**不看导出变量名**，按数据形状认。
+ * 从数据文件里取出专题对象。
  *
- * 判据是 `isExamTopicData`（有 `trends` 与 `drills` 两个必填数组）。这样无论作者写的是
- * `export const mthAlgebra`、`export const topic` 还是 `export default {...}`，
- * 也无论是对象还是「对象数组」，都能取到；取不到时返回 `undefined`，由调用方给出
- * 一句看得懂的报错，而不是 TypeError。
+ * 先按**契约表的固定导出名**取（`mth-algebra.ts` → `mthAlgebra`），再退到 `default`，
+ * 最后才按数据形状扫一遍全部导出。
+ *
+ * 判据始终是 `isExamTopicData`（有 `trends` 与 `drills` 两个必填数组）：契约是五人协作
+ * 里最容易被写歪的一环（导出名大小写、导出数组、`export default`…），只要数据形状对，
+ * 这一块就照样能打开；真的取不到时返回 `undefined`，由调用方给出**一句看得懂的报错**，
+ * 而不是 TypeError。
  */
-function topicOfNamespace(ns: Record<string, unknown>): ExamTopic | undefined {
+function topicOfNamespace(ns: Record<string, unknown>, id: string): ExamTopic | undefined {
+  // ① 契约：固定导出名
+  const contracted = TOPIC_FILES[id]?.exportName;
+  if (contracted) {
+    const named = ns[contracted];
+    if (isExamTopicData(named)) return named;
+  }
+  // ② `export default {...}`
+  if (isExamTopicData(ns.default)) return ns.default;
+
+  // ③ 兜底：不认名字，只认形状（对象，或「对象数组」里的第一个专题）
   for (const value of Object.values(ns)) {
     if (isExamTopicData(value)) return value;
     if (Array.isArray(value)) {
@@ -300,21 +362,23 @@ export function loadMathTopicData(id: string): Promise<ExamTopic> {
 
   const loader = loaderForId(id);
   if (!loader) {
+    const contract = TOPIC_FILES[id];
     return Promise.reject(
       new Error(
-        `数学专题「${id}」的正文数据还没写好（期望文件 ${MATH_TOPIC_CONTENT_DIR}/${id}.ts，` +
-          `文件名含「${mathTopicSpecOf(id)?.short ?? id}」即可被自动识别，见 TOPICS-SPEC.md）`,
+        `数学专题「${id}」的正文数据还没写好（期望文件 ` +
+          `${MATH_TOPIC_CONTENT_DIR}/${contract?.file ?? id}.ts，` +
+          `导出 ${contract?.exportName ?? 'ExamTopic 对象'}；见 TOPICS-SPEC.md 与加载器里的契约表）`,
       ),
     );
   }
 
   const p = loader()
     .then((ns) => {
-      const topic = topicOfNamespace(ns);
+      const topic = topicOfNamespace(ns, id);
       if (!topic) {
         throw new Error(
-          `数学专题「${id}」的数据文件里找不到专题对象：需要导出带 trends / drills 的 ` +
-            `ExamTopic（见 TOPICS-SPEC.md 第四节）`,
+          `数学专题「${id}」的数据文件里找不到专题对象：需要**导出带 trends / drills 的 ` +
+            `ExamTopic 对象**（契约的导出名是 ${TOPIC_FILES[id]?.exportName ?? id}，见 TOPICS-SPEC.md 第四节）`,
         );
       }
       if (topic.id !== id) {

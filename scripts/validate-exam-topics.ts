@@ -34,10 +34,11 @@
  */
 
 import type { Entry, ExamTopic, QuizQuestion } from '../src/types';
+import { readFileSync } from 'node:fs';
 import { masteryPolicyOf } from '../src/lib/progress';
 import { isExamTopicData } from '../src/lib/examTopic';
 import { lazyEntryModules } from '../src/data/lazyEntries';
-import { MATH_TOPIC_SPECS } from '../src/data/math/modules/math-topics';
+import { MATH_TOPIC_FILES, MATH_TOPIC_SPECS } from '../src/data/math/modules/math-topics';
 
 /** 一块专题模块的字段下限与口径 */
 export interface ExamTopicRules {
@@ -77,6 +78,12 @@ export interface ExamTopicRules {
    * 而规范文件与内容文件的所有权不在同一个工程师手里，硬失败会挡住内容交付。
    */
   expectedSections?: (topicId: string) => string[] | undefined;
+  /**
+   * 内容侧的**文件与导出名契约**（多人并行写内容时由协调方固定）：
+   * 专题 id → `{ 文件短名, 导出名 }`。校验器逐条核对「清单 id ↔ 文件 ↔ 导出名」，
+   * 漂移时**告警**（加载器有形状兜底，内容照样能打开，但契约漂移必须让人知道）。
+   */
+  exportContract?: Record<string, { file: string; exportName: string }>;
 }
 
 export interface ExamTopicReport {
@@ -94,6 +101,9 @@ export interface ExamTopicReport {
   /** 章节（类目/子类）总数与其中的例子总数 */
   sections: number;
   examples: number;
+  /** 内容文件与导出名符合契约的条数（只有配了 `exportContract` 的模块才有意义） */
+  contractOk: number;
+  contractTotal: number;
   bad: number;
 }
 
@@ -133,10 +143,12 @@ export function validateExamTopicModule(opts: {
   entries: Entry[];
   /** 这一条的正文是否已在内存里 */
   isReady: (id: string) => boolean;
+  /** 正文数据文件所在目录（注册表提供；核对契约文件时用） */
+  contentDir?: string;
   /** 打印报告时用（由入口统一打印时为 false） */
   silent?: boolean;
 }): ExamTopicReport {
-  const { rules, err, warn, entries, isReady } = opts;
+  const { rules, err, warn, entries, isReady, contentDir } = opts;
   const at0 = `[${rules.label}]`;
   let bad = 0;
   let questions = 0;
@@ -149,11 +161,40 @@ export function validateExamTopicModule(opts: {
   let angles = 0;
   let sections = 0;
   let examples = 0;
+  let contractOk = 0;
 
   const topics = entries
     .filter((e) => e.moduleId === rules.moduleId)
     .map((e) => (isExamTopicData(e.data) ? e.data : undefined))
     .filter((t): t is ExamTopic => Boolean(t));
+
+  /**
+   * 内容契约：清单里的专题 ↔ 数据文件 ↔ 固定导出名。
+   *
+   * 加载器对命名有形状兜底（导出名写歪也能打开），所以这里**只告警**；
+   * 但契约漂移会让「一个专题一个单文件 import」这条约定慢慢失效
+   * （例如有人把两个专题塞进一个文件），必须有人看见。
+   */
+  const contractEntries = Object.entries(rules.exportContract ?? {});
+  for (const [id, c] of contractEntries) {
+    if (!topics.some((t) => t.id === id)) continue; // 这个专题还没有内容：不在契约核对范围
+    const file = `${contentDir ?? ''}/${c.file}.ts`.replace(/^\//, '');
+    let src = '';
+    try {
+      src = readFileSync(file, 'utf8');
+    } catch {
+      warn?.(`${at0} ${id}: 契约文件不存在（${file}）——请按约定放在 ${contentDir} 下`);
+      continue;
+    }
+    if (new RegExp(`export\\s+(const|let|var)\\s+${c.exportName}\\b`).test(src)) {
+      contractOk += 1;
+    } else {
+      warn?.(
+        `${at0} ${id}: 契约要求 ${file} 导出 \`${c.exportName}\`（示例：\`export const ${c.exportName}: ExamTopic = {…}\`），` +
+          `当前文件里找不到该导出——加载器会按数据形状兜底取到它，但请照契约写，别让下一个人踩坑`,
+      );
+    }
+  }
 
   // 掌握策略必须与文档一致：专题走「全题过关」（模块 id 前缀或题目 id 前缀命中即可）
   if (masteryPolicyOf(rules.moduleId) !== 'all-questions') {
@@ -438,6 +479,8 @@ export function validateExamTopicModule(opts: {
     angles,
     sections,
     examples,
+    contractOk,
+    contractTotal: contractEntries.filter(([id]) => topics.some((t) => t.id === id)).length,
     bad,
   };
 
@@ -454,6 +497,11 @@ export function validateExamTopicModule(opts: {
     console.log(
       `      训练分组      ${report.drills} 组（组名 = 章节名 = 题目标签，点进分组即按标签组卷）· 掌握判定 = 全题过关`,
     );
+    if (report.contractTotal) {
+      console.log(
+        `      内容契约      ${report.contractOk}/${report.contractTotal} 个专题的「文件 + 导出名」与约定一致（一专题一文件一 import = 打开一条只下载那一块）`,
+      );
+    }
   }
 
   return report;
@@ -519,6 +567,8 @@ export const MATH_TOPIC_RULES: ExamTopicRules = {
   rulesWord: '解题套路',
   /** 章节清单逐字来自 `TOPICS-SPEC.md` 第二节（对不上只告警，见 `expectedSections` 的说明） */
   expectedSections: (id) => MATH_TOPIC_SPECS.find((s) => s.id === id)?.sections,
+  /** 协调方固定的「文件 + 导出名」契约（与加载器同一张表，防止两边漂移） */
+  exportContract: MATH_TOPIC_FILES,
 };
 
 /** 模块 id → 规则（新增一块题型专题时在这里登记一条，`pnpm validate` 自动覆盖它） */
@@ -569,6 +619,8 @@ export function validateAllExamTopics(opts: {
         warn,
         entries,
         isReady: (id) => mod.isReady(id),
+        // 契约核对的路径从注册表拿，规则表里不重复写一遍目录
+        contentDir: mod.contentDir,
         silent: opts.silent,
       }),
     );

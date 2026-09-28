@@ -1845,6 +1845,21 @@ export interface MathEntry extends EntryBase {
   data: MathTopic;
 }
 
+/**
+ * 数学「中考题型专题」条目（`math-topics`）。
+ *
+ * 为什么单列一个类型而不是塞进 `MathEntry`：这一块的数据是**题型专题**形态
+ * （`ExamTopic`：考情 / 分步讲解 / 章节 / 专项训练），与知识点形态的 `MathTopic`
+ * （概念 / 公式 / 例题 / 方法）根本不同。先前为了少改类型，装配处只能写
+ * `as unknown as MathTopic` 硬转——那种 casts 一旦有人按 `MathTopic` 去读字段
+ * （例如 `concepts.map`）就会在运行时炸掉，而且编译器完全帮不上忙。
+ * 单列类型后，装配与读取都按真实形状走，页面上按数据形状分流（`isExamTopicData`）。
+ */
+export interface MathExamTopicEntry extends EntryBase {
+  moduleId: 'math-topics';
+  data: ExamTopic;
+}
+
 export type Entry =
   | PoemEntry
   | VocabEntry
@@ -1858,7 +1873,8 @@ export type Entry =
   | PoliticsEntry
   | PhysicsEntry
   | ChemEntry
-  | MathEntry;
+  | MathEntry
+  | MathExamTopicEntry;
 
 /** 练习会话中的一道题（带来源信息） */
 export interface QuizItem extends QuizQuestion {
