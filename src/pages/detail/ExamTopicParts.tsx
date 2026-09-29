@@ -23,6 +23,7 @@ import type { ExamExample, ExamSection } from '../../types';
 import { cn } from '../../lib/utils';
 import { isStepExample } from '../../lib/examTopic';
 import { Tag } from '../../components/common';
+import { PhysicsFigureView } from '../../components/PhysicsFigure';
 import { RichText } from '../../components/RichText';
 
 /* ------------------------------ 文本 ------------------------------ */
@@ -376,6 +377,9 @@ export function ExampleList({ examples, kind }: { examples: ExamExample[]; kind:
 
             {isOpen ? (
               <div className="exam-ex__body fade-in">
+                {/* 配图（数学）：几何、函数图象等不看图难理解的例子，图在解答之前看 */}
+                {ex.figure ? <PhysicsFigureView figure={ex.figure} className="physics-quizFig" /> : null}
+
                 {/* 分步解答（数学）：一步一步做完，最后单列答案便于快速核对 */}
                 {steps.length ? (
                   <ol className="exam-ex__steps">

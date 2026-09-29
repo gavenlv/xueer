@@ -66,6 +66,20 @@ export const mathGeometry: MathTopic[] = [
           '两角之和等于 $90^\\circ$，则这两个角互为余角；之和等于 $180^\\circ$，则互为补角。互余、互补只与角的度数有关，与两个角的位置无关。性质：同角（或等角）的余角相等，同角（或等角）的补角相等。',
       },
     ],
+    examPoints: [
+      {
+        point: '线段中点与角平分线的基本计算',
+        how: '多以选择、填空出现，常与余角补角、度分秒换算综合，也会设未知数列方程求角；踩分靠先画图标量，写清「因为……所以……」并注明中点、角平分线依据，度分秒按 60 进制进退位。',
+      },
+      {
+        point: '正方体的展开图与相对面判断',
+        how: '常以展开图识别命题，与空间想象、动手操作结合；踩分点是按「一四一」「二三一」等类型核对，先确定三组相对面再想象折叠，含「田」字形的图形一定不能折成正方体。',
+      },
+      {
+        point: '互余互补关系的方程综合题',
+        how: '解答题中给出角之间的倍分、和差关系求角度，常与一元一次方程综合；踩分靠设未知数、依据互余互补列方程并回代检验，注意「同角或等角的余角相等」要先有同角或等角的前提。',
+      },
+    ],
     formulas: [
       {
         name: '线段中点的数量关系',
@@ -107,6 +121,27 @@ export const mathGeometry: MathTopic[] = [
       },
       {
         stem: '已知 $\\angle AOB=140^\\circ$，$OC$ 平分 $\\angle AOB$，$OD$ 在 $\\angle BOC$ 的内部且 $\\angle BOD=20^\\circ$，求 $\\angle AOD$ 的度数。',
+        figure: {
+          id: 'fig-m-geo-tuxing-jiao-1',
+          title: '角的平分线与和差',
+          caption: 'OC 平分 ∠AOB，OD 在 ∠BOC 的内部',
+          view: 'wide',
+          alt: '以 O 为顶点的角 AOB 等于 140 度，射线 OC 平分该角，角 AOC 与角 BOC 各为 70 度；射线 OD 在角 BOC 内部，角 BOD 为 20 度、角 COD 为 50 度，角 AOD 等于角 AOC 加角 COD 为 120 度。',
+          prims: [
+            { t: 'line', x1: 40, y1: 66, x2: 80, y2: 66 },
+            { t: 'line', x1: 40, y1: 66, x2: 12.4, y2: 42.9 },
+            { t: 'line', x1: 40, y1: 66, x2: 53.7, y2: 28.4 },
+            { t: 'line', x1: 40, y1: 66, x2: 71.9, y2: 54.4 },
+            { t: 'dot', x: 40, y: 66, label: 'O', labelDx: -5.5, labelDy: 4.5 },
+            { t: 'dot', x: 12.4, y: 42.9, label: 'A', labelDx: -5.5, labelDy: 1 },
+            { t: 'dot', x: 80, y: 66, label: 'B', labelDx: 2.5, labelDy: 4 },
+            { t: 'dot', x: 53.7, y: 28.4, label: 'C', labelDx: 1, labelDy: -2.5 },
+            { t: 'dot', x: 71.9, y: 54.4, label: 'D', labelDx: 2.5, labelDy: 2 },
+            { t: 'angle', x: 40, y: 66, from: 70, to: 140, r: 8, label: '70°' },
+            { t: 'angle', x: 40, y: 66, from: 20, to: 70, r: 6, label: '50°' },
+            { t: 'angle', x: 40, y: 66, from: 0, to: 20, r: 6, label: '20°' },
+          ],
+        },
         steps: [
           '由 $OC$ 平分 $\\angle AOB$（已知），得 $\\angle BOC=\\angle AOC=\\frac{1}{2}\\angle AOB=\\frac{1}{2}\\times 140^\\circ=70^\\circ$（角平分线的性质）。',
           '因为 $OD$ 在 $\\angle BOC$ 的内部，所以 $\\angle COD=\\angle BOC-\\angle BOD=70^\\circ-20^\\circ=50^\\circ$。',
@@ -125,6 +160,42 @@ export const mathGeometry: MathTopic[] = [
         ],
         answer: '这个角是 $50^\\circ$。',
         tip: '求角度设未知数列方程比逐步推算更稳；注意「有余角」隐含这个角小于 $90^\\circ$，解得的结果要检验。',
+      },
+      {
+        stem: '一个正方体的平面展开图按「一四一」型排列：中间一排 4 个正方形从左到右依次记为 $A$、$B$、$C$、$D$，$A$ 的正上方是 $E$，$D$ 的正下方是 $F$。写出折成正方体后与 $B$、$E$ 相对的面，并说明判断依据。',
+        figure: {
+          id: 'fig-m-geo-tuxing-zhengfangti-1',
+          title: '正方体展开图「一四一」型',
+          caption: '同色的一对面，折成正方体后相对',
+          view: 'square',
+          alt: '正方体展开图，一四一型：中间一排从左到右四个正方形 A、B、C、D，A 的正上方是 E，D 的正下方是 F；其中 B 与 D 同色、E 与 F 同色，折成正方体后分别相对。',
+          prims: [
+            { t: 'rect', x: 18, y: 18, w: 16, h: 16, label: 'E', tone: 'ok' },
+            { t: 'rect', x: 18, y: 34, w: 16, h: 16, label: 'A' },
+            { t: 'rect', x: 34, y: 34, w: 16, h: 16, label: 'B', tone: 'accent' },
+            { t: 'rect', x: 50, y: 34, w: 16, h: 16, label: 'C' },
+            { t: 'rect', x: 66, y: 34, w: 16, h: 16, label: 'D', tone: 'accent' },
+            { t: 'rect', x: 66, y: 50, w: 16, h: 16, label: 'F', tone: 'ok' },
+          ],
+        },
+        steps: [
+          '先把中间一排围成正方体的侧面：$A$、$B$、$C$、$D$ 依次相邻，隔一个面的两个面相对，所以 $A$ 对 $C$、$B$ 对 $D$。',
+          '$E$、$F$ 分别折成正方体的上、下两个底面，它们折好后不相邻，正好相对，所以 $E$ 对 $F$。',
+          '检验：六个面两两相对恰好分成三组，$A$ 与 $C$、$B$ 与 $D$、$E$ 与 $F$，没有遗漏也没有重复，与正方体恰有三组相对面的事实一致。',
+        ],
+        answer: '与 $B$ 相对的是 $D$，与 $E$ 相对的是 $F$（三组相对面为 $A$ 对 $C$、$B$ 对 $D$、$E$ 对 $F$）。',
+        tip: '展开图找相对面抓住两点：同一排中间隔一个正方形的两个面相对；分布在这排两侧、折后当上、下底的两个面相对。',
+      },
+      {
+        stem: '已知线段 $AB=12$ cm，点 $C$ 在直线 $AB$ 上且 $AC=4$ cm，点 $M$、$N$ 分别是线段 $AB$、$AC$ 的中点，求线段 $MN$ 的长。',
+        steps: [
+          '点 $C$ 只说在「直线 $AB$ 上」，可能在线段 $AB$ 上，也可能在点 $A$ 外侧的延长线上（$AC=4<AB=12$，不可能在 $B$ 外侧），所以先画两种位置的图，分类讨论。',
+          '情况一：$C$ 在线段 $AB$ 上。$AM=\\frac{1}{2}AB=6$，$AN=\\frac{1}{2}AC=2$，且 $N$、$M$ 都在射线 $AB$ 上，故 $MN=AM-AN=6-2=4$（cm）。',
+          '情况二：$C$ 在点 $A$ 外侧的延长线上。仍有 $AM=6$、$AN=2$，但 $M$、$N$ 位于点 $A$ 的两侧，故 $MN=AM+AN=6+2=8$（cm）。',
+          '用坐标法检验：令 $A=0$、$B=12$，情况一 $C=4$ 时 $M=6$、$N=2$，距离为 4；情况二 $C=-4$ 时 $M=6$、$N=-2$，距离为 8，两种结果都成立。',
+        ],
+        answer: '$MN$ 的长为 4 cm 或 8 cm。',
+        tip: '「点在直线上」与「点在线段上」一字之差，前者要分类讨论；中点的一半照算，但两点在定点同侧用减法、异侧用加法。',
       },
     ],
     pitfalls: [
@@ -219,6 +290,32 @@ export const mathGeometry: MathTopic[] = [
         difficulty: 2,
         tags: ['基本性质', '辨析'],
       },
+      {
+        id: 'm-geo-tuxing-chubu-z1',
+        type: 'choice',
+        stem: '下列关于正方体展开图的说法，正确的是',
+        options: [
+          '只要含有 6 个正方形的平面图形，就一定能折成正方体',
+          '正方体展开图中，原来相对的两个面一定相邻且有一条公共边',
+          '展开图中出现「田」字形的四个正方形时，仍能折成完整的正方体',
+          '判断能否折成正方体时，可先在展开图中找出三组相对的面，再想象折叠过程验证',
+        ],
+        answer: 'D',
+        explanation:
+          '6 个正方形随意连成的图形（如「田」字形、一排 6 个）折时会重叠或缺面，A、C 错；相对的面折好后没有公共棱，B 错；先分组找相对面再想象折叠是规范的判断方法，D 正确。',
+        difficulty: 2,
+        tags: ['基本性质', '辨析'],
+      },
+      {
+        id: 'm-geo-tuxing-chubu-z2',
+        type: 'fill',
+        stem: '下午 2 时 30 分，时钟的时针与分针所成的较小角是 ____ 度。（只填数字）',
+        answer: '105',
+        explanation:
+          '分针 30 分指向 6，对应 $180^\\circ$；时针每小时走 $30^\\circ$、每分钟再走 $0.5^\\circ$，2 时 30 分指向 $2\\times30^\\circ+30\\times0.5^\\circ=75^\\circ$。两针夹角为 $180^\\circ-75^\\circ=105^\\circ$（小于 $180^\\circ$，即为较小角）。',
+        difficulty: 2,
+        tags: ['角的计算'],
+      },
     ],
   },
 
@@ -266,6 +363,20 @@ export const mathGeometry: MathTopic[] = [
         term: '平移',
         explain:
           '图形沿某一条直线方向移动一定的距离叫平移。平移前后的两个图形全等，对应线段平行（或在同一条直线上）且相等，对应点的连线平行（或在同一条直线上）且相等。',
+      },
+    ],
+    examPoints: [
+      {
+        point: '平行线判定与性质的综合推理',
+        how: '解答题常以拐点、三角板拼接为背景，与角平分线、垂直、对顶角综合求角；踩分靠先判定后性质、依据不写反，过拐点作平行线是首选辅助线，书写要交代平行的传递过程。',
+      },
+      {
+        point: '平移性质的计算与作图',
+        how: '常以网格作图或图形平移命题，与对应点坐标、周长面积计算结合；踩分点是对应点连线平行（或共线）且相等，平移距离看对应点而不是图形间距，作图要保留连线痕迹。',
+      },
+      {
+        point: '「三线八角」的识别与条件辨析',
+        how: '选择题高频命题，常把判定与性质、同位角与同旁内角混在选项里；踩分靠先确认截线与被截线、再判断角的位置，使用「同旁内角互补」必须先写明两直线平行。',
       },
     ],
     formulas: [
@@ -330,6 +441,76 @@ export const mathGeometry: MathTopic[] = [
         ],
         answer: '$\\angle AOC=65^\\circ$。',
         tip: '垂直条件要立刻翻译成 $90^\\circ$，再用「整体减部分」求角；注意先确认 $OD$ 确实在 $\\angle EOB$ 内部。',
+      },
+      {
+        stem: '如图，$AB\\parallel CD$，点 $E$ 在两直线之间，连接 $BE$、$DE$，已知 $\\angle ABE=40^\\circ$，$\\angle CDE=30^\\circ$，求 $\\angle BED$ 的度数。',
+        figure: {
+          id: 'fig-m-geo-xiangjiao-zhedian-1',
+          title: '拐点问题：过拐点作平行线',
+          caption: 'EF∥AB，把 ∠BED 拆成两个内错角',
+          view: 'square',
+          alt: '两条水平平行线 AB 与 CD，点 E 在两线之间，连接 BE、DE 构成折线；过 E 作 EF 平行 AB，图中标出角 ABE 为 40 度、角 CDE 为 30 度，由内错角相等得角 BEF 为 40 度、角 DEF 为 30 度，所以角 BED 为 70 度。',
+          prims: [
+            { t: 'line', x1: 12, y1: 25, x2: 62, y2: 25 },
+            { t: 'line', x1: 30, y1: 75, x2: 85, y2: 75 },
+            { t: 'line', x1: 62, y1: 25, x2: 36.1, y2: 46.7 },
+            { t: 'line', x1: 85, y1: 75, x2: 36.1, y2: 46.7 },
+            { t: 'line', x1: 36.1, y1: 46.7, x2: 64, y2: 46.7, tone: 'muted', dashed: true },
+            { t: 'dot', x: 12, y: 25, label: 'A', labelDx: -5.5, labelDy: 1 },
+            { t: 'dot', x: 62, y: 25, label: 'B', labelDx: 2, labelDy: -2.5 },
+            { t: 'dot', x: 30, y: 75, label: 'C', labelDx: -5, labelDy: 4 },
+            { t: 'dot', x: 85, y: 75, label: 'D', labelDx: 2, labelDy: 4 },
+            { t: 'dot', x: 36.1, y: 46.7, label: 'E', labelDx: 0.5, labelDy: -3 },
+            { t: 'dot', x: 64, y: 46.7, hollow: true, tone: 'muted', label: 'F', labelDx: 2.5, labelDy: 1 },
+            { t: 'angle', x: 62, y: 25, from: 180, to: 220, r: 7, label: '40°' },
+            { t: 'angle', x: 85, y: 75, from: 150, to: 180, r: 7, label: '30°' },
+            { t: 'angle', x: 36.1, y: 46.7, from: 0, to: 40, r: 6, label: '40°' },
+            { t: 'angle', x: 36.1, y: 46.7, from: -30, to: 0, r: 6, label: '30°' },
+          ],
+        },
+        steps: [
+          '已知的两个角被点 $E$ 隔开，不能直接用上；想把 $\\angle BED$ 拆成两个能与已知角挂钩的角，于是过点 $E$ 作 $EF\\parallel AB$（辅助线思路：见折线拐点作平行线）。',
+          '因为 $AB\\parallel CD$（已知），$EF\\parallel AB$（已作），所以 $EF\\parallel CD$（平行于同一条直线的两条直线互相平行）。',
+          '所以 $\\angle BEF=\\angle ABE=40^\\circ$，$\\angle DEF=\\angle CDE=30^\\circ$（两直线平行，内错角相等）。',
+          '因此 $\\angle BED=\\angle BEF+\\angle DEF=40^\\circ+30^\\circ=70^\\circ$。',
+        ],
+        answer: '$\\angle BED=70^\\circ$。',
+        tip: '两条平行线之间出现折线，就过拐点作平行线，把大角拆成两个内错角；辅助线的作法与平行传递过程都要写进证明。',
+      },
+      {
+        stem: '如图，直线 $AB\\parallel CD$，直线 $EF$ 分别交 $AB$、$CD$ 于点 $G$、$H$，射线 $HP$ 在 $\\angle GHD$ 的内部且平分这个角，$\\angle EGB=70^\\circ$，求 $\\angle PHD$ 的度数。',
+        figure: {
+          id: 'fig-m-geo-xiangjiao-tongwei-1',
+          title: '同位角与角平分线',
+          caption: 'HP 平分 ∠GHD，∠PHD 是它的一半',
+          view: 'square',
+          alt: '两条水平平行线 AB 与 CD 被直线 EF 所截，交点 G 在 AB 上、H 在 CD 上，角 EGB 为 70 度；射线 HP 平分角 GHD，角 GHP 与角 PHD 各为 35 度。',
+          prims: [
+            { t: 'line', x1: 12, y1: 30, x2: 90, y2: 30 },
+            { t: 'line', x1: 12, y1: 74, x2: 90, y2: 74 },
+            { t: 'line', x1: 51.5, y1: 9.3, x2: 23.2, y2: 87.2 },
+            { t: 'line', x1: 28, y1: 74, x2: 49.3, y2: 59.1, tone: 'accent' },
+            { t: 'dot', x: 12, y: 30, label: 'A', labelDx: -5.5, labelDy: 3 },
+            { t: 'dot', x: 90, y: 30, label: 'B', labelDx: 2.5, labelDy: -1 },
+            { t: 'dot', x: 12, y: 74, label: 'C', labelDx: -5.5, labelDy: 4 },
+            { t: 'dot', x: 90, y: 74, label: 'D', labelDx: 2.5, labelDy: 4 },
+            { t: 'dot', x: 51.5, y: 9.3, label: 'E', labelDx: 1, labelDy: -2.5 },
+            { t: 'dot', x: 23.2, y: 87.2, label: 'F', labelDx: -5.5, labelDy: 4 },
+            { t: 'dot', x: 44, y: 30, label: 'G', labelDx: 2, labelDy: 4.5 },
+            { t: 'dot', x: 28, y: 74, label: 'H', labelDx: 3, labelDy: 5 },
+            { t: 'dot', x: 49.3, y: 59.1, label: 'P', labelDx: 2.5, labelDy: 1 },
+            { t: 'angle', x: 44, y: 30, from: 0, to: 70, r: 7, label: '70°' },
+            { t: 'angle', x: 28, y: 74, from: 35, to: 70, r: 6.5, label: '35°' },
+            { t: 'angle', x: 28, y: 74, from: 0, to: 35, r: 6.5, label: '35°' },
+          ],
+        },
+        steps: [
+          '$\\angle EGB$ 与 $\\angle GHD$ 在截线 $EF$ 的同旁、又分别在 $AB$、$CD$ 的同一侧，是同位角；因为 $AB\\parallel CD$，所以 $\\angle GHD=\\angle EGB=70^\\circ$（两直线平行，同位角相等）。',
+          '因为 $HP$ 平分 $\\angle GHD$（已知），所以 $\\angle PHD=\\angle GHP=\\frac{1}{2}\\angle GHD$（角平分线的定义）。',
+          '代入得 $\\angle PHD=\\frac{1}{2}\\times70^\\circ=35^\\circ$。',
+        ],
+        answer: '$\\angle PHD=35^\\circ$。',
+        tip: '平行线给角相等，角平分线给角的一半，两步各写各的依据；先认准同位角、内错角还是同旁内角，再决定用相等还是互补。',
       },
     ],
     pitfalls: [
@@ -420,6 +601,63 @@ export const mathGeometry: MathTopic[] = [
         difficulty: 2,
         tags: ['判定与性质', '互逆命题'],
       },
+      {
+        id: 'm-geo-xiangjiao-pingxing-z1',
+        type: 'choice',
+        stem: '下列说法中，正确的是',
+        options: [
+          '经过一点有且只有一条直线与已知直线平行',
+          '从直线外一点到这条直线的垂线段，叫做点到直线的距离',
+          '两条直线被第三条直线所截，同位角相等',
+          '图形平移后，对应点的连线平行（或在同一条直线上）且相等',
+        ],
+        answer: 'D',
+        explanation:
+          '平行公理要求该点在直线外，A 漏前提；点到直线的距离是垂线段的长度而不是垂线段本身，B 错；同位角只有在两直线平行时才相等，C 漏前提；平移的性质正是对应点连线平行（或共线）且相等，D 正确。',
+        difficulty: 2,
+        tags: ['判定与性质辨析'],
+      },
+      {
+        id: 'm-geo-xiangjiao-pingxing-z2',
+        type: 'short',
+        stem: '如图，直线 $AB$、$CD$ 被直线 $EF$ 所截，交点分别为 $G$、$H$，$\\angle EGB=\\angle GHD$。（1）判断 $AB$ 与 $CD$ 是否平行，并写出依据；（2）若 $\\angle EGB=110^\\circ$，射线 $HP$ 平分 $\\angle GHD$，求 $\\angle PHD$ 的度数。',
+        figure: {
+          id: 'fig-m-geo-xiangjiao-panju-1',
+          title: '同位角相等，两直线平行',
+          caption: '∠EGB 与 ∠GHD 是同位角，HP 平分 ∠GHD',
+          view: 'square',
+          alt: '两条水平直线 AB 与 CD 被直线 EF 所截，交点 G 在 AB 上、H 在 CD 上，角 EGB 与角 GHD 相等且为 110 度，射线 HP 平分角 GHD，角 GHP 与角 PHD 各为 55 度。',
+          prims: [
+            { t: 'line', x1: 10, y1: 30, x2: 90, y2: 30 },
+            { t: 'line', x1: 10, y1: 74, x2: 90, y2: 74 },
+            { t: 'line', x1: 28.5, y1: 9.3, x2: 56.8, y2: 87.2 },
+            { t: 'line', x1: 52, y1: 74, x2: 66.9, y2: 52.7, tone: 'accent' },
+            { t: 'dot', x: 10, y: 30, label: 'A', labelDx: -5.5, labelDy: 3 },
+            { t: 'dot', x: 90, y: 30, label: 'B', labelDx: 2.5, labelDy: -1 },
+            { t: 'dot', x: 10, y: 74, label: 'C', labelDx: -5.5, labelDy: 4 },
+            { t: 'dot', x: 90, y: 74, label: 'D', labelDx: 2.5, labelDy: 4 },
+            { t: 'dot', x: 28.5, y: 9.3, label: 'E', labelDx: 1, labelDy: -2.5 },
+            { t: 'dot', x: 56.8, y: 87.2, label: 'F', labelDx: 3, labelDy: 1 },
+            { t: 'dot', x: 36, y: 30, label: 'G', labelDx: -5.5, labelDy: 4.5 },
+            { t: 'dot', x: 52, y: 74, label: 'H', labelDx: -5.5, labelDy: 5 },
+            { t: 'dot', x: 66.9, y: 52.7, label: 'P', labelDx: 2.5, labelDy: 1 },
+            { t: 'angle', x: 36, y: 30, from: 0, to: 110, r: 7, label: '110°' },
+            { t: 'angle', x: 52, y: 74, from: 55, to: 110, r: 6.5, label: '55°' },
+            { t: 'angle', x: 52, y: 74, from: 0, to: 55, r: 6.5, label: '55°' },
+          ],
+        },
+        answer:
+          '（1）$\\angle EGB$ 与 $\\angle GHD$ 是直线 $AB$、$CD$ 被 $EF$ 所截形成的同位角，且 $\\angle EGB=\\angle GHD$，由「同位角相等，两直线平行」得 $AB\\parallel CD$。'
+          + '（2）因为 $AB\\parallel CD$，$\\angle EGB$ 与 $\\angle GHD$ 是同位角，所以 $\\angle GHD=\\angle EGB=110^\\circ$（两直线平行，同位角相等）；又 $HP$ 平分 $\\angle GHD$，所以 $\\angle PHD=\\frac{1}{2}\\angle GHD=\\frac{1}{2}\\times110^\\circ=55^\\circ$。',
+        rubric: [
+          '由同位角相等判定 $AB\\parallel CD$，依据写「同位角相等，两直线平行」',
+          '由平行得 $\\angle GHD=110^\\circ$，依据写平行线的性质（同位角相等）',
+          '由角平分线的定义写出 $\\angle PHD=\\frac{1}{2}\\angle GHD=55^\\circ$',
+        ],
+        explanation: '本题考查判定与性质的规范连用。评分要点：先确认两个角是同位角，用判定定理由角等推平行；再用性质由平行得同位角相等；最后用角平分线定义取一半。常见失分点：直接写「角相等所以平行」不说明角的位置关系；判定与性质的依据写反；第二问忘记角平分线要除以 2。',
+        difficulty: 3,
+        tags: ['平行线的判定', '平行线的性质'],
+      },
     ],
   },
 
@@ -469,6 +707,20 @@ export const mathGeometry: MathTopic[] = [
           '用坐标系描述地理位置时，要先选合适的原点（如学校、广场），确定 $x$ 轴、$y$ 轴的正方向，规定单位长度。原点或单位长度选得不同，同一地点的坐标就不同，所以答题时要说明所用的坐标系。',
       },
     ],
+    examPoints: [
+      {
+        point: '由坐标判断点所在象限，或根据象限、距离条件确定点的坐标',
+        how: '选择题常给坐标或含字母的坐标判象限，填空题给点到两轴距离与象限定坐标。踩分点：坐标轴上的点不属于任何象限；距离必须加绝对值，再按象限符号配正负，未指定象限时四种情况分类讨论。',
+      },
+      {
+        point: '用平移规律与轴对称规律求对应点坐标或字母的值',
+        how: '常把平移、关于坐标轴对称综合出填空或解答。关键是左右只改横坐标、上下只改纵坐标，关于哪条轴对称则哪个坐标不变；求字母时把规律写成方程，解出后回代验证对应关系。',
+      },
+      {
+        point: '在平面直角坐标系中求线段长与图形面积',
+        how: '解答题高频题型：先找平行于坐标轴的边，用坐标差的绝对值求底和高；没有平行边时用外接矩形补形或分割成三角形。书写要写明平行依据与高的来源，倾斜边用勾股定理求。',
+      },
+    ],
     formulas: [
       {
         name: '点到两坐标轴的距离',
@@ -515,6 +767,24 @@ export const mathGeometry: MathTopic[] = [
       },
       {
         stem: '$\\triangle ABC$ 的三个顶点分别是 $A(-2,-1)$、$B(3,-1)$、$C(1,2)$，求 $\\triangle ABC$ 的面积。',
+        figure: {
+          id: 'fig-m-geo-zuobiao-mianji-1',
+          title: '在坐标系中求三角形面积',
+          caption: '以 AB 为底，C 到 AB 的距离为高',
+          view: 'wide',
+          alt: '平面直角坐标系中，三角形 ABC 的顶点分别为 A(-2,-1)、B(3,-1)、C(1,2)，AB 平行于 x 轴且长为 5，C 到 AB 的距离为 3，图中画出 C 到 AB 的垂线段，三角形面积等于二分之一乘 5 乘 3 为 7.5。',
+          prims: [
+            { t: 'axis', x: 23, y: 78, w: 63, h: 45, xLabel: 'x', yLabel: 'y', origin: true, xTicks: [ { at: 0.143, label: '-2' }, { at: 0.286, label: '-1' }, { at: 0.571, label: '1' }, { at: 0.714, label: '2' }, { at: 0.857, label: '3' } ], yTicks: [ { at: 0.2, label: '-1' }, { at: 0.6, label: '1' }, { at: 0.8, label: '2' } ] },
+            { t: 'poly', points: [[32, 69], [77, 69], [59, 42]], closed: true, tone: 'accent', fill: true },
+            { t: 'line', x1: 59, y1: 42, x2: 59, y2: 69, tone: 'muted', dashed: true },
+            { t: 'angle', x: 59, y: 69, from: 0, to: 90, r: 4, right: true },
+            { t: 'dot', x: 32, y: 69, label: 'A(-2,-1)', labelDx: -24, labelDy: 4.5 },
+            { t: 'dot', x: 77, y: 69, label: 'B(3,-1)', labelDx: 2.5, labelDy: 4.5 },
+            { t: 'dot', x: 59, y: 42, label: 'C(1,2)', labelDx: 2, labelDy: -2.5 },
+            { t: 'text', x: 54.5, y: 75.5, text: '5', size: 3.6 },
+            { t: 'text', x: 61.5, y: 56, text: '3', size: 3.6, anchor: 'start', tone: 'muted' },
+          ],
+        },
         steps: [
           '因为 $A$、$B$ 两点的纵坐标都是 $-1$，所以 $AB\\parallel x$ 轴（纵坐标相同的两点连线平行于 $x$ 轴），$AB=|3-(-2)|=5$。',
           '点 $C$ 到直线 $AB$ 的距离等于 $C$ 的纵坐标与 $-1$ 的差的绝对值，即 $|2-(-1)|=3$，这就是 $AB$ 边上的高。',
@@ -525,6 +795,23 @@ export const mathGeometry: MathTopic[] = [
       },
       {
         stem: '把点 $A(-3,4)$ 先向右平移 5 个单位，再向下平移 2 个单位得到点 $B$，求点 $B$ 的坐标；并求点 $A$ 关于 $x$ 轴的对称点 $C$ 的坐标。',
+        figure: {
+          id: 'fig-m-geo-zuobiao-pingyi-1',
+          title: '点的平移与轴对称',
+          caption: 'A 右移 5、下移 2 得 B；A 关于 x 轴对称得 C',
+          view: 'wide',
+          alt: '平面直角坐标系中，点 A(-3,4) 向右平移 5 个单位再向下平移 2 个单位得到点 B(2,2)，图中用箭头表示平移方向；点 A 与 x 轴下方的点 C(-3,-4) 关于 x 轴对称，虚线连接 A、C 且垂直于 x 轴。',
+          prims: [
+            { t: 'axis', x: 20, y: 92, w: 60, h: 80, xLabel: 'x', yLabel: 'y', origin: true, xTicks: [ { at: 0.133, label: '-3' }, { at: 0.267, label: '-2' }, { at: 0.4, label: '-1' }, { at: 0.667, label: '1' }, { at: 0.8, label: '2' } ], yTicks: [ { at: 0.1, label: '-4' }, { at: 0.7, label: '2' }, { at: 0.9, label: '4' } ] },
+            { t: 'arrow', x1: 28, y1: 20, x2: 68, y2: 36, tone: 'accent', width: 0.6 },
+            { t: 'text', x: 48, y: 22, text: '右 5，下 2', size: 3.4, tone: 'accent' },
+            { t: 'line', x1: 28, y1: 20, x2: 28, y2: 84, tone: 'muted', dashed: true },
+            { t: 'text', x: 31, y: 49, text: '关于 x 轴对称', size: 3.2, anchor: 'start', tone: 'muted' },
+            { t: 'dot', x: 28, y: 20, label: 'A(-3,4)', labelDx: -27, labelDy: -2 },
+            { t: 'dot', x: 68, y: 36, label: 'B(2,2)', labelDx: 3, labelDy: 1 },
+            { t: 'dot', x: 28, y: 84, label: 'C(-3,-4)', labelDx: 3, labelDy: 1.5 },
+          ],
+        },
         steps: [
           '向右平移 5 个单位，横坐标加 5：$(-3+5,\\ 4)=(2,4)$。',
           '再向下平移 2 个单位，纵坐标减 2：$(2,\\ 4-2)=(2,2)$，所以 $B(2,2)$。',
@@ -532,6 +819,27 @@ export const mathGeometry: MathTopic[] = [
         ],
         answer: '$B(2,2)$，$C(-3,-4)$。',
         tip: '连续平移可以合并计算，但每一步都要作用在正确的坐标上：左右只改横坐标，上下只改纵坐标。',
+      },
+      {
+        stem: '已知点 $P$ 到 $x$ 轴的距离是 2，到 $y$ 轴的距离是 3，且点 $P$ 在第二象限，求点 $P$ 的坐标。',
+        steps: [
+          '点到 $x$ 轴的距离是纵坐标的绝对值，所以 $|y|=2$，即 $y=2$ 或 $y=-2$；同理 $|x|=3$，即 $x=3$ 或 $x=-3$。',
+          '点 $P$ 在第二象限，第二象限内点的坐标符号是 $(-,+)$，所以横坐标取负、纵坐标取正。',
+          '因此 $x=-3$，$y=2$，点 $P$ 的坐标是 $(-3,\\ 2)$。',
+        ],
+        answer: '$P(-3,\\ 2)$。',
+        tip: '距离只给绝对值、不给符号，坐标一般有四种可能；象限符号的作用就是从四种可能中选出唯一一种，两步缺一不可。',
+      },
+      {
+        stem: '已知点 $A(2m-1,\\ 3)$ 与点 $B(5,\\ n+2)$ 关于 $x$ 轴对称，求 $m$、$n$ 的值。',
+        steps: [
+          '关于 $x$ 轴对称的两个点横坐标相同、纵坐标互为相反数，这是列方程的依据。',
+          '横坐标相同：$2m-1=5$，解得 $2m=6$，$m=3$。',
+          '纵坐标互为相反数：$n+2=-3$，解得 $n=-5$。',
+          '回代检验：$A(5,3)$、$B(5,-3)$，横坐标相同、纵坐标相反，确关于 $x$ 轴对称。',
+        ],
+        answer: '$m=3$，$n=-5$。',
+        tip: '对称条件本质是坐标之间的等量关系，把「相同」「互为相反数」翻译成方程即可；做完务必回代，防止把关于哪条轴记反。',
       },
     ],
     pitfalls: [
@@ -621,6 +929,27 @@ export const mathGeometry: MathTopic[] = [
         difficulty: 2,
         tags: ['坐标特征', '象限符号'],
       },
+      {
+        id: 'm-geo-pingmian-zuobiao-z1',
+        type: 'choice',
+        stem: '点 $P$ 在第四象限，且它到 $x$ 轴的距离是 2，到 $y$ 轴的距离是 3，则点 $P$ 的坐标是',
+        options: ['$(-3,\\ 2)$', '$(-3,\\ -2)$', '$(3,\\ -2)$', '$(3,\\ 2)$'],
+        answer: 'C',
+        explanation:
+          '点到 $x$ 轴的距离是 $|y|=2$，到 $y$ 轴的距离是 $|x|=3$；第四象限内点的符号为 $(+,-)$，所以横坐标取 $3$、纵坐标取 $-2$，即 $P(3,-2)$。选 A、B 的同学把横坐标符号配错，选 D 的同学把纵坐标符号配反。',
+        difficulty: 2,
+        tags: ['坐标特征', '象限符号'],
+      },
+      {
+        id: 'm-geo-pingmian-zuobiao-z2',
+        type: 'fill',
+        stem: '点 $P(-6,\\ 8)$ 到原点 $O$ 的距离是 ____。（只填数字）',
+        answer: '10',
+        explanation:
+          '过点 $P$ 向 $x$ 轴作垂线，构造出两直角边分别为 $|-6|=6$ 和 $|8|=8$ 的直角三角形，$OP$ 是斜边。由勾股定理得 $OP=\\sqrt{6^2+8^2}=\\sqrt{100}=10$。',
+        difficulty: 2,
+        tags: ['坐标与距离'],
+      },
     ],
   },
 
@@ -668,6 +997,20 @@ export const mathGeometry: MathTopic[] = [
         term: '用同一种正多边形镶嵌（平面镶嵌）',
         explain:
           '用同一种正多边形铺满地面时，拼在同一个顶点处的各内角之和必须恰好等于 $360^\\circ$。能单独铺满平面的正多边形只有正三角形、正四边形（正方形）、正六边形三种。',
+      },
+    ],
+    examPoints: [
+      {
+        point: '用三边关系判断能否构成三角形、求第三边范围或等腰三角形周长',
+        how: '选择与填空高频。只需检验较短两边之和是否大于最长边；给等腰两边求周长时必须分两种腰长讨论，再用三边关系舍去不能构成的情况，端点取等号的情形一律排除。',
+      },
+      {
+        point: '用内角和定理与外角性质求角度',
+        how: '常与角平分线、平行线、高综合出解答题。踩分点：外角只等于与它不相邻的两个内角之和；设未知数列方程时写清依据，求出后用内角和或外角两种算法互相检验。',
+      },
+      {
+        point: '多边形内角和、外角和公式与平面镶嵌的判定',
+        how: '选择题考边数与内角和互求，解答题考正多边形能否镶嵌。每个内角相等求边数走外角和 $360^\\circ$ 最快；镶嵌要说明同一顶点处各内角之和恰好为 $360^\\circ$，注意书写判定过程。',
       },
     ],
     formulas: [
@@ -729,6 +1072,69 @@ export const mathGeometry: MathTopic[] = [
         ],
         answer: '这个多边形是十边形（$n=10$）。',
         tip: '已知「每个内角相等」求边数时，改算外角再用外角和 $360^\\circ$ 最快，还能避开解较复杂的方程。',
+      },
+      {
+        stem: '如图意：在 $\\triangle ABC$ 中，$\\angle A=65^\\circ$，$\\angle B=35^\\circ$，$CD$ 平分 $\\angle ACB$，交 $AB$ 于点 $D$，求 $\\angle BDC$ 的度数。',
+        figure: {
+          id: 'fig-m-geo-sanjiao-pingfen-1',
+          title: '角平分线求角',
+          caption: 'CD 平分 ∠ACB，在 △BCD 中用内角和',
+          view: 'wide',
+          alt: '三角形 ABC 中，角 A 为 65 度、角 B 为 35 度、角 C 为 80 度，CD 平分角 ACB 交 AB 于点 D，角 ACD 与角 BCD 各为 40 度，在三角形 BCD 中由内角和得角 BDC 为 105 度。',
+          prims: [
+            { t: 'line', x1: 15, y1: 70, x2: 85, y2: 70 },
+            { t: 'line', x1: 15, y1: 70, x2: 32.3, y2: 33 },
+            { t: 'line', x1: 85, y1: 70, x2: 32.3, y2: 33 },
+            { t: 'line', x1: 32.3, y1: 33, x2: 42.1, y2: 70, tone: 'accent' },
+            { t: 'dot', x: 15, y: 70, label: 'A', labelDx: -5.5, labelDy: 4 },
+            { t: 'dot', x: 85, y: 70, label: 'B', labelDx: 2.5, labelDy: 4 },
+            { t: 'dot', x: 32.3, y: 33, label: 'C', labelDx: 0, labelDy: -3 },
+            { t: 'dot', x: 42.1, y: 70, label: 'D', labelDx: 1, labelDy: 4.5 },
+            { t: 'angle', x: 15, y: 70, from: 0, to: 65, r: 7, label: '65°' },
+            { t: 'angle', x: 85, y: 70, from: 145, to: 180, r: 7, label: '35°' },
+            { t: 'angle', x: 32.3, y: 33, from: 245, to: 285, r: 6.5, label: '40°' },
+            { t: 'angle', x: 32.3, y: 33, from: 285, to: 325, r: 6.5, label: '40°' },
+            { t: 'angle', x: 42.1, y: 70, from: 0, to: 105, r: 8, label: '105°' },
+          ],
+        },
+        steps: [
+          '先由三角形内角和定理求被平分的角：$\\angle ACB=180^\\circ-65^\\circ-35^\\circ=80^\\circ$。',
+          '因为 $CD$ 平分 $\\angle ACB$，所以 $\\angle ACD=\\angle BCD=\\frac{1}{2}\\angle ACB=40^\\circ$。',
+          '在 $\\triangle BDC$ 中再用内角和：$\\angle BDC=180^\\circ-\\angle B-\\angle BCD=180^\\circ-35^\\circ-40^\\circ=105^\\circ$。',
+          '换外角性质检验：$\\angle BDC$ 是 $\\triangle ADC$ 的外角，$\\angle BDC=\\angle A+\\angle ACD=65^\\circ+40^\\circ=105^\\circ$，结果一致。',
+        ],
+        answer: '$\\angle BDC=105^\\circ$。',
+        tip: '求角思路：先用内角和求出与平分线相关的角，再在目标三角形内用内角和；外角等于不相邻两内角之和可以当检验，两种算法一致才稳妥。',
+      },
+      {
+        stem: '在 $\\triangle ABC$ 中，$AD$ 是 $BC$ 边上的中线，$\\triangle ABD$ 的周长比 $\\triangle ADC$ 的周长大 3，且 $AB+AC=13$，求 $AB$、$AC$ 的长。',
+        figure: {
+          id: 'fig-m-geo-sanjiao-zhongxian-1',
+          title: '中线分出的两个三角形',
+          caption: 'D 是 BC 中点，两三角形周长之差 = AB−AC',
+          view: 'wide',
+          alt: '三角形 ABC 中，D 是边 BC 的中点，BD 与 DC 上画有相同的等长标记，线段 AD 是中线；按真实比例 AB 长为 8、AC 长为 5，两个三角形有公共边 AD，周长之差等于 AB 与 AC 之差为 3。',
+          prims: [
+            { t: 'poly', points: [[10, 70], [70, 70], [72.5, 20]], closed: true },
+            { t: 'line', x1: 72.5, y1: 20, x2: 40, y2: 70, tone: 'accent' },
+            { t: 'line', x1: 25, y1: 68.2, x2: 25, y2: 71.8, tone: 'accent' },
+            { t: 'line', x1: 55, y1: 68.2, x2: 55, y2: 71.8, tone: 'accent' },
+            { t: 'dot', x: 10, y: 70, label: 'B', labelDx: -5.5, labelDy: 4 },
+            { t: 'dot', x: 70, y: 70, label: 'C', labelDx: 2.5, labelDy: 4 },
+            { t: 'dot', x: 72.5, y: 20, label: 'A', labelDx: 2.5, labelDy: -2 },
+            { t: 'dot', x: 40, y: 70, label: 'D', labelDx: 0.5, labelDy: 4.5 },
+            { t: 'text', x: 36, y: 46, text: '8', size: 3.6, anchor: 'end', tone: 'muted' },
+            { t: 'text', x: 75, y: 46, text: '5', size: 3.6, anchor: 'start', tone: 'muted' },
+          ],
+        },
+        steps: [
+          '中线的定义给出 $BD=DC$；两个三角形又有公共边 $AD$，所以周长之差只来自 $AB$ 与 $AC$。',
+          '由题意得 $AB-AC=3$（$\\triangle ABD$ 周长较大，说明 $AB>AC$），又有 $AB+AC=13$。',
+          '两式相加：$2AB=16$，所以 $AB=8$；代回得 $AC=5$。',
+          '检验：$8+5=13$，$8-5=3$，且 $5+8>8$，能构成三角形，结果合理。',
+        ],
+        answer: '$AB=8$，$AC=5$。',
+        tip: '中线分三角形所得两个小三角形周长之差，就等于原三角形两条边之差——中线本身和公共边在作差时全部消掉，抓住这一点就不用分别求两段底边。',
       },
     ],
     pitfalls: [
@@ -826,6 +1232,27 @@ export const mathGeometry: MathTopic[] = [
         difficulty: 2,
         tags: ['平面镶嵌', '多边形内角和'],
       },
+      {
+        id: 'm-geo-sanjiaoxing-z1',
+        type: 'choice',
+        stem: '一个正多边形的每个外角都等于 $40^\\circ$，则这个正多边形的边数是',
+        options: ['$8$', '$10$', '$9$', '$12$'],
+        answer: 'C',
+        explanation:
+          '任意多边形的外角和都等于 $360^\\circ$，正多边形各外角相等，所以边数 $n=360^\\circ\\div 40^\\circ=9$，选 C。若误用内角和公式反推，容易把 $n-2$ 当成 $n$ 而错选 B。',
+        difficulty: 2,
+        tags: ['多边形内角和'],
+      },
+      {
+        id: 'm-geo-sanjiaoxing-z2',
+        type: 'fill',
+        stem: '在 $\\triangle ABC$ 中，$\\angle A=80^\\circ$，$\\angle B=60^\\circ$，则顶点 $C$ 处外角的度数是 ____。（只填数字）',
+        answer: '140',
+        explanation:
+          '方法一：先由内角和得 $\\angle C=180^\\circ-80^\\circ-60^\\circ=40^\\circ$，顶点 $C$ 处的外角与它互补，为 $180^\\circ-40^\\circ=140^\\circ$。方法二：外角等于与它不相邻的两个内角之和，$80^\\circ+60^\\circ=140^\\circ$。',
+        difficulty: 2,
+        tags: ['内角和定理', '外角性质'],
+      },
     ],
   },
 
@@ -868,6 +1295,20 @@ export const mathGeometry: MathTopic[] = [
         term: '角的平分线的性质与判定',
         explain:
           '性质：角的平分线上的点到角两边的距离相等（要作出到两边的垂线段）。判定：在角的内部，到角两边距离相等的点在这个角的平分线上。两者条件与结论互换：由「平分」得「距离相等」是性质，由「距离相等」得「点在平分线上」是判定，用错方向就会写成没有依据的推理（还须强调点在角的内部）。',
+      },
+    ],
+    examPoints: [
+      {
+        point: '辨析五种判定方法，识别 SSA、AAA 等不能判定全等的情形',
+        how: '选择题高频，常让补条件或选判定依据。踩分点：SAS 的角必须是夹角；HL 只限直角三角形且要斜边与一条直角边分别相等；面积或周长相等、三个角分别相等都不能判定全等。',
+      },
+      {
+        point: '利用全等证明线段相等、角相等或直线垂直',
+        how: '解答题主考题型。要先写清在「哪两个三角形中」，三组条件按判定方法顺序排列，公共边、公共角、对顶角必须显式写出，最后写「对应边（角）相等」，证明链一环扣一环，禁止用「由图可知」代替依据。',
+      },
+      {
+        point: '角平分线的性质与判定，以及用二次全等、倍长中线完成证明',
+        how: '见角平分线向两边作垂线段转化距离；一次全等条件不足时先证一组全等再证第二组；见中线常倍长中线构造「八字形」全等，把分散的边集中到同一三角形中求范围或相等。',
       },
     ],
     formulas: [
@@ -933,6 +1374,78 @@ export const mathGeometry: MathTopic[] = [
         ],
         answer: '$BD=CE$。',
         tip: '两个大角相等时，往往要「同时加上或减去同一个角」才能得到能用的夹角，这类图形称为共顶点角模型。',
+      },
+      {
+        stem: '在 $\\triangle ABC$ 中，$AD$ 是 $BC$ 边上的中线，$AB=5$，$AC=3$，求中线 $AD$ 长的取值范围。',
+        figure: {
+          id: 'fig-m-geo-quandeng-beichang-1',
+          title: '倍长中线构造全等',
+          caption: '延长 AD 至 E 使 DE=AD，△BDE≌△CDA',
+          view: 'wide',
+          alt: '三角形 ABC 中 AD 是中线，延长 AD 到点 E 使 DE 等于 AD，连接 BE；三角形 BDE 与三角形 CDA 全等，所以 BE 等于 AC 等于 3；在三角形 ABE 中 AB 等于 5，由三边关系得 AE 大于 2 且小于 8，即 AD 大于 1 且小于 4。',
+          prims: [
+            { t: 'poly', points: [[37, 33], [67, 33], [67, 10.5]], closed: true },
+            { t: 'poly', points: [[37, 33], [52, 33], [37, 55.5]], closed: true, fill: true, tone: 'ok' },
+            { t: 'poly', points: [[67, 33], [52, 33], [67, 10.5]], closed: true, fill: true, tone: 'ok' },
+            { t: 'line', x1: 67, y1: 10.5, x2: 52, y2: 33, tone: 'accent' },
+            { t: 'line', x1: 52, y1: 33, x2: 37, y2: 55.5, tone: 'muted', dashed: true },
+            { t: 'line', x1: 37, y1: 33, x2: 37, y2: 55.5, tone: 'accent' },
+            { t: 'line', x1: 60.9, y1: 22.7, x2: 58.1, y2: 20.8, tone: 'accent' },
+            { t: 'line', x1: 45.9, y1: 45.2, x2: 43.1, y2: 43.3, tone: 'accent' },
+            { t: 'line', x1: 44.5, y1: 31.4, x2: 44.5, y2: 34.6, tone: 'muted' },
+            { t: 'line', x1: 59.5, y1: 31.4, x2: 59.5, y2: 34.6, tone: 'muted' },
+            { t: 'angle', x: 67, y: 33, from: 90, to: 180, r: 3.5, right: true },
+            { t: 'dot', x: 67, y: 10.5, label: 'A', labelDx: 2.5, labelDy: -2 },
+            { t: 'dot', x: 37, y: 33, label: 'B', labelDx: -5.5, labelDy: 1 },
+            { t: 'dot', x: 67, y: 33, label: 'C', labelDx: 2.5, labelDy: 1 },
+            { t: 'dot', x: 52, y: 33, label: 'D', labelDx: -1.5, labelDy: 4.5 },
+            { t: 'dot', x: 37, y: 55.5, label: 'E', labelDx: -5.5, labelDy: 3 },
+            { t: 'text', x: 49, y: 19.5, text: '5', size: 3.6, anchor: 'end', tone: 'muted' },
+            { t: 'text', x: 70, y: 22, text: '3', size: 3.6, anchor: 'start', tone: 'muted' },
+            { t: 'text', x: 33.5, y: 44.5, text: '3', size: 3.6, anchor: 'end', tone: 'muted' },
+          ],
+        },
+        steps: [
+          '中线只给了 $BD=DC$，直接看 $\\triangle ABD$ 与 $\\triangle ADC$ 条件不够；延长 $AD$ 到点 $E$，使 $DE=AD$，连接 $BE$（倍长中线的辅助线）。',
+          '在 $\\triangle BDE$ 和 $\\triangle CDA$ 中：$BD=CD$（中线定义），$\\angle BDE=\\angle CDA$（对顶角相等），$DE=DA$（作图），所以 $\\triangle BDE\\cong\\triangle CDA$（SAS），得 $BE=AC=3$。',
+          '在 $\\triangle ABE$ 中用三边关系：$AB-BE<AE<AB+BE$，即 $5-3<AE<5+3$，所以 $2<AE<8$。',
+          '由作图知 $AE=2AD$，故 $2<2AD<8$，即 $1<AD<4$。',
+        ],
+        answer: '$1<AD<4$。',
+        tip: '中线问题条件分散时，倍长中线构造「八字形」全等是通法：它把 $AC$ 等量搬到 $BE$，使 $AB$、$AC$ 与两倍中线落在同一个三角形里，再用三边关系求范围。',
+      },
+      {
+        stem: '如图意：$PB\\perp AB$ 于点 $B$，$PC\\perp AC$ 于点 $C$，且 $PB=PC$，求证：射线 $AP$ 平分 $\\angle BAC$。',
+        figure: {
+          id: 'fig-m-geo-quandeng-hl-1',
+          title: '斜边直角边（HL）判全等',
+          caption: 'PB⊥AB，PC⊥AC，PB=PC，AP 公共',
+          view: 'wide',
+          alt: '从点 A 引出两条射线 AB 与 AC，点 P 在角内，PB 垂直 AB 于点 B，PC 垂直 AC 于点 C，图中 B、C 处画有直角标记，PB 与 PC 画有相同的等长标记，AP 是公共边；三角形 ABP 与三角形 ACP 全等，所以 AP 平分角 BAC。',
+          prims: [
+            { t: 'line', x1: 18, y1: 50, x2: 84.2, y2: 65.3 },
+            { t: 'line', x1: 18, y1: 50, x2: 75.1, y2: 12.9 },
+            { t: 'line', x1: 18, y1: 50, x2: 75.1, y2: 39.9 },
+            { t: 'line', x1: 75.1, y1: 39.9, x2: 69.9, y2: 62, tone: 'accent' },
+            { t: 'line', x1: 75.1, y1: 39.9, x2: 62.8, y2: 20.9, tone: 'accent' },
+            { t: 'line', x1: 70.9, y1: 51.3, x2: 74.1, y2: 50.6, tone: 'accent' },
+            { t: 'line', x1: 67.5, y1: 31.3, x2: 70.4, y2: 29.5, tone: 'accent' },
+            { t: 'angle', x: 69.9, y: 62, from: 77, to: 167, r: 3.5, right: true },
+            { t: 'angle', x: 62.8, y: 20.9, from: 213, to: 303, r: 3.5, right: true },
+            { t: 'dot', x: 18, y: 50, label: 'A', labelDx: -5.5, labelDy: 1 },
+            { t: 'dot', x: 69.9, y: 62, label: 'B', labelDx: 2, labelDy: 4.5 },
+            { t: 'dot', x: 62.8, y: 20.9, label: 'C', labelDx: 1, labelDy: -3 },
+            { t: 'dot', x: 75.1, y: 39.9, label: 'P', labelDx: 2.5, labelDy: 1 },
+          ],
+        },
+        steps: [
+          '由垂直的定义得 $\\angle ABP=\\angle ACP=90^\\circ$，所以 $\\triangle ABP$、$\\triangle ACP$ 都是直角三角形。',
+          '在 $\\mathrm{Rt}\\triangle ABP$ 和 $\\mathrm{Rt}\\triangle ACP$ 中：$AP=AP$（公共斜边），$PB=PC$（已知），所以两三角形全等（HL）。',
+          '所以 $\\angle BAP=\\angle CAP$（全等三角形的对应角相等）。',
+          '点 $P$ 在 $\\angle BAC$ 的内部，故射线 $AP$ 平分 $\\angle BAC$；这也说明「到角两边距离相等的点在角的平分线上」。',
+        ],
+        answer: '射线 $AP$ 平分 $\\angle BAC$。',
+        tip: '由「距离相等」推「平分」用的是角平分线的判定，方向与性质相反；证明时先作垂线段、用全等过渡，最后必须点明点在角的内部，结论才严密。',
       },
     ],
     pitfalls: [
@@ -1029,6 +1542,67 @@ export const mathGeometry: MathTopic[] = [
         difficulty: 3,
         tags: ['边边角', '反例', '全等判定'],
       },
+      {
+        id: 'm-geo-quandeng-z1',
+        type: 'choice',
+        stem: '下列关于全等三角形的说法中，正确的是',
+        options: [
+          '全等三角形对应边上的中线不一定相等',
+          '两角和其中一个角的对边分别相等的两个三角形全等',
+          '面积相等的两个三角形一定全等',
+          '两条直角边分别相等的两个直角三角形必须用 HL 判定全等',
+        ],
+        answer: 'B',
+        explanation:
+          'A 错：全等三角形对应边上的高、中线、角平分线都相等。B 是 AAS，正确。C 错：面积相等只说明底与高的乘积相等，形状可以不同。D 错：两条直角边分别相等用 SAS 即可判定，HL 需要的是斜边与一条直角边分别相等。',
+        difficulty: 2,
+        tags: ['全等判定', '条件辨析'],
+      },
+      {
+        id: 'm-geo-quandeng-z2',
+        type: 'short',
+        stem: '如图意：点 $B$、$C$、$D$ 在同一直线上，$AB\\perp BD$，$ED\\perp BD$，垂足分别为 $B$、$D$，且 $AC=CE$，$BC=DE$。求证：$AC\\perp CE$。',
+        figure: {
+          id: 'fig-m-geo-quandeng-chuizhi-1',
+          title: 'HL 判全等证垂直',
+          caption: '△ABC≌△CDE（HL），∠ACE=180°−90°',
+          view: 'square',
+          alt: '点 B、C、D 在同一条水平直线上，AB 垂直于该直线于点 B，ED 垂直于该直线于点 D，图中 B、D 处有直角标记；斜边 AC 与 CE 画有相同标记、直角边 BC 与 DE 画有相同标记，由 HL 得三角形 ABC 全等于三角形 CDE，从而 AC 垂直于 CE。',
+          prims: [
+            { t: 'line', x1: 8, y1: 74, x2: 91, y2: 74 },
+            { t: 'line', x1: 12, y1: 74, x2: 12, y2: 29 },
+            { t: 'line', x1: 87, y1: 74, x2: 87, y2: 44 },
+            { t: 'line', x1: 12, y1: 29, x2: 42, y2: 74 },
+            { t: 'line', x1: 42, y1: 74, x2: 87, y2: 44 },
+            { t: 'line', x1: 25, y1: 72.4, x2: 29, y2: 75.6, tone: 'accent' },
+            { t: 'line', x1: 85, y1: 72.4, x2: 89, y2: 75.6, tone: 'accent' },
+            { t: 'line', x1: 26.1, y1: 50.6, x2: 27.9, y2: 52.4, tone: 'ok' },
+            { t: 'line', x1: 63.6, y1: 58.1, x2: 65.4, y2: 59.9, tone: 'ok' },
+            { t: 'angle', x: 12, y: 74, from: 0, to: 90, r: 3.5, right: true },
+            { t: 'angle', x: 87, y: 74, from: 90, to: 180, r: 3.5, right: true },
+            { t: 'dot', x: 12, y: 29, label: 'A', labelDx: -1, labelDy: -3 },
+            { t: 'dot', x: 12, y: 74, label: 'B', labelDx: -5, labelDy: 4.5 },
+            { t: 'dot', x: 42, y: 74, label: 'C', labelDx: 0.5, labelDy: 4.5 },
+            { t: 'dot', x: 87, y: 74, label: 'D', labelDx: 2, labelDy: 4.5 },
+            { t: 'dot', x: 87, y: 44, label: 'E', labelDx: 2.5, labelDy: 0 },
+          ],
+        },
+        answer:
+          '因为 $AB\\perp BD$，$ED\\perp BD$，所以 $\\angle B=\\angle D=90^\\circ$，$\\triangle ABC$ 与 $\\triangle CDE$ 都是直角三角形。'
+          + '在 $\\mathrm{Rt}\\triangle ABC$ 和 $\\mathrm{Rt}\\triangle CDE$ 中：$AC=CE$（已知，斜边），$BC=DE$（已知，直角边），所以 $\\mathrm{Rt}\\triangle ABC\\cong\\mathrm{Rt}\\triangle CDE$（HL）。'
+          + '所以 $\\angle A=\\angle ECD$（全等三角形对应角相等）。'
+          + '在 $\\mathrm{Rt}\\triangle ABC$ 中两锐角互余，$\\angle A+\\angle ACB=90^\\circ$，等量代换得 $\\angle ECD+\\angle ACB=90^\\circ$。'
+          + '又因为 $B$、$C$、$D$ 共线，$\\angle ACB+\\angle ACE+\\angle ECD=180^\\circ$，所以 $\\angle ACE=180^\\circ-90^\\circ=90^\\circ$，即 $AC\\perp CE$。',
+        rubric: [
+          '由垂直条件说明两个三角形都是直角三角形',
+          '用 HL 证明 $\\mathrm{Rt}\\triangle ABC\\cong\\mathrm{Rt}\\triangle CDE$，并写明斜边与直角边两组条件',
+          '由全等得 $\\angle A=\\angle ECD$，结合两锐角互余完成等量代换',
+          '利用 $B$、$C$、$D$ 共线算出 $\\angle ACE=90^\\circ$，写出垂直结论',
+        ],
+        explanation: '本题考查 HL 判定与全等性质的综合运用。评分要点：先点明两个直角三角形；按 HL 列出斜边 $AC=CE$、直角边 $BC=DE$ 两组条件；证全等后把对应角等量代换到直角三角形两锐角互余中；最后利用三点共线的平角算出 $\\angle ACE=90^\\circ$。常见失分点：不说明是直角三角形就直接用 HL；把 $BC=DE$ 当成斜边；得到角互余后忘记 $B$、$C$、$D$ 共线这一条件，无法收出垂直结论。',
+        difficulty: 3,
+        tags: ['全等判定', '全等性质'],
+      },
     ],
   },
 
@@ -1078,6 +1652,20 @@ export const mathGeometry: MathTopic[] = [
           '在直角三角形中，如果一个锐角等于 $30^\\circ$，那么它所对的直角边等于斜边的一半。它的逆命题也成立：直角三角形中，若一条直角边等于斜边的一半，则这条直角边所对的锐角是 $30^\\circ$。',
       },
     ],
+    examPoints: [
+      {
+        point: '等腰三角形的性质与判定，特别是分类讨论与「三线合一」',
+        how: '已知等腰三角形一个角求其他角必须分顶角、底角两种情况；解答题常借三线合一把底边中点、高、角平分线互相转化。书写时要写清是「顶角平分线、底边上的中线、底边上的高」，判定等腰用等角对等边。',
+      },
+      {
+        point: '线段垂直平分线的性质与判定，求线段长或证点在垂直平分线上',
+        how: '选择、填空、证明都常见。见垂直平分线就连接端点把未知边替换成已知边；证「点在垂直平分线上」必须用判定（距离相等），方向用反会构成循环论证。',
+      },
+      {
+        point: '等边三角形的判定、含 $30^\\circ$ 角直角三角形的结论与坐标对称规律',
+        how: '有一个角为 $60^\\circ$ 的等腰三角形是等边三角形是高频判定；$30^\\circ$ 角所对直角边等于斜边一半常配合作图与计算；关于坐标轴对称的点注意哪个坐标变号，对称轴要画成直线。',
+      },
+    ],
     formulas: [
       {
         name: '关于坐标轴对称的点的坐标',
@@ -1120,6 +1708,27 @@ export const mathGeometry: MathTopic[] = [
       },
       {
         stem: '在 $\\triangle ABC$ 中，$AB$ 的垂直平分线分别交 $AB$、$AC$ 于点 $D$、$E$，已知 $AC=8$，$BC=5$，求 $\\triangle BEC$ 的周长。',
+        figure: {
+          id: 'fig-m-geo-zhouduichen-chuizhipingfen-1',
+          title: '垂直平分线的等距性质',
+          caption: 'BE=AE，△BEC 周长 = AC+BC',
+          view: 'wide',
+          alt: '三角形 ABC 中，AB 的垂直平分线交 AB 于点 D、交 AC 于点 E，D 处有直角标记；EA 与 EB 画有相同标记表示相等，AC 长为 8、BC 长为 5，三角形 BEC 的周长等于 AC 加 BC 为 13。',
+          prims: [
+            { t: 'poly', points: [[15, 45], [60, 45], [61.9, 7.6]], closed: true },
+            { t: 'line', x1: 37.5, y1: 52, x2: 37.5, y2: 22, tone: 'accent' },
+            { t: 'angle', x: 37.5, y: 45, from: 90, to: 180, r: 3, right: true },
+            { t: 'line', x1: 25.2, y1: 34.7, x2: 27.3, y2: 37.3, tone: 'ok' },
+            { t: 'line', x1: 47.7, y1: 34.7, x2: 49.8, y2: 37.3, tone: 'ok' },
+            { t: 'dot', x: 15, y: 45, label: 'A', labelDx: -5.5, labelDy: 1 },
+            { t: 'dot', x: 60, y: 45, label: 'B', labelDx: 1, labelDy: 4.5 },
+            { t: 'dot', x: 61.9, y: 7.6, label: 'C', labelDx: 2.5, labelDy: -1 },
+            { t: 'dot', x: 37.5, y: 45, label: 'D', labelDx: -4.5, labelDy: 4 },
+            { t: 'dot', x: 37.5, y: 27, label: 'E', labelDx: 2.5, labelDy: 0.5 },
+            { t: 'text', x: 44, y: 24, text: '8', size: 3.6, anchor: 'start', tone: 'muted' },
+            { t: 'text', x: 65, y: 25, text: '5', size: 3.6, anchor: 'start', tone: 'muted' },
+          ],
+        },
         steps: [
           '因为 $DE$ 是 $AB$ 的垂直平分线，所以 $EA=EB$（线段垂直平分线上的点到线段两个端点的距离相等）。',
           '$\\triangle BEC$ 的周长 $=BE+EC+BC=EA+EC+BC$。',
@@ -1138,6 +1747,49 @@ export const mathGeometry: MathTopic[] = [
         ],
         answer: '$BC=5$，$AC=5\\sqrt{3}$。',
         tip: '含 $30^\\circ$ 角的直角三角形三边之比是 $1:\\sqrt{3}:2$（依次是 $30^\\circ$ 角所对的直角边、另一条直角边、斜边），记比例比每次列勾股方程更快。',
+      },
+      {
+        stem: '如图意：在等边三角形 $ABC$ 中，点 $D$、$E$ 分别在边 $BC$、$CA$ 上，且 $BD=CE$，$AD$ 与 $BE$ 相交于点 $P$，求 $\\angle APE$ 的度数。',
+        figure: {
+          id: 'fig-m-geo-zhouduichen-dengbian-1',
+          title: '等边三角形中的全等',
+          caption: 'BD=CE ⇒ △ABD≌△BCE，∠APE=60°',
+          view: 'square',
+          alt: '等边三角形 ABC 中，D 在边 BC 上、E 在边 CA 上，BD 与 CE 画有相同标记表示相等；AD 与 BE 相交于点 P，由三角形 ABD 全等于三角形 BCE 得角 BAD 等于角 CBE，角 APE 等于角 BAP 加角 ABP 为 60 度。',
+          prims: [
+            { t: 'poly', points: [[18, 76], [82, 76], [50, 20.6]], closed: true },
+            { t: 'line', x1: 50, y1: 20.6, x2: 42, y2: 76 },
+            { t: 'line', x1: 18, y1: 76, x2: 70, y2: 55.2 },
+            { t: 'line', x1: 30, y1: 74.2, x2: 30, y2: 77.8, tone: 'accent' },
+            { t: 'line', x1: 74.4, y1: 66.5, x2: 77.6, y2: 64.7, tone: 'accent' },
+            { t: 'angle', x: 43.5, y: 65.8, from: 22, to: 82, r: 5, label: '60°' },
+            { t: 'dot', x: 50, y: 20.6, label: 'A', labelDx: 0, labelDy: -3 },
+            { t: 'dot', x: 18, y: 76, label: 'B', labelDx: -5, labelDy: 4.5 },
+            { t: 'dot', x: 82, y: 76, label: 'C', labelDx: 2.5, labelDy: 4.5 },
+            { t: 'dot', x: 42, y: 76, label: 'D', labelDx: 0, labelDy: 4.5 },
+            { t: 'dot', x: 70, y: 55.2, label: 'E', labelDx: 2.5, labelDy: 0 },
+            { t: 'dot', x: 43.5, y: 65.8, label: 'P', labelDx: -5.5, labelDy: -1.5 },
+          ],
+        },
+        steps: [
+          '等边三角形给出 $AB=BC$、$\\angle ABD=\\angle BCE=60^\\circ$，加上 $BD=CE$，在 $\\triangle ABD$ 和 $\\triangle BCE$ 中构成 SAS，所以 $\\triangle ABD\\cong\\triangle BCE$。',
+          '由全等得对应角相等：$\\angle BAD=\\angle CBE$。',
+          '$\\angle APE$ 是 $\\triangle ABP$ 的外角，所以 $\\angle APE=\\angle BAP+\\angle ABP$（外角等于不相邻两内角之和）。',
+          '把 $\\angle BAP$ 等量代换成 $\\angle CBE$，则 $\\angle APE=\\angle CBE+\\angle ABP=\\angle ABC=60^\\circ$。',
+        ],
+        answer: '$\\angle APE=60^\\circ$。',
+        tip: '等边三角形中夹 $60^\\circ$ 角的两组对应边常凑成 SAS 全等；所求角若在两条连线的交点处，优先用外角把它拆成两个角之和，再借全等做等量代换。',
+      },
+      {
+        stem: '用构造全等的方法证明等腰三角形的判定定理：如果一个三角形有两个角相等，那么这两个角所对的边也相等。',
+        steps: [
+          '已知 $\\triangle ABC$ 中 $\\angle B=\\angle C$，要证 $AB=AC$。辅助线的想法是把 $\\triangle ABC$ 分成两个三角形：作 $AD\\perp BC$，垂足为 $D$。',
+          '由垂直的定义得 $\\angle ADB=\\angle ADC=90^\\circ$。',
+          '在 $\\triangle ABD$ 和 $\\triangle ACD$ 中：$\\angle B=\\angle C$（已知），$\\angle ADB=\\angle ADC$（已证），$AD=AD$（公共边），所以 $\\triangle ABD\\cong\\triangle ACD$（AAS）。',
+          '所以 $AB=AC$（全等三角形的对应边相等），即等角对等边。',
+        ],
+        answer: '$AB=AC$，等角对等边得证。',
+        tip: '证明判定定理时不能用定理自身作依据；作底边上的高（或顶角平分线）把一个三角形拆成两个全等三角形，是沟通角相等与边相等的标准辅助线。',
       },
     ],
     pitfalls: [
@@ -1227,6 +1879,32 @@ export const mathGeometry: MathTopic[] = [
         difficulty: 2,
         tags: ['垂直平分线', '判定与性质'],
       },
+      {
+        id: 'm-geo-zhouduichen-z1',
+        type: 'choice',
+        stem: '下列关于轴对称与等腰三角形的说法中，正确的是',
+        options: [
+          '等腰三角形的高、中线、角平分线互相重合',
+          '等腰三角形中有一个角是 $40^\\circ$，则它的顶角一定是 $40^\\circ$',
+          '点 $P$ 在线段 $AB$ 的垂直平分线上，则 $PA=AB$',
+          '有一个角是 $60^\\circ$ 的等腰三角形是等边三角形',
+        ],
+        answer: 'D',
+        explanation:
+          'A 错：只有顶角平分线、底边上的中线、底边上的高才互相重合。B 错：$40^\\circ$ 可能是顶角（底角各 $70^\\circ$），也可能是底角（顶角 $100^\\circ$）。C 错：应为 $PA=PB$。D 是等边三角形的判定定理，正确。',
+        difficulty: 2,
+        tags: ['三线合一', '等腰三角形'],
+      },
+      {
+        id: 'm-geo-zhouduichen-z2',
+        type: 'fill',
+        stem: '点 $P$ 在线段 $AB$ 的垂直平分线上，且 $PA=2x-1$，$PB=x+3$，则 $x=$ ____。（只填数字）',
+        answer: '4',
+        explanation:
+          '线段垂直平分线上的点到线段两个端点的距离相等，所以 $PA=PB$，即 $2x-1=x+3$，解得 $x=4$。回代得 $PA=PB=7$，距离相等，结果合理。',
+        difficulty: 2,
+        tags: ['垂直平分线', '判定与性质'],
+      },
     ],
   },
 
@@ -1269,6 +1947,20 @@ export const mathGeometry: MathTopic[] = [
         term: '立体图形表面上的最短路径',
         explain:
           '求曲面或立体图形表面上两点间的最短路线，要把表面展开成平面图形，依据「两点之间线段最短」连接两点，再用勾股定理计算长度。展开方式可能不止一种，需要分别计算并比较，才能确定最小值。',
+      },
+    ],
+    examPoints: [
+      {
+        point: '在直角三角形中已知两边求第三边，或利用方程求线段长',
+        how: '选择、填空高频。先确认直角三角形并找准斜边，再列平方关系；折叠、旗杆断裂等问题中设未知线段为 $x$，把折叠前后相等的边标在图上，用勾股定理列方程求解，解后检验为正且合三边关系。',
+      },
+      {
+        point: '用逆定理判定直角三角形或说明垂直',
+        how: '给三边长度时先算平方，按「找最长边、验平方和、下直角结论」三步书写；常与中线、面积结合：先逆定理得垂直，再用垂直平分线或面积公式收尾，依据必须写明是逆定理。',
+      },
+      {
+        point: '立体表面最短路径与实际测量问题',
+        how: '蚂蚁爬行必须把立体表面展开成平面后连线，各种展开方式分别计算取最小；梯子靠墙、航行方位等应用题先画示意图，把实际量标成直角三角形的边，再用勾股定理作答并写单位。',
       },
     ],
     formulas: [
@@ -1322,6 +2014,25 @@ export const mathGeometry: MathTopic[] = [
       },
       {
         stem: '一个长方体盒子的长、宽、高分别是 $5$、$4$、$3$（单位：cm），一只蚂蚁要从盒子的一个顶点沿表面爬到与它相对的顶点，求最短路程。',
+        figure: {
+          id: 'fig-m-geo-gougu-zhankai-1',
+          title: '长方体表面最短路径（展开图）',
+          caption: '宽与高所在面展开：√(5²+7²)=√74',
+          view: 'square',
+          alt: '把长方体宽与高所在的两个面沿公共棱展开成一个矩形：一边是长 5，另一边是宽加高等于 7，公共棱是中间的横线；蚂蚁从左上角顶点 S 沿虚线对角线爬到右下角的对角顶点 T，由勾股定理最短路程为根号 74，约 8.6 厘米。',
+          prims: [
+            { t: 'rect', x: 28, y: 18, w: 35, h: 49 },
+            { t: 'line', x1: 28, y1: 46, x2: 63, y2: 46, tone: 'muted', dashed: true },
+            { t: 'line', x1: 28, y1: 18, x2: 63, y2: 67, tone: 'accent', dashed: true },
+            { t: 'angle', x: 63, y: 67, from: 90, to: 180, r: 3, right: true },
+            { t: 'dot', x: 28, y: 18, label: 'S', labelDx: -5, labelDy: -1 },
+            { t: 'dot', x: 63, y: 67, label: 'T', labelDx: 2.5, labelDy: 2 },
+            { t: 'text', x: 52, y: 40, text: '√74', size: 3.6, anchor: 'start', tone: 'accent' },
+            { t: 'text', x: 45.5, y: 71.5, text: '长 5', size: 3.4 },
+            { t: 'text', x: 24.5, y: 32, text: '宽 4', size: 3.4, anchor: 'end' },
+            { t: 'text', x: 24.5, y: 56.5, text: '高 3', size: 3.4, anchor: 'end' },
+          ],
+        },
         steps: [
           '蚂蚁必须经过盒子的表面，把经过的两个面沿它们公共的棱展开成平面图形，最短路程就是展开图中两点之间的线段长（两点之间线段最短）。',
           '长与宽所在的面展开：路程为 $\\sqrt{(5+4)^2+3^2}=\\sqrt{81+9}=\\sqrt{90}$。',
@@ -1331,6 +2042,75 @@ export const mathGeometry: MathTopic[] = [
         ],
         answer: '最短路程是 $\\sqrt{74}$ cm。',
         tip: '立体表面的最短路径必须先展开成平面再连线，而且要把所有展开方式都算出来比较，漏掉一种可能取不到最小值。',
+      },
+      {
+        stem: '如图意：矩形纸片 $ABCD$ 中，$AB=CD=8$，$AD=BC=10$。把纸片折叠，使点 $D$ 落在 $BC$ 边上的点 $F$ 处，折痕为 $AE$（点 $E$ 在 $CD$ 边上），求 $EC$ 的长。',
+        figure: {
+          id: 'fig-m-geo-gougu-zhedie-1',
+          title: '矩形折叠求 EC',
+          caption: 'AF=AD=10，EF=ED，在 Rt△EFC 中列方程',
+          view: 'square',
+          alt: '矩形 ABCD 中 AB 等于 8、AD 等于 10，折叠使点 D 落在 BC 边上的点 F 处，折痕 AE 画成虚线；AF 等于 AD 等于 10，BF 等于 6、FC 等于 4，DE 折过去成为 EF，设 EC 为 x，在直角三角形 EFC 中用勾股定理解得 EC 等于 3。',
+          prims: [
+            { t: 'rect', x: 30, y: 15, w: 60, h: 48 },
+            { t: 'line', x1: 30, y1: 15, x2: 90, y2: 45, tone: 'accent', dashed: true },
+            { t: 'line', x1: 30, y1: 15, x2: 66, y2: 63 },
+            { t: 'line', x1: 90, y1: 45, x2: 66, y2: 63 },
+            { t: 'angle', x: 30, y: 63, from: 0, to: 90, r: 3, right: true },
+            { t: 'text', x: 63, y: 27, text: '折痕 AE', size: 3.2, tone: 'accent' },
+            { t: 'dot', x: 30, y: 15, label: 'A', labelDx: -5, labelDy: -2 },
+            { t: 'dot', x: 30, y: 63, label: 'B', labelDx: -5, labelDy: 4.5 },
+            { t: 'dot', x: 90, y: 63, label: 'C', labelDx: 2, labelDy: 4.5 },
+            { t: 'dot', x: 90, y: 15, label: 'D', labelDx: 2, labelDy: -2.5 },
+            { t: 'dot', x: 66, y: 63, label: 'F', labelDx: 0, labelDy: 4.5 },
+            { t: 'dot', x: 90, y: 45, label: 'E', labelDx: 2.5, labelDy: 0 },
+            { t: 'text', x: 26.5, y: 39, text: '8', size: 3.6, anchor: 'end', tone: 'muted' },
+            { t: 'text', x: 60, y: 69.5, text: '10', size: 3.6, tone: 'muted' },
+            { t: 'text', x: 48, y: 69.5, text: '6', size: 3.2, tone: 'muted' },
+            { t: 'text', x: 78, y: 69.5, text: '4', size: 3.2, tone: 'muted' },
+          ],
+        },
+        steps: [
+          '折叠前后重合的边相等：$AF=AD=10$，$EF=DE$（这是列方程的等量来源）。',
+          '在 $\\mathrm{Rt}\\triangle ABF$ 中用勾股定理：$BF=\\sqrt{AF^2-AB^2}=\\sqrt{10^2-8^2}=6$，所以 $FC=BC-BF=10-6=4$。',
+          '设 $EC=x$，则 $DE=8-x$，于是 $EF=DE=8-x$。',
+          '在 $\\mathrm{Rt}\\triangle EFC$ 中：$x^2+4^2=(8-x)^2$，展开得 $x^2+16=64-16x+x^2$，解得 $x=3$。',
+        ],
+        answer: '$EC=3$。',
+        tip: '折叠问题的思路是「折痕即对称轴」：重合边、重合角全部相等，先在一个直角三角形里求出过渡线段，再设未知数到另一个直角三角形中列勾股方程。',
+      },
+      {
+        stem: '在 $\\triangle ABC$ 中，$AB=13$，$AC=15$，$BC=14$，求 $BC$ 边上的高 $AD$ 与 $\\triangle ABC$ 的面积。',
+        figure: {
+          id: 'fig-m-geo-gougu-shuanggougu-1',
+          title: '双勾股求斜三角形的高',
+          caption: '设 BD=x，同一条高两次用勾股定理',
+          view: 'square',
+          alt: '三角形 ABC 中 AB 等于 13、AC 等于 15、BC 等于 14，AD 是 BC 边上的高，D 处有直角标记；BD 等于 5、DC 等于 9、AD 等于 12，由两个直角三角形的勾股定理联立求得，三角形面积等于 84。',
+          prims: [
+            { t: 'poly', points: [[16, 78], [86, 78], [41, 18]], closed: true },
+            { t: 'line', x1: 41, y1: 18, x2: 41, y2: 78, tone: 'muted', dashed: true },
+            { t: 'angle', x: 41, y: 78, from: 0, to: 90, r: 3, right: true },
+            { t: 'dot', x: 41, y: 18, label: 'A', labelDx: 0, labelDy: -3 },
+            { t: 'dot', x: 16, y: 78, label: 'B', labelDx: -5, labelDy: 4.5 },
+            { t: 'dot', x: 86, y: 78, label: 'C', labelDx: 2.5, labelDy: 4.5 },
+            { t: 'dot', x: 41, y: 78, label: 'D', labelDx: 0, labelDy: 4.5 },
+            { t: 'text', x: 25, y: 46, text: '13', size: 3.6, anchor: 'end', tone: 'muted' },
+            { t: 'text', x: 66, y: 46, text: '15', size: 3.6, anchor: 'start', tone: 'muted' },
+            { t: 'text', x: 28.5, y: 83.5, text: '5', size: 3.2, tone: 'muted' },
+            { t: 'text', x: 63.5, y: 83.5, text: '9', size: 3.2, tone: 'muted' },
+            { t: 'text', x: 51, y: 89.5, text: '14', size: 3.6, tone: 'muted' },
+            { t: 'text', x: 44, y: 48, text: '12', size: 3.6, anchor: 'start', tone: 'muted' },
+          ],
+        },
+        steps: [
+          '高 $AD$ 把 $\\triangle ABC$ 分成两个直角三角形，但两段底边都未知。设 $BD=x$，则 $DC=14-x$（高在三角形内部，由三边可预判为锐角三角形）。',
+          '同一条高在两个直角三角形中分别用勾股定理：$AD^2=AB^2-BD^2=13^2-x^2$，$AD^2=AC^2-DC^2=15^2-(14-x)^2$。',
+          '两式相等：$169-x^2=225-(14-x)^2$，化简得 $169=29+28x$，解得 $x=5$。',
+          '所以 $AD=\\sqrt{13^2-5^2}=\\sqrt{144}=12$，面积 $S=\\frac{1}{2}\\times 14\\times 12=84$。',
+        ],
+        answer: '$AD=12$，$\\triangle ABC$ 的面积是 $84$。',
+        tip: '斜三角形求高的通法是「设底边一段为 $x$，同一条高两次列勾股，等高等量联立」；$13,14,15$ 三角形面积恰为整数 84，是非常经典的模型。',
       },
     ],
     pitfalls: [
@@ -1423,6 +2203,27 @@ export const mathGeometry: MathTopic[] = [
         difficulty: 3,
         tags: ['勾股定理', '逆定理', '辨析'],
       },
+      {
+        id: 'm-geo-gougu-z1',
+        type: 'choice',
+        stem: '一架长 $2.5$ m 的梯子斜靠在竖直的墙上，梯子底端离墙脚 $0.7$ m，则梯子顶端离地面的高度是',
+        options: ['$1.8$ m', '$2.0$ m', '$2.4$ m', '$3.2$ m'],
+        answer: 'C',
+        explanation:
+          '墙与地面垂直，梯子是斜边。由勾股定理得高度 $h=\\sqrt{2.5^2-0.7^2}=\\sqrt{6.25-0.49}=\\sqrt{5.76}=2.4$ m，选 C。选 D 是把两条边直接相加，选 A、B 是平方或开方计算出错。',
+        difficulty: 2,
+        tags: ['勾股定理', '求直角边'],
+      },
+      {
+        id: 'm-geo-gougu-z2',
+        type: 'fill',
+        stem: '一个长方体的长、宽、高分别是 $3$、$2$、$12$，一只蚂蚁从一个顶点沿表面爬到与它相对的顶点，最短路程是 ____。（只填数字）',
+        answer: '13',
+        explanation:
+          '把表面展开后比较三种走法：$\\sqrt{(3+2)^2+12^2}=\\sqrt{169}=13$；$\\sqrt{(3+12)^2+2^2}=\\sqrt{229}$；$\\sqrt{(2+12)^2+3^2}=\\sqrt{205}$。三者中最小的是 $13$，所以最短路程为 $13$。',
+        difficulty: 3,
+        tags: ['勾股定理'],
+      },
     ],
   },
 
@@ -1475,6 +2276,20 @@ export const mathGeometry: MathTopic[] = [
         term: '中点四边形',
         explain:
           '顺次连接任意四边形各边中点所得的四边形叫中点四边形，它一定是平行四边形（用两次中位线定理可证）。进一步：若原四边形的对角线相等，则中点四边形是菱形；若原四边形的对角线互相垂直，则中点四边形是矩形；若对角线既相等又互相垂直，则中点四边形是正方形。',
+      },
+    ],
+    examPoints: [
+      {
+        point: '平行四边形性质与判定的综合运用',
+        how: '选择题考条件辨析（注意「一组对边平行另一组相等」可能是等腰梯形）；解答题常需连对角线证全等，或由对角线互相平分判定。书写要先写平行（或相等）依据，再下「是平行四边形」结论，性质与判定方向不能混。',
+      },
+      {
+        point: '矩形、菱形、正方形的特殊性质与判定，以及相关计算',
+        how: '矩形对角线相等、菱形对角线垂直且四边相等，考边长、面积时常在对角线分出的直角三角形中用勾股定理；菱形面积用 $\\frac{1}{2}d_1d_2$。判定时「对角线相等（垂直）」必须配齐「平行四边形」前提，正方形要双重条件。',
+      },
+      {
+        point: '三角形中位线定理、斜边中线与中点四边形',
+        how: '见两个中点连中位线，平行与一半两层结论按问题取舍；中点四边形题连一条对角线用两次中位线，再根据原四边形对角线相等或垂直判断是菱形还是矩形，证明链要写出「四边相等」等中间步骤。',
       },
     ],
     formulas: [
@@ -1533,6 +2348,26 @@ export const mathGeometry: MathTopic[] = [
       },
       {
         stem: '菱形 $ABCD$ 的两条对角线 $AC$、$BD$ 相交于点 $O$，$AC=8$，$BD=6$，求菱形的边长和面积。',
+        figure: {
+          id: 'fig-m-geo-sibianxing-lingxing-1',
+          title: '菱形的对角线互相垂直平分',
+          caption: '对角线分菱形为四个直角三角形',
+          view: 'square',
+          alt: '菱形 ABCD 的对角线 AC 等于 8、BD 等于 6，交于点 O，O 处有直角标记表示对角线互相垂直；对角线把菱形分成四个直角三角形，边长等于根号下 4 的平方加 3 的平方为 5，面积等于 8 乘 6 除以 2 为 24。',
+          prims: [
+            { t: 'poly', points: [[50, 25], [35, 45], [50, 65], [65, 45]], closed: true },
+            { t: 'line', x1: 50, y1: 25, x2: 50, y2: 65 },
+            { t: 'line', x1: 35, y1: 45, x2: 65, y2: 45 },
+            { t: 'angle', x: 50, y: 45, from: 90, to: 180, r: 3, right: true },
+            { t: 'dot', x: 50, y: 25, label: 'A', labelDx: 0, labelDy: -3 },
+            { t: 'dot', x: 35, y: 45, label: 'B', labelDx: -5.5, labelDy: 0.5 },
+            { t: 'dot', x: 50, y: 65, label: 'C', labelDx: 0, labelDy: 4.5 },
+            { t: 'dot', x: 65, y: 45, label: 'D', labelDx: 2.5, labelDy: 0.5 },
+            { t: 'dot', x: 50, y: 45, r: 0.9, label: 'O', labelDx: 2, labelDy: 3.5 },
+            { t: 'text', x: 52.5, y: 34, text: '8', size: 3.6, anchor: 'start', tone: 'muted' },
+            { t: 'text', x: 41, y: 41.5, text: '6', size: 3.6, anchor: 'end', tone: 'muted' },
+          ],
+        },
         steps: [
           '因为 $ABCD$ 是菱形，所以两条对角线互相垂直且互相平分（菱形的性质），于是 $AC\\perp BD$，$AO=\\frac{1}{2}AC=4$，$BO=\\frac{1}{2}BD=3$。',
           '在 $\\mathrm{Rt}\\triangle AOB$ 中，由勾股定理得 $AB=\\sqrt{AO^2+BO^2}=\\sqrt{4^2+3^2}=5$，所以菱形的边长是 5。',
@@ -1541,6 +2376,73 @@ export const mathGeometry: MathTopic[] = [
         ],
         answer: '菱形的边长是 5，面积是 24。',
         tip: '菱形的对角线把它分成四个全等的直角三角形：边长用勾股定理求，面积用对角线乘积的一半，一次解决两个问题。',
+      },
+      {
+        stem: '如图意：矩形 $ABCD$ 的两条对角线相交于点 $O$，$\\angle AOB=60^\\circ$，$AB=4$，求对角线 $AC$ 的长。',
+        figure: {
+          id: 'fig-m-geo-sibianxing-juxing-1',
+          title: '矩形的对角线相等且互相平分',
+          caption: 'OA=OB=AB=4，所以 AC=8',
+          view: 'wide',
+          alt: '矩形 ABCD 的对角线相交于点 O，角 AOB 等于 60 度，AB 等于 4，A 处有直角标记；矩形对角线相等且互相平分，所以 OA 等于 OB，三角形 AOB 是等边三角形，OA 等于 4，对角线 AC 等于 8。',
+          prims: [
+            { t: 'rect', x: 29, y: 32, w: 45, h: 26 },
+            { t: 'line', x1: 29, y1: 32, x2: 74, y2: 58 },
+            { t: 'line', x1: 29, y1: 58, x2: 74, y2: 32 },
+            { t: 'angle', x: 51.5, y: 45, from: 150, to: 210, r: 5, label: '60°' },
+            { t: 'angle', x: 29, y: 32, from: -90, to: 0, r: 3, right: true },
+            { t: 'dot', x: 29, y: 32, label: 'A', labelDx: -4.5, labelDy: -2.5 },
+            { t: 'dot', x: 29, y: 58, label: 'B', labelDx: -4.5, labelDy: 3.5 },
+            { t: 'dot', x: 74, y: 58, label: 'C', labelDx: 2.5, labelDy: 3.5 },
+            { t: 'dot', x: 74, y: 32, label: 'D', labelDx: 2.5, labelDy: -2.5 },
+            { t: 'dot', x: 51.5, y: 45, r: 0.9, label: 'O', labelDx: 2.5, labelDy: 0.5 },
+            { t: 'text', x: 25.5, y: 45, text: '4', size: 3.6, anchor: 'end', tone: 'muted' },
+          ],
+        },
+        steps: [
+          '矩形的对角线相等且互相平分，所以 $AC=BD$，$AO=\\frac{1}{2}AC$，$BO=\\frac{1}{2}BD$，于是 $AO=BO$，$\\triangle AOB$ 是等腰三角形。',
+          '又因为 $\\angle AOB=60^\\circ$，有一个角是 $60^\\circ$ 的等腰三角形是等边三角形，所以 $\\triangle AOB$ 是等边三角形。',
+          '因此 $AO=AB=4$。',
+          '所以 $AC=2AO=8$。',
+        ],
+        answer: '$AC=8$。',
+        tip: '矩形两条对角线交成 $60^\\circ$（或 $120^\\circ$）时，必出等边三角形：先由「对角线互相平分且相等」得等腰，再加 $60^\\circ$ 升级为等边，对角线就是短边的两倍。',
+      },
+      {
+        stem: '如图意：在平行四边形 $ABCD$ 中，对角线 $AC$、$BD$ 相交于点 $O$，点 $E$、$F$ 在 $AC$ 上，且 $AE=CF$。求证：四边形 $BEDF$ 是平行四边形。',
+        figure: {
+          id: 'fig-m-geo-sibianxing-pingxing-1',
+          title: '对角线互相平分的四边形',
+          caption: 'OE=OF，OB=OD ⇒ 四边形 BEDF 是平行四边形',
+          view: 'square',
+          alt: '平行四边形 ABCD 的对角线 AC 与 BD 相交于点 O，E、F 在 AC 上且 AE 等于 CF；OE 与 OF 画有相同标记、OB 与 OD 画有相同标记，对角线 EF 与 BD 互相平分，所以四边形 BEDF 是平行四边形。',
+          prims: [
+            { t: 'poly', points: [[20, 25], [70, 25], [85, 70], [35, 70]], closed: true },
+            { t: 'line', x1: 20, y1: 25, x2: 85, y2: 70 },
+            { t: 'line', x1: 70, y1: 25, x2: 35, y2: 70 },
+            { t: 'line', x1: 70, y1: 25, x2: 39.5, y2: 38.5, tone: 'accent' },
+            { t: 'line', x1: 35, y1: 70, x2: 65.5, y2: 56.5, tone: 'accent' },
+            { t: 'line', x1: 45, y1: 44.4, x2: 47, y2: 41.6, tone: 'accent' },
+            { t: 'line', x1: 58, y1: 53.4, x2: 60, y2: 50.6, tone: 'accent' },
+            { t: 'line', x1: 60, y1: 35.3, x2: 62.5, y2: 37.2, tone: 'muted' },
+            { t: 'line', x1: 42.5, y1: 57.8, x2: 45, y2: 59.7, tone: 'muted' },
+            { t: 'dot', x: 20, y: 25, label: 'A', labelDx: -5.5, labelDy: -2 },
+            { t: 'dot', x: 70, y: 25, label: 'B', labelDx: 2, labelDy: -2.5 },
+            { t: 'dot', x: 85, y: 70, label: 'C', labelDx: 2.5, labelDy: 1 },
+            { t: 'dot', x: 35, y: 70, label: 'D', labelDx: -5, labelDy: 4.5 },
+            { t: 'dot', x: 52.5, y: 47.5, r: 0.9, label: 'O', labelDx: 2.5, labelDy: 3.5 },
+            { t: 'dot', x: 39.5, y: 38.5, label: 'E', labelDx: -5.5, labelDy: -0.5 },
+            { t: 'dot', x: 65.5, y: 56.5, label: 'F', labelDx: 2.5, labelDy: 0.5 },
+          ],
+        },
+        steps: [
+          '已有平行四边形的对角线条件可直接用：因为 $ABCD$ 是平行四边形，所以 $OB=OD$，$OA=OC$（平行四边形的对角线互相平分）。',
+          '又已知 $AE=CF$，两式分别相减得 $OA-AE=OC-CF$，即 $OE=OF$。',
+          '在四边形 $BEDF$ 中，对角线 $BD$、$EF$ 相交于 $O$，且 $OB=OD$、$OE=OF$，即两条对角线互相平分。',
+          '所以四边形 $BEDF$ 是平行四边形（对角线互相平分的四边形是平行四边形）。',
+        ],
+        answer: '四边形 $BEDF$ 是平行四边形。',
+        tip: '证平行四边形优先利用原图形的对角线交点：一个「互相平分」直接给出两组等量，再处理 $E$、$F$ 的条件，比连新辅助线证全等简捷得多。',
       },
     ],
     pitfalls: [
@@ -1637,6 +2539,32 @@ export const mathGeometry: MathTopic[] = [
         difficulty: 3,
         tags: ['中点四边形', '中位线定理'],
       },
+      {
+        id: 'm-geo-pingxing-sibianxing-z1',
+        type: 'choice',
+        stem: '菱形具有而一般平行四边形不一定具有的性质是',
+        options: [
+          '两组对角分别相等',
+          '两条对角线互相垂直',
+          '两条对角线互相平分',
+          '两组对边分别平行且相等',
+        ],
+        answer: 'B',
+        explanation:
+          '对角相等、对角线互相平分、对边平行且相等都是平行四边形的一般性质，菱形自然也有；只有「对角线互相垂直」是菱形（及正方形）特有的性质，一般平行四边形的对角线只互相平分，不一定垂直。',
+        difficulty: 2,
+        tags: ['平行四边形的性质', '菱形的性质'],
+      },
+      {
+        id: 'm-geo-pingxing-sibianxing-z2',
+        type: 'fill',
+        stem: '在平行四边形 $ABCD$ 中，$\\angle A:\\angle B=2:3$，则 $\\angle A=$ ____ 度。（只填数字）',
+        answer: '72',
+        explanation:
+          '平行四边形的邻角互补，$\\angle A$ 与 $\\angle B$ 是邻角。设 $\\angle A=2x^\\circ$，$\\angle B=3x^\\circ$，则 $2x+3x=180$，解得 $x=36$，所以 $\\angle A=2\\times 36^\\circ=72^\\circ$。',
+        difficulty: 2,
+        tags: ['平行四边形的性质'],
+      },
     ],
   },
 
@@ -1679,6 +2607,24 @@ export const mathGeometry: MathTopic[] = [
         term: '用旋转构造全等',
         explain:
           '图形中有等腰直角三角形（旋转角 $90^\\circ$）、等边三角形（旋转角 $60^\\circ$）、正方形（旋转角 $90^\\circ$）等特殊图形时，常把某个三角形绕公共顶点旋转，使分散的线段与角集中到一个新的位置，从而构造全等三角形，得到相等的线段、角或共线关系。',
+      },
+    ],
+    examPoints: [
+      {
+        point: '利用旋转的性质求旋转角、证明线段或角相等',
+        how: '常与等腰三角形综合：连接旋转中心与一对对应点，由「对应点到旋转中心的距离相等」构造等腰三角形，用顶角或底角求旋转角；证线段相等直接引用「旋转前后的图形全等」，旋转角必须用对应点与中心的连线去找。',
+      },
+      {
+        point: '方格纸中的旋转作图与坐标中的旋转',
+        how: '作图题高频：按「连、转、取」三步在网格中旋转图形，先定方向再定角度；坐标系中绕原点旋转 $90^\\circ$ 可借全等推对应点坐标，旋转 $180^\\circ$ 即关于原点对称。',
+      },
+      {
+        point: '中心对称与中心对称图形的识别',
+        how: '常与轴对称混合考查：给出平行四边形、圆、正多边形、字母图案等，先看绕某点旋转 $180^\\circ$ 能否重合，再看有无对称轴；注意分清「两个图形的关系」与「一个图形自身的性质」。',
+      },
+      {
+        point: '用旋转构造全等证明线段和差或相等',
+        how: '压轴常考：见等边三角形想 $60^\\circ$ 旋转、见正方形想 $90^\\circ$ 旋转，把三角形绕公共顶点「搬家」，用 SAS 证全等，把分散线段集中到一个三角形中，再结合勾股或等腰三角形收尾。',
       },
     ],
     formulas: [
@@ -1739,6 +2685,28 @@ export const mathGeometry: MathTopic[] = [
         ],
         answer: '平行四边形、圆、线段是中心对称图形；等边三角形、正五边形不是。',
         tip: '正 $n$ 边形只有 $n$ 为偶数时才是中心对称图形；判断的关键是「是否存在一个点，使图形绕它旋转 $180^\\circ$ 后与自身重合」。',
+      },
+      {
+        stem: '点 $P$ 是等边 $\\triangle ABC$ 内一点，$PA=3$，$PB=4$，$PC=5$，求 $\\angle APB$ 的度数。',
+        steps: [
+          '见等边三角形想 $60^\\circ$ 旋转：把 $\\triangle ABP$ 绕点 $A$ 逆时针旋转 $60^\\circ$，使 $AB$ 与 $AC$ 重合，点 $P$ 的对应点记为 $P_1$，则 $\\triangle ABP\\cong\\triangle ACP_1$（旋转前后图形全等）。',
+          '由旋转性质得 $AP_1=AP=3$，$CP_1=BP=4$；旋转角为 $60^\\circ$，即 $\\angle PAP_1=60^\\circ$，所以 $\\triangle APP_1$ 是等边三角形，$PP_1=AP=3$。',
+          '在 $\\triangle PP_1C$ 中，三边长分别为 $PP_1=3$，$P_1C=4$，$PC=5$，因为 $3^2+4^2=5^2$，由勾股定理的逆定理得 $\\angle PP_1C=90^\\circ$。',
+          '由旋转全等得 $\\angle APB=\\angle AP_1C$。结合图形，射线 $P_1P$ 落在 $\\angle AP_1C$ 的内部，所以 $\\angle AP_1C=\\angle AP_1P+\\angle PP_1C=60^\\circ+90^\\circ=150^\\circ$，即 $\\angle APB=150^\\circ$。',
+        ],
+        answer: '$\\angle APB=150^\\circ$。',
+        tip: '等边三角形内一点到三个顶点的距离问题，几乎都绕顶点旋转 $60^\\circ$：把三段距离集中到一个三角形中，再用勾股定理的逆定理发现直角，最后还原旋转角收尾。',
+      },
+      {
+        stem: '在平面直角坐标系中，把点 $P(3,1)$ 绕原点 $O$ 顺时针旋转 $90^\\circ$ 得到点 $P_1$。求点 $P_1$ 的坐标、线段 $PP_1$ 的长，以及点 $P$ 在旋转过程中经过的路径长。',
+        steps: [
+          '顺时针旋转 $90^\\circ$ 时，点 $(x,y)$ 的对应点是 $(y,-x)$（可以取点 $(1,0)$ 检验：它顺时针转 $90^\\circ$ 后落在 $(0,-1)$）。所以 $P_1(1,-3)$。',
+          '旋转不改变与中心的距离，所以 $OP_1=OP=\\sqrt{3^2+1^2}=\\sqrt{10}$，且 $\\angle P_1OP=90^\\circ$（旋转角），$\\triangle POP_1$ 是等腰直角三角形。',
+          '$PP_1$ 是这个等腰直角三角形的斜边，$PP_1=\\sqrt{2}\\times\\sqrt{10}=\\sqrt{20}=2\\sqrt{5}$（也可以用两点间距离公式 $\\sqrt{(3-1)^2+(1+3)^2}=\\sqrt{20}$ 验证）。',
+          '点 $P$ 的路径是以 $O$ 为圆心、$OP$ 为半径、圆心角 $90^\\circ$ 的一段弧，由弧长公式得 $l=\\frac{90\\pi\\times\\sqrt{10}}{180}=\\frac{\\sqrt{10}\\pi}{2}$。',
+        ],
+        answer: '$P_1(1,-3)$，$PP_1=2\\sqrt{5}$，路径长为 $\\frac{\\sqrt{10}\\pi}{2}$。',
+        tip: '坐标旋转 $90^\\circ$ 的对应关系可以借特殊点记忆；旋转路径长要想到弧长公式，圆心角、半径、弧长知道其中两个就能求第三个。',
       },
     ],
     pitfalls: [
@@ -1835,6 +2803,36 @@ export const mathGeometry: MathTopic[] = [
         difficulty: 2,
         tags: ['中心对称', '概念辨析'],
       },
+      {
+        id: 'm-geo-xuanzhuan-z1',
+        type: 'choice',
+        stem: '在 $\\triangle ABC$ 中，$AB=AC$，$\\angle BAC=40^\\circ$。把 $\\triangle ABC$ 绕点 $A$ 旋转，使点 $B$ 恰好落在原三角形的 $AC$ 边上的点 $D$ 处（点 $D$ 异于 $A$、$C$），则 $\\angle ABD$ 的度数是',
+        options: ['$40^\\circ$', '$55^\\circ$', '$80^\\circ$', '$70^\\circ$'],
+        answer: 'D',
+        explanation:
+          '点 $B$ 的对应点是 $D$，旋转角为 $\\angle BAD$。因为 $D$ 在 $AC$ 上，所以 $\\angle BAD=\\angle BAC=40^\\circ$。由旋转性质得 $AD=AB$，所以 $\\triangle ABD$ 是等腰三角形，顶角 $\\angle BAD=40^\\circ$，底角 $\\angle ABD=\\frac{180^\\circ-40^\\circ}{2}=70^\\circ$。选 B 是把 $40^\\circ$ 直接平分，误当成角平分线问题。',
+        difficulty: 3,
+        tags: ['旋转的性质', '等腰三角形'],
+      },
+      {
+        id: 'm-geo-xuanzhuan-z2',
+        type: 'short',
+        stem: '已知：在正方形 $ABCD$ 中，点 $E$ 在边 $BC$ 上，点 $F$ 在边 $CD$ 上，且 $\\angle EAF=45^\\circ$。求证：$EF=BE+DF$。',
+        answer:
+          '延长 $CB$ 到 $F_1$，使 $BF_1=DF$，连接 $AF_1$（相当于把 $\\triangle ADF$ 绕点 $A$ 顺时针旋转 $90^\\circ$ 到 $\\triangle ABF_1$ 的位置）。'
+          + '因为 $AB=AD$，$\\angle ABF_1=\\angle ADF=90^\\circ$，$BF_1=DF$，所以 $\\triangle ABF_1\\cong\\triangle ADF$（SAS），得 $AF_1=AF$，$\\angle F_1AB=\\angle FAD$。'
+          + '因为 $\\angle BAD=90^\\circ$，$\\angle EAF=45^\\circ$，所以 $\\angle FAD+\\angle BAE=90^\\circ-45^\\circ=45^\\circ$，于是 $\\angle F_1AE=\\angle F_1AB+\\angle BAE=\\angle FAD+\\angle BAE=45^\\circ=\\angle FAE$。'
+          + '又 $AE=AE$，$AF_1=AF$，所以 $\\triangle AF_1E\\cong\\triangle AFE$（SAS），得 $EF=EF_1$。因为 $F_1$ 在 $CB$ 的延长线上，所以 $E$、$B$、$F_1$ 共线，$EF_1=EB+BF_1=BE+DF$，即 $EF=BE+DF$。',
+        rubric: [
+          '写出辅助线：延长 CB 到 F1 使 BF1=DF（或把 △ADF 绕 A 顺时针旋转 90°），连接 AF1',
+          '证 △ABF1≌△ADF（SAS），得 AF1=AF 与 ∠F1AB=∠FAD',
+          '由 ∠BAD=90° 与 ∠EAF=45° 推出 ∠F1AE=∠FAE=45°',
+          '证 △AF1E≌△AFE（SAS），得 EF=EF1=EB+BF1=BE+DF',
+        ],
+        explanation: '本题考查正方形半角模型中用旋转构造全等。评分要点：写出旋转（截长）辅助线并证 $\\triangle ABF_1\\cong\\triangle ADF$，得到 $AF_1=AF$ 与 $\\angle F_1AB=\\angle FAD$；由角的和差推出 $\\angle F_1AE=\\angle FAE=45^\\circ$；用 SAS 证 $\\triangle AF_1E\\cong\\triangle AFE$ 得 $EF=EF_1$；最后由 $F_1$、$B$、$E$ 共线换算出 $EF=BE+DF$。常见失分点：辅助线只写「作辅助线」不写作法；跳过 $\\angle F_1AE=45^\\circ$ 的推导直接用 SAS；最后一步不说明 $E$、$B$、$F_1$ 共线，导致 $EF_1=EB+BF_1$ 缺少依据。',
+        difficulty: 3,
+        tags: ['旋转的性质', '辅助线'],
+      },
     ],
   },
 
@@ -1887,6 +2885,24 @@ export const mathGeometry: MathTopic[] = [
         term: '三角形与圆、正多边形与圆',
         explain:
           '不在同一条直线上的三个点确定一个圆，这个圆叫三角形的外接圆，圆心（外心）是三边垂直平分线的交点；与三角形三边都相切的圆叫内切圆，圆心（内心）是三条角平分线的交点。正多边形的外接圆与内切圆同心，半径、边心距与半条边构成直角三角形，可用勾股定理计算。',
+      },
+    ],
+    examPoints: [
+      {
+        point: '垂径定理及其推论的计算',
+        how: '高频填空与解答：见弦作弦心距，用 $r^2=d^2+\\left(\\frac{a}{2}\\right)^2$ 与勾股定理知二求一；注意弦所对的弧有劣弧、优弧两类，求弓形高要分类讨论，防止漏解。',
+      },
+      {
+        point: '圆周角定理与圆内接四边形综合求角',
+        how: '常与等腰三角形结合：连半径得等腰，用「同弧所对圆周角相等」「直径所对圆周角是直角」搭桥；圆内接四边形对角互补也是求角的重要依据，书写时注明所用定理。',
+      },
+      {
+        point: '切线的判定与性质',
+        how: '解答必考：证切线「连半径，证垂直」，垂直常由等腰三角形顶角、平行线转移或已知直角得到；已知切线则「连半径，得垂直」，再结合勾股、相似或三角函数求线段。',
+      },
+      {
+        point: '弧长、扇形面积与圆锥侧面展开',
+        how: '先找圆心角与半径：不规则阴影用「整体减部分」或割补转化；圆锥问题抓住「底面周长等于展开扇形弧长」，用勾股定理联系半径、高与母线，再套 $\\pi rl$ 求侧面积。',
       },
     ],
     formulas: [
@@ -1954,6 +2970,28 @@ export const mathGeometry: MathTopic[] = [
         ],
         answer: '$CD$ 是 $\\odot O$ 的切线。',
         tip: '证切线的标准三步：连半径、证垂直、下结论；垂直关系常靠「同圆半径相等得等腰」与「直径所对的圆周角是直角」来搭桥。',
+      },
+      {
+        stem: '如图意，$PA$、$PB$ 是 $\\odot O$ 的两条切线，$A$、$B$ 为切点，且 $\\angle APB=50^\\circ$。求 $\\angle AOB$ 的度数，并求弦 $AB$ 所对的圆周角的度数。',
+        steps: [
+          '连接 $OA$、$OB$。因为 $PA$、$PB$ 是切线，所以 $OA\\perp PA$，$OB\\perp PB$（切线的性质：圆的切线垂直于过切点的半径），即 $\\angle OAP=\\angle OBP=90^\\circ$。',
+          '在四边形 $AOBP$ 中，内角和为 $360^\\circ$，所以 $\\angle AOB=360^\\circ-90^\\circ-90^\\circ-50^\\circ=130^\\circ$。',
+          '弦 $AB$ 把圆分成两段弧，所对的圆周角要分类：顶点在优弧上的圆周角所对的是劣弧 $AB$，劣弧度数等于圆心角 $130^\\circ$，所以这个圆周角为 $\\frac{1}{2}\\times 130^\\circ=65^\\circ$。',
+          '顶点在劣弧上的圆周角所对的是优弧，优弧度数为 $360^\\circ-130^\\circ=230^\\circ$，所对圆周角为 $115^\\circ$；也可以由「圆内接四边形对角互补」直接得 $180^\\circ-65^\\circ=115^\\circ$。',
+        ],
+        answer: '$\\angle AOB=130^\\circ$；弦 $AB$ 所对的圆周角为 $65^\\circ$ 或 $115^\\circ$。',
+        tip: '切线问题先连过切点的半径；「一条弦所对的圆周角」要按顶点在优弧还是劣弧分类，两解恰好互补，只答一个就是漏解。',
+      },
+      {
+        stem: '一个圆锥的底面半径为 $3$，高为 $4$，求它的侧面积与侧面展开图（扇形）的圆心角。',
+        steps: [
+          '设母线长为 $l$。半径、高、母线构成直角三角形，由勾股定理得 $l=\\sqrt{r^2+h^2}=\\sqrt{3^2+4^2}=5$。',
+          '圆锥的侧面展开图是扇形，扇形半径是母线 $l=5$，扇形弧长等于底面圆的周长 $2\\pi r=6\\pi$（这是圆锥计算中最关键的对应关系）。',
+          '侧面积 $S_{侧}=\\pi rl=\\pi\\times 3\\times 5=15\\pi$（也可以用 $S=\\frac{1}{2}lr=\\frac{1}{2}\\times 6\\pi\\times 5=15\\pi$ 验证）。',
+          '设展开图圆心角为 $n^\\circ$，由弧长公式 $\\frac{n\\pi\\times 5}{180}=6\\pi$，解得 $n=216$，即圆心角为 $216^\\circ$。',
+        ],
+        answer: '侧面积为 $15\\pi$，侧面展开图的圆心角为 $216^\\circ$。',
+        tip: '圆锥计算的三把钥匙：勾股定理联系半径、高与母线；底面周长等于展开扇形的弧长；侧面积的两个公式 $\\pi rl$ 与 $\\frac{1}{2}lr$ 可以互相检验。',
       },
     ],
     pitfalls: [
@@ -2050,6 +3088,36 @@ export const mathGeometry: MathTopic[] = [
         difficulty: 3,
         tags: ['圆周角定理', '分类讨论', '条件'],
       },
+      {
+        id: 'm-geo-yuan-z1',
+        type: 'choice',
+        stem: '点 $A$、$B$、$C$、$D$ 都在 $\\odot O$ 上，圆心角 $\\angle AOB=100^\\circ$，点 $C$ 在劣弧 $AB$ 上（不与 $A$、$B$ 重合），点 $D$ 在优弧 $AB$ 上，则 $\\angle ACB$ 的度数是',
+        options: ['$40^\\circ$', '$50^\\circ$', '$65^\\circ$', '$130^\\circ$'],
+        answer: 'D',
+        explanation:
+          '圆周角 $\\angle ADB$ 与圆心角 $\\angle AOB$ 对同一条劣弧 $AB$，所以 $\\angle ADB=\\frac{1}{2}\\times 100^\\circ=50^\\circ$。四边形 $ACBD$ 的四个顶点都在圆上，是圆内接四边形，$\\angle ACB$ 与 $\\angle ADB$ 是一组对角，由对角互补得 $\\angle ACB=180^\\circ-50^\\circ=130^\\circ$。也可以直接算：$\\angle ACB$ 所对的优弧度数为 $360^\\circ-100^\\circ=260^\\circ$，圆周角为 $130^\\circ$。选 B 是忽略 $C$、$D$ 分居两段弧上，把对角误当成同弧圆周角。',
+        difficulty: 3,
+        tags: ['圆周角定理', '分类讨论'],
+      },
+      {
+        id: 'm-geo-yuan-z2',
+        type: 'short',
+        stem: '已知：在 $\\triangle ABC$ 中，$AB=AC$，以 $AB$ 为直径作 $\\odot O$，$\\odot O$ 交 $BC$ 边于点 $D$（$D$ 与 $B$ 不重合），过点 $D$ 作 $DE\\perp AC$，垂足为 $E$。求证：$DE$ 是 $\\odot O$ 的切线。',
+        answer:
+          '连接 $OD$。因为 $OB=OD$（同圆的半径相等），所以 $\\angle ODB=\\angle OBD$（等边对等角）。'
+          + '因为 $AB=AC$，所以 $\\angle C=\\angle B$（等边对等角）。于是 $\\angle ODB=\\angle C$，所以 $OD\\parallel AC$（同位角相等，两直线平行）。'
+          + '因为 $DE\\perp AC$，所以 $\\angle DEC=90^\\circ$。由 $OD\\parallel AC$ 得 $\\angle ODE=\\angle DEC=90^\\circ$（两直线平行，同位角相等），即 $OD\\perp DE$。'
+          + '又点 $D$ 在 $\\odot O$ 上，$OD$ 是半径，即 $DE$ 经过半径 $OD$ 的外端且垂直于 $OD$，所以 $DE$ 是 $\\odot O$ 的切线（切线的判定定理）。',
+        rubric: [
+          '连接 OD 作辅助线，并用 OB=OD 得等腰三角形',
+          '由 AB=AC 得 ∠B=∠C，推出 OD∥AC',
+          '由 DE⊥AC 推出 ∠ODE=90°，即 OD⊥DE',
+          '说明 D 在圆上且 DE 垂直于过 D 的半径，引用切线判定定理下结论',
+        ],
+        explanation: '本题考查切线的判定与等腰三角形性质的综合。评分要点：连 $OD$；由 $OB=OD$ 与 $AB=AC$ 得两组等角，推出 $\\angle ODB=\\angle C$，从而 $OD\\parallel AC$；由 $DE\\perp AC$ 得 $\\angle ODE=90^\\circ$；点明「经过半径外端且垂直于这条半径的直线是圆的切线」并下结论。常见失分点：只写 $OD\\perp DE$ 而不说明 $D$ 是半径的外端；把判定依据误写成切线的性质；写平行与垂直时不注明依据（同位角相等，两直线平行）。',
+        difficulty: 3,
+        tags: ['切线的判定', '等腰三角形'],
+      },
     ],
   },
 
@@ -2097,6 +3165,24 @@ export const mathGeometry: MathTopic[] = [
         term: '位似图形',
         explain:
           '两个多边形不仅相似，而且对应顶点的连线相交于一点，对应边互相平行（或在同一条直线上），这样的两个图形叫位似图形，这个点叫位似中心。以原点为位似中心、相似比为 $k$ 时，点 $(x,y)$ 的对应点是 $(kx,ky)$（两个图形在位似中心同侧）或 $(-kx,-ky)$（异侧）。',
+      },
+    ],
+    examPoints: [
+      {
+        point: '相似三角形的判定与性质综合求线段',
+        how: '主流解答题：先用「两角分别相等」或「两边成比例且夹角相等」证相似，再按对应边成比例列式；对应顶点必须写在对应位置，比例式分母用整条边，常与正方形、勾股定理结合。',
+      },
+      {
+        point: '等积式与线段比例的证明',
+        how: '把 $a^2=bc$ 型等积式先化成比例式，再用「三点定形」找相似三角形；公共角、公共边、直角或平行线是找等角的关键，书写顺序是「先证相似，再写比例，最后化成等积式」。',
+      },
+      {
+        point: '相似在测量与实际问题中的应用',
+        how: '同一时刻阳光下用「物高与影长的比相等」直接列比例；灯光（中心投影）、镜子反射、遮挡估距等情境要自己构造相似三角形，设未知数列方程，并检验解是否符合线段的取值范围。',
+      },
+      {
+        point: '面积比的逆用与位似作图',
+        how: '面积比等于相似比的平方，反用时先开方求相似比；「三角形与四边形」的面积比要先转化成两个三角形的面积比再开方；位似作图注意同侧、异侧两组坐标，防止漏解。',
       },
     ],
     formulas: [
@@ -2162,6 +3248,28 @@ export const mathGeometry: MathTopic[] = [
         ],
         answer: '旗杆高 12 m。',
         tip: '同一时刻的平行投影下「物高与影长的比相等」是测高的核心结论；若题中是灯光（中心投影），就不能直接按比例算，要用相似三角形列方程。',
+      },
+      {
+        stem: '小华想测量一棵树的高度：他把一面小镜子平放在水平地面上，然后沿直线从镜子处后退，当他退到离镜子 $2$ m 的点 $D$ 处时，恰好在镜子中看到树梢 $A$ 的像。已知小华的眼睛离地面 $1.5$ m，镜子离树底部 $B$ 有 $8$ m，求树 $AB$ 的高度。',
+        steps: [
+          '设树高 $AB=h$ m，小华的眼睛为点 $C$，人脚为 $D$，镜子位置为 $E$，则 $CD=1.5$ m，$DE=2$ m，$BE=8$ m，且 $AB\\perp BD$，$CD\\perp BD$。',
+          '由光学的反射原理，入射角等于反射角，得 $\\angle AEB=\\angle CED$（树梢的光线与视线相对镜面的倾角相等）。',
+          '在 $\\triangle ABE$ 与 $\\triangle CDE$ 中，$\\angle ABE=\\angle CDE=90^\\circ$，$\\angle AEB=\\angle CED$，所以 $\\triangle ABE\\sim\\triangle CDE$（两角分别相等的两个三角形相似）。',
+          '所以 $\\frac{AB}{CD}=\\frac{BE}{DE}$（相似三角形的对应边成比例），即 $\\frac{h}{1.5}=\\frac{8}{2}=4$，解得 $h=6$。',
+        ],
+        answer: '树 $AB$ 的高度是 $6$ m。',
+        tip: '镜子测高综合了物理的反射原理与相似三角形：入射角等于反射角提供一对相等的角，加上两条铅垂线带来的直角，就能构造相似三角形列比例。',
+      },
+      {
+        stem: '在 $\\triangle ABC$ 中，$AB=9$，$AC=6$，点 $D$ 在边 $AC$ 上，$AD=2$，点 $E$ 在边 $AB$ 上（$E$ 不与 $A$、$B$ 重合）。若 $\\triangle ADE$ 与 $\\triangle ABC$ 相似，求 $AE$ 的长。',
+        steps: [
+          '两个三角形共用 $\\angle A$，但题目没有指明对应顶点，所以要分两种情况讨论（分类讨论是本题的突破口）。',
+          '情况一：$\\triangle ADE\\sim\\triangle ABC$，对应关系为 $A$ 对 $A$、$D$ 对 $B$、$E$ 对 $C$，则 $\\frac{AD}{AB}=\\frac{AE}{AC}$，即 $\\frac{2}{9}=\\frac{AE}{6}$，解得 $AE=\\frac{4}{3}$。',
+          '情况二：$\\triangle ADE\\sim\\triangle ACB$，对应关系为 $A$ 对 $A$、$D$ 对 $C$、$E$ 对 $B$，则 $\\frac{AD}{AC}=\\frac{AE}{AB}$，即 $\\frac{2}{6}=\\frac{AE}{9}$，解得 $AE=3$。',
+          '两种情况的 $AE$ 都满足 $0<AE<9$，点 $E$ 都在边 $AB$ 上，符合题意，两种结果都要保留。',
+        ],
+        answer: '$AE=\\frac{4}{3}$ 或 $AE=3$。',
+        tip: '题目只说「与 $\\triangle ABC$ 相似」而不指明对应顶点时，共角的两个三角形有两种相似方式；先按对应关系列比例再解方程，最后检验解是否在线段的取值范围内。',
       },
     ],
     pitfalls: [
@@ -2253,6 +3361,36 @@ export const mathGeometry: MathTopic[] = [
         difficulty: 3,
         tags: ['相似三角形的性质', '周长比', '面积比'],
       },
+      {
+        id: 'm-geo-xiangsi-z1',
+        type: 'choice',
+        stem: '在 $\\triangle ABC$ 中，$D$、$E$ 分别在边 $AB$、$AC$ 上，$DE\\parallel BC$。若 $\\triangle ADE$ 与四边形 $DBCE$ 的面积之比为 $4:5$，则 $AD:AB$ 等于',
+        options: ['$2:3$', '$4:5$', '$4:9$', '$2:5$'],
+        answer: 'A',
+        explanation:
+          '四边形 $DBCE$ 与 $\\triangle ADE$ 拼成整个 $\\triangle ABC$，所以 $S_{\\triangle ADE}:S_{\\triangle ABC}=4:(4+5)=4:9$。因为 $DE\\parallel BC$，所以 $\\triangle ADE\\sim\\triangle ABC$，面积比等于相似比的平方，即 $\\left(\\frac{AD}{AB}\\right)^2=\\frac{4}{9}$，所以 $AD:AB=2:3$。选 C 是把面积比 $4:9$ 直接当成了相似比，选 B 是把「与四边形的面积比」误当成「与整个三角形的面积比」。',
+        difficulty: 2,
+        tags: ['相似三角形的性质', '面积比'],
+      },
+      {
+        id: 'm-geo-xiangsi-z2',
+        type: 'short',
+        stem: '已知：在正方形 $ABCD$ 中，$AB=6$，点 $E$ 在边 $BC$ 上，$BE=2$，点 $F$ 在边 $CD$ 上，且 $\\angle AEF=90^\\circ$。求 $CF$ 的长。',
+        answer:
+          '在正方形 $ABCD$ 中，$\\angle B=\\angle C=90^\\circ$，所以 $\\angle BAE+\\angle AEB=90^\\circ$（直角三角形两锐角互余）。'
+          + '因为 $\\angle AEF=90^\\circ$，且 $B$、$E$、$C$ 三点共线，所以 $\\angle AEB+\\angle FEC=180^\\circ-\\angle AEF=90^\\circ$，于是 $\\angle BAE=\\angle FEC$（同角的余角相等）。'
+          + '因为 $\\angle B=\\angle C=90^\\circ$，$\\angle BAE=\\angle FEC$，所以 $\\triangle ABE\\sim\\triangle ECF$（两角分别相等的两个三角形相似）。'
+          + '所以 $\\frac{AB}{EC}=\\frac{BE}{CF}$（相似三角形的对应边成比例）。因为 $EC=BC-BE=6-2=4$，所以 $\\frac{6}{4}=\\frac{2}{CF}$，解得 $CF=\\frac{4}{3}$。',
+        rubric: [
+          '由互余关系推出 ∠BAE=∠FEC（一线三直角的基本图形）',
+          '证 △ABE∽△ECF（两角分别相等）',
+          '按对应边写出比例式 AB/EC=BE/CF',
+          '正确计算 EC=4 并解得 CF=4/3',
+        ],
+        explanation: '本题考查「一线三直角」基本图形中相似三角形的构造与应用。评分要点：由 $\\angle B=\\angle C=90^\\circ$、$\\angle AEF=90^\\circ$ 与 $B$、$E$、$C$ 共线推出 $\\angle BAE=\\angle FEC$；证 $\\triangle ABE\\sim\\triangle ECF$；按对应边列比例式 $\\frac{AB}{EC}=\\frac{BE}{CF}$；代入 $EC=4$ 解得 $CF=\\frac{4}{3}$。常见失分点：对应顶点顺序写错导致比例式颠倒（写成 $\\frac{AB}{CF}=\\frac{BE}{EC}$）；把 $EC$ 误算成 $6$；只写相似结论不写判定依据。',
+        difficulty: 3,
+        tags: ['相似三角形的判定', '求线段长'],
+      },
     ],
   },
 
@@ -2295,6 +3433,24 @@ export const mathGeometry: MathTopic[] = [
         term: '仰角、俯角、坡度与方位角',
         explain:
           '视线与水平线所成的角中，视线在水平线上方的叫仰角，在下方的叫俯角；坡面的垂直高度 $h$ 与水平宽度 $l$ 的比叫坡度（坡比），记作 $i=h:l$，并且 $i=\\tan\\alpha$（$\\alpha$ 为坡角）；方位角用来描述方向，如「北偏东 $30^\\circ$」表示从正北方向向东转 $30^\\circ$。',
+      },
+    ],
+    examPoints: [
+      {
+        point: '特殊角函数值与解直角三角形',
+        how: '选择填空考特殊角函数值的混合运算，解答考「已知一边一角或两边」解三角形；选公式时让已知元素与所求元素出现在同一个三角函数式中，结果化成最简根式并用勾股检验。',
+      },
+      {
+        point: '一般三角形中作高构造直角三角形',
+        how: '非直角三角形先作高（常作垂线），拆成两个直角三角形，用公共的高或公共边联系；注意高可能落在形外，需要分类讨论，这是中档解答题的主要得分点。',
+      },
+      {
+        point: '仰角俯角与方位角应用',
+        how: '测塔高、航海避礁等情境先画水平线、铅垂线与视线，把实际问题翻译成直角三角形，设未知数列三角方程求解，最后写答并保留单位；两个观测点常通过一段水平距离联系。',
+      },
+      {
+        point: '坡度（坡比）问题',
+        how: '坡度 $i=\\tan\\alpha$ 是竖直高度与水平宽度之比，常与梯形、堤坝结合：把坡面补成矩形与直角三角形，坡长用勾股或三角函数求，注意区分坡长与水平宽度。',
       },
     ],
     formulas: [
@@ -2364,6 +3520,28 @@ export const mathGeometry: MathTopic[] = [
         ],
         answer: '垂直高度是 10 m，水平宽度是 $10\\sqrt{3}$ m（坡度 $i=1:\\sqrt{3}$）。',
         tip: '把实际问题抽象成直角三角形时，先判断哪条边是斜边、哪个角是坡角，再选三角函数；结果要用勾股关系检验一遍。',
+      },
+      {
+        stem: '数学兴趣小组测量教学楼的高度：在地面上的点 $D$ 处测得楼顶 $A$ 的仰角为 $30^\\circ$，沿 $DB$ 方向向教学楼前进 $40$ m 到达点 $C$ 处，测得楼顶 $A$ 的仰角为 $45^\\circ$。点 $B$ 是楼底，$A$、$B$、$C$、$D$ 在同一竖直平面内，$AB\\perp BD$。求教学楼 $AB$ 的高度（结果保留根号）。',
+        steps: [
+          '设 $AB=h$ m，$BC=x$ m。在 $\\mathrm{Rt}\\triangle ABC$ 中，$\\angle ACB=45^\\circ$，所以 $\\triangle ABC$ 是等腰直角三角形，$x=h$（等角对等边）。',
+          '在 $\\mathrm{Rt}\\triangle ABD$ 中，$\\angle ADB=30^\\circ$，$BD=x+40$。由 $\\tan\\angle ADB=\\frac{AB}{BD}$ 得 $\\tan 30^\\circ=\\frac{h}{h+40}$。',
+          '代入 $\\tan 30^\\circ=\\frac{\\sqrt{3}}{3}$：$\\frac{\\sqrt{3}}{3}=\\frac{h}{h+40}$，即 $\\sqrt{3}(h+40)=3h$，整理得 $(3-\\sqrt{3})h=40\\sqrt{3}$，解得 $h=\\frac{40\\sqrt{3}}{3-\\sqrt{3}}=20\\sqrt{3}+20$。',
+          '所以教学楼 $AB$ 的高度是 $20(\\sqrt{3}+1)$ m（约 $54.6$ m）。',
+        ],
+        answer: '教学楼 $AB$ 的高度是 $20(\\sqrt{3}+1)$ m。',
+        tip: '两个观测点的仰角差是测高问题的常见条件：先用 $45^\\circ$ 得「高度等于水平距离」，再对 $30^\\circ$ 列含未知数的方程，设未知数解方程比逐段求线段更稳。',
+      },
+      {
+        stem: '在 $\\triangle ABC$ 中，$AB=8$，$AC=5$，$\\angle A=60^\\circ$，求 $BC$ 的长与 $\\triangle ABC$ 的面积。',
+        steps: [
+          '$\\triangle ABC$ 不是直角三角形，作 $CD\\perp AB$ 于点 $D$（$\\angle A=60^\\circ$ 是锐角，垂足 $D$ 落在线段 $AB$ 上），把原三角形分成两个直角三角形。',
+          '在 $\\mathrm{Rt}\\triangle ACD$ 中，$AD=AC\\cdot\\cos 60^\\circ=5\\times\\frac{1}{2}=\\frac{5}{2}$，$CD=AC\\cdot\\sin 60^\\circ=\\frac{5\\sqrt{3}}{2}$。',
+          '所以 $BD=AB-AD=8-\\frac{5}{2}=\\frac{11}{2}$。在 $\\mathrm{Rt}\\triangle BCD$ 中，$BC=\\sqrt{BD^2+CD^2}=\\sqrt{\\frac{121}{4}+\\frac{75}{4}}=\\sqrt{49}=7$。',
+          '面积 $S=\\frac{1}{2}\\,AB\\cdot CD=\\frac{1}{2}\\times 8\\times\\frac{5\\sqrt{3}}{2}=10\\sqrt{3}$。',
+        ],
+        answer: '$BC=7$，$\\triangle ABC$ 的面积为 $10\\sqrt{3}$。',
+        tip: '「两边一夹角」求第三边的通法是作高：先用三角函数求出公共的高与一段投影，再在另一个直角三角形中用勾股定理；求出的三边可以用「短边平方加高平方」快速验算。',
       },
     ],
     pitfalls: [
@@ -2455,6 +3633,36 @@ export const mathGeometry: MathTopic[] = [
         difficulty: 2,
         tags: ['特殊角的三角函数值', '记忆方法'],
       },
+      {
+        id: 'm-geo-ruijiao-sanjiao-z1',
+        type: 'choice',
+        stem: '如图意，一轮船在灯塔 $P$ 的北偏东 $30^\\circ$ 方向、距灯塔 $80$ 海里的点 $A$ 处，正沿正南方向航行。航行过程中轮船与灯塔 $P$ 的最短距离是',
+        options: ['$20$ 海里', '$40$ 海里', '$40\\sqrt{3}$ 海里', '$80$ 海里'],
+        answer: 'B',
+        explanation:
+          '轮船沿正南方向航行，航线是过点 $A$ 的南北方向的直线，到直线以垂线段最短，所以最短距离是灯塔 $P$ 到这条南北线的距离（即点 $A$ 相对灯塔的东向偏移量）。$A$ 在 $P$ 的北偏东 $30^\\circ$ 方向，$80$ 海里是斜边，最短距离是 $30^\\circ$ 角所对的直角边，等于 $80\\times\\sin 30^\\circ=40$ 海里。选 C 求的是 $80\\cos 30^\\circ=40\\sqrt{3}$，那是轮船从 $A$ 航行到垂足位置所走的距离。',
+        difficulty: 3,
+        tags: ['解直角三角形', '实际应用'],
+      },
+      {
+        id: 'm-geo-ruijiao-sanjiao-z2',
+        type: 'short',
+        stem: '已知：在 $\\triangle ABC$ 中，$\\angle B=45^\\circ$，$\\angle C=30^\\circ$，$BC$ 边上的高 $AD=6$。求 $\\triangle ABC$ 的三边长 $AB$、$AC$、$BC$。',
+        answer:
+          '高 $AD$ 把 $\\triangle ABC$ 分成 $\\mathrm{Rt}\\triangle ABD$ 与 $\\mathrm{Rt}\\triangle ACD$，两个直角三角形共用 $AD=6$。'
+          + '在 $\\mathrm{Rt}\\triangle ABD$ 中，$\\angle B=45^\\circ$，所以 $\\triangle ABD$ 是等腰直角三角形，$BD=AD=6$，$AB=\\sqrt{6^2+6^2}=6\\sqrt{2}$（也可由 $AB=\\frac{AD}{\\sin 45^\\circ}$ 求得）。'
+          + '在 $\\mathrm{Rt}\\triangle ACD$ 中，$\\angle C=30^\\circ$，由「$30^\\circ$ 角所对的直角边等于斜边的一半」得 $AC=2AD=12$，再由勾股定理得 $CD=\\sqrt{AC^2-AD^2}=\\sqrt{144-36}=6\\sqrt{3}$（也可由 $CD=\\frac{AD}{\\tan 30^\\circ}$ 求得）。'
+          + '所以 $BC=BD+CD=6+6\\sqrt{3}$，即三边长分别为 $AB=6\\sqrt{2}$，$AC=12$，$BC=6+6\\sqrt{3}$。',
+        rubric: [
+          '在 Rt△ABD 中利用 45° 得 BD=AD=6，AB=6√2',
+          '在 Rt△ACD 中利用 30° 得 AC=2AD=12',
+          '求得 CD=6√3',
+          '由 BC=BD+CD 求出 BC=6+6√3',
+        ],
+        explanation: '本题考查利用公共高把一般三角形转化为两个直角三角形求解。评分要点：分清两个直角三角形；在含 $45^\\circ$ 的直角三角形中求 $AB$ 与 $BD$；在含 $30^\\circ$ 的直角三角形中由 $\\sin 30^\\circ=\\frac{AD}{AC}$ 或三边比求 $AC=12$、$CD=6\\sqrt{3}$；最后相加得 $BC$。常见失分点：把 $30^\\circ$ 的对边与邻边弄反（误得 $AC=6\\sqrt{3}$、$CD=12$）；只答两条边而漏掉 $BC=BD+CD$；根式没有化成最简。',
+        difficulty: 3,
+        tags: ['解直角三角形', '特殊角函数值'],
+      },
     ],
   },
 
@@ -2497,6 +3705,24 @@ export const mathGeometry: MathTopic[] = [
         term: '由三视图想象立体图形',
         explain:
           '还原几何体时先看俯视图确定底面的形状，再看主视图与左视图确定高度与前后位置。常见对应关系：三视图中两个是矩形、一个是圆，物体是圆柱；两个是三角形、一个是带圆心的圆，物体是圆锥；三个都是矩形时，物体可能是长方体，也可能是圆柱（要结合俯视图判断）。',
+      },
+    ],
+    examPoints: [
+      {
+        point: '由三视图还原几何体并计算面积、体积',
+        how: '先由俯视图定底面形状，再由主视图与左视图定高，还原成柱、锥或组合体后套公式；注意无盖容器、烟囱帽等是否计入底面，圆锥的半径、高、母线常用勾股定理联系。',
+      },
+      {
+        point: '画三视图与「长对正、高平齐、宽相等」',
+        how: '常考画法正误与尺寸对应：组合体、带孔几何体中被遮挡的轮廓要画虚线；先定主视方向，再逐图核对长、高、宽，小正方体堆叠可用「俯视图标数字法」求个数与表面积。',
+      },
+      {
+        point: '平行投影测高与影长',
+        how: '与相似三角形综合：同一时刻「物高与影长的比相等」，把竹竿、旗杆、楼房抽象成两个相似的直角三角形列比例式，注意单位统一，结果写明实际意义。',
+      },
+      {
+        point: '中心投影与点光源问题',
+        how: '光源、物体顶端与影子端点共线，构成相似三角形，设未知数列方程求灯高或影长；两次测量常列两个比例式消元，解题第一步先分清是平行投影还是中心投影。',
       },
     ],
     formulas: [
@@ -2558,6 +3784,28 @@ export const mathGeometry: MathTopic[] = [
         ],
         answer: '旗杆高 9 m；换成点光源后比例关系不再成立，必须用相似三角形计算。',
         tip: '投影问题的第一步是先判断投影类型：平行投影用「同一时刻物高与影长的比相等」，中心投影用相似三角形。',
+      },
+      {
+        stem: '一个几何体的三视图如下：主视图与左视图都是底边长为 $6$、高为 $4$ 的等腰三角形，俯视图是直径为 $6$ 的圆（含圆心）。指出这个几何体是什么，并求它的侧面积与全面积。',
+        steps: [
+          '俯视图是带圆心的圆，说明底面是圆；主视图与左视图都是三角形，说明从侧面看顶部收成一点，所以这个几何体是圆锥。',
+          '由俯视图得底面直径为 $6$，即底面半径 $r=3$；由主视图（等腰三角形）的高得圆锥的高 $h=4$。',
+          '设母线长为 $l$，半径、高、母线构成直角三角形，由勾股定理 $l=\\sqrt{r^2+h^2}=\\sqrt{3^2+4^2}=5$。',
+          '侧面积 $S_{侧}=\\pi rl=\\pi\\times 3\\times 5=15\\pi$；全面积 $S_{全}=S_{侧}+S_{底}=15\\pi+\\pi\\times 3^2=24\\pi$。',
+        ],
+        answer: '该几何体是底面半径为 $3$、高为 $4$ 的圆锥，侧面积为 $15\\pi$，全面积为 $24\\pi$。',
+        tip: '「两个三角形加一个带圆心的圆」对应圆锥；由三视图还原后，半径、高、母线构成直角三角形，求全面积时别忘了加底面积。',
+      },
+      {
+        stem: '夜里，一根高 $1.5$ m 的标杆 $AB$ 直立在路灯下，测得它的影长为 $2.5$ m；把标杆沿影子的方向向外平移 $4$ m 后，影长变为 $3.5$ m。求路灯的高度（路灯与标杆都垂直于地面）。',
+        steps: [
+          '设路灯高 $H$ m，灯在地面的射影到标杆初始位置的距离为 $s$ m。灯光是点光源，属于中心投影：标杆顶端、影子端点与光源在同一条直线上，构成相似三角形。',
+          '第一次测量：由相似得「物高与灯高之比等于影长与（灯到杆距离加影长）之比」，即 $\\frac{1.5}{H}=\\frac{2.5}{s+2.5}$。',
+          '第二次标杆离灯更远了 $4$ m，影长为 $3.5$ m，同理得 $\\frac{1.5}{H}=\\frac{3.5}{s+4+3.5}$。',
+          '两个比相等：$\\frac{s+2.5}{2.5}=\\frac{s+7.5}{3.5}$，交叉相乘得 $3.5(s+2.5)=2.5(s+7.5)$，解得 $s=10$。代入第一式得 $\\frac{1.5}{H}=\\frac{2.5}{12.5}$，解得 $H=7.5$。',
+        ],
+        answer: '路灯的高度是 $7.5$ m。',
+        tip: '中心投影中「物高与影长」不成固定比例，但「灯高、灯到物体的距离、影长」之间始终满足相似比例；两次测量列两个比例式，消去中间量即可求灯高。',
       },
     ],
     pitfalls: [
@@ -2648,6 +3896,36 @@ export const mathGeometry: MathTopic[] = [
         difficulty: 2,
         tags: ['平行投影', '中心投影', '实际应用'],
       },
+      {
+        id: 'm-geo-touying-shitu-z1',
+        type: 'choice',
+        stem: '一个圆锥的底面半径为 $3$，母线长为 $6$，把它的侧面展开得到的扇形的圆心角是',
+        options: ['$60^\\circ$', '$90^\\circ$', '$180^\\circ$', '$270^\\circ$'],
+        answer: 'C',
+        explanation:
+          '圆锥侧面展开图的弧长等于底面圆的周长 $2\\pi r=6\\pi$。设圆心角为 $n^\\circ$，由弧长公式 $\\frac{n\\pi\\times 6}{180}=6\\pi$，解得 $n=180$，所以圆心角是 $180^\\circ$。直观检验：展开图半径即母线 $6$，圆心角 $180^\\circ$ 说明展开图恰好是半圆，面积 $\\frac{1}{2}\\pi\\times 6^2=18\\pi$，与 $\\pi rl=\\pi\\times 3\\times 6=18\\pi$ 一致。',
+        difficulty: 2,
+        tags: ['侧面展开图', '弧长公式'],
+      },
+      {
+        id: 'm-geo-touying-shitu-z2',
+        type: 'short',
+        stem: '用若干个棱长相同的小立方体搭成一个几何体，其俯视图是 $2$ 行 $3$ 列的矩形，且每个位置都至少有 $1$ 个小立方体；主视图从左到右共 $3$ 列，各列的最大层数依次为 $2$、$3$、$1$；左视图从左到右共 $2$ 列，分别对应俯视图的上、下两行，最大层数依次为 $3$、$2$。搭成这个几何体最少需要多少个小立方体？最多需要多少个？',
+        answer:
+          '每个位置的层数同时受主视图（所在列的最大层数）与左视图（所在行的最大层数）限制，不能超过两者中较小的一个。'
+          + '最多情形：让每个位置取「主视图该列最大层数」与「左视图该行最大层数」中的较小者，上行各位置为 $2,3,1$，下行各位置为 $2,2,1$，总数 $=2+3+1+2+2+1=11$ 个，此时每列、每行的最大层数都恰好达标。'
+          + '最少情形：先按俯视图每格放 $1$ 个（共 $6$ 个）；第 $2$ 列必须有一处达到 $3$ 层，而下行的最大层数只能是 $2$，所以把上行第 $2$ 列加高到 $3$（增加 $2$ 个）；第 $1$ 列必须有一处达到 $2$ 层，把下行第 $1$ 列加高到 $2$（增加 $1$ 个），同时下行的最大层数也就达到了 $2$。总数 $=6+2+1=9$ 个。'
+          + '检验：上行层数 $1,3,1$，下行层数 $2,1,1$，各列最大层数为 $2,3,1$，两行最大层数为 $3,2$，与三个视图都相符。所以最少 $9$ 个，最多 $11$ 个。',
+        rubric: [
+          '理解每个位置层数受主视图列高与左视图行高的双重限制',
+          '最多情形：每个位置取列限制与行限制中的较小者，得 11 个',
+          '最少情形：每格保底 1 个，再把第 2 列加高到 3、第 1 列加高到 2（兼作下行行高），得 9 个',
+          '给出一种满足三个视图的摆放方案并检验',
+        ],
+        explanation: '本题考查由三视图确定几何体中小立方体数量的最值问题。评分要点：明确每个位置最多取「主视图列高」与「左视图行高」的较小值，逐格计算得最多 $11$ 个；最少情形先放保底的 $6$ 个，再用最少的增量满足「第 $2$ 列有 $3$ 层、第 $1$ 列有 $2$ 层（兼作下行行高）」，得最少 $9$ 个；最后用一种方案对照三个视图检验。常见失分点：忽略俯视图「每格至少 $1$ 个」而把最少算成 $8$ 或更少；最多情形忘记取较小者，把所有格子都填成 $3$；只答一个最值。',
+        difficulty: 3,
+        tags: ['三视图', '分类讨论'],
+      },
     ],
   },
 
@@ -2696,6 +3974,24 @@ export const mathGeometry: MathTopic[] = [
         term: '由已知到求证的双向分析',
         explain:
           '寻找证明思路有两种方式：「由因导果」从已知条件出发逐步推出结论，「执果索因」从结论出发寻找使结论成立所需的条件。两者结合、在中间会合，思路就找到了；条件较多的题目先画图、把已知标在图上，再在基本图形中寻找突破口。',
+      },
+    ],
+    examPoints: [
+      {
+        point: '全等三角形判定的规范书写与易错辨析',
+        how: '每一步依据写清楚，公共边、公共角、对顶角要明确写出再引用；SSA 与「两边成比例且对角相等」不能判定全等与相似，是选择、纠错题的高频陷阱。',
+      },
+      {
+        point: '辅助线的作法与选择',
+        how: '见中线倍长中线、见两个中点连中位线、见角平分线作垂线或平行线、见特殊角构造直角三角形；作法必须写完整（延长到某点使某段等于某段，再连接），否则推理缺少依据。',
+      },
+      {
+        point: '线段和差、等积式与不等关系的证明',
+        how: '证 $a^2=bc$ 先化比例式找相似；证「长边等于两短边之和」用截长补短或旋转把线段集中；证不等式用三角形三边关系配合全等转移线段，落笔前先想清「把哪些线段搬到哪里」。',
+      },
+      {
+        point: '证明的逻辑规范与纠错',
+        how: '纠错题先指出错误依据（如误用 SSA、把判定当性质、用「由图可知」代替推理），再给出正确条件组合（把对角换成夹角用 SAS，或补一个角用 AAS）；依据必须与推理方向一致。',
       },
     ],
     formulas: [
@@ -2760,6 +4056,28 @@ export const mathGeometry: MathTopic[] = [
         ],
         answer: '$\\triangle BDE$ 是等腰三角形（其中 $BE=DE$）。',
         tip: '「角平分线加平行线必得等腰三角形」是高频基本图形：见到这两个条件同时出现，就去寻找相等的角，再由「等角对等边」得等腰。',
+      },
+      {
+        stem: '已知：在 $\\triangle ABC$ 中，$AD$ 平分 $\\angle BAC$ 交 $BC$ 于点 $D$，且 $\\angle B=2\\angle C$。求证：$AC=AB+BD$。',
+        steps: [
+          '要证「长线段等于两段之和」，考虑截长法：在 $AC$ 上截取 $AE=AB$，连接 $DE$。',
+          '因为 $AD$ 平分 $\\angle BAC$，所以 $\\angle BAD=\\angle EAD$；又 $AB=AE$，$AD=AD$，所以 $\\triangle ABD\\cong\\triangle AED$（SAS），得 $BD=ED$，$\\angle AED=\\angle B=2\\angle C$。',
+          '$\\angle AED$ 是 $\\triangle DEC$ 的外角，所以 $\\angle AED=\\angle EDC+\\angle C$（三角形的外角等于与它不相邻的两个内角的和）。于是 $2\\angle C=\\angle EDC+\\angle C$，得 $\\angle EDC=\\angle C$。',
+          '由等角对等边得 $ED=EC$。所以 $AC=AE+EC=AB+ED=AB+BD$。',
+        ],
+        answer: '$AC=AB+BD$。',
+        tip: '证明「长边等于两短边之和」先想截长或补短：本题在长边上截取等于短边的线段，用角平分线构造全等，再用外角定理把角的倍数关系转化成等腰三角形。',
+      },
+      {
+        stem: '已知：在 $\\triangle ABC$ 中，$\\angle ACB=90^\\circ$，$AC=BC$，直线 $l$ 经过点 $C$，$A$、$B$ 两点在直线 $l$ 的同侧，$AD\\perp l$ 于点 $D$，$BE\\perp l$ 于点 $E$，且垂足 $D$、$E$ 分别位于点 $C$ 的两侧。求证：$\\triangle ACD\\cong\\triangle CBE$，且 $DE=AD+BE$。',
+        steps: [
+          '因为 $AD\\perp l$，$BE\\perp l$，所以 $\\angle ADC=\\angle CEB=90^\\circ$（垂直的定义）。',
+          '因为 $\\angle ACB=90^\\circ$，且 $D$、$C$、$E$ 在同一条直线上，所以 $\\angle ACD+\\angle ACB+\\angle BCE=180^\\circ$，得 $\\angle ACD+\\angle BCE=90^\\circ$。',
+          '在 $\\mathrm{Rt}\\triangle CBE$ 中，$\\angle CBE+\\angle BCE=90^\\circ$（直角三角形两锐角互余），所以 $\\angle ACD=\\angle CBE$（同角的余角相等）。',
+          '又 $\\angle ADC=\\angle CEB=90^\\circ$，$AC=CB$，所以 $\\triangle ACD\\cong\\triangle CBE$（AAS）。由全等得 $CD=BE$，$AD=CE$，因为 $D$、$E$ 在点 $C$ 的两侧，所以 $DE=CD+CE=BE+AD$。',
+        ],
+        answer: '$\\triangle ACD\\cong\\triangle CBE$，且 $DE=AD+BE$。',
+        tip: '「一线三直角」是构造全等与相似的高频基本图形：直线上的平角拆成 $90^\\circ+90^\\circ$ 后，用「同角的余角相等」转移一对锐角，再配一条相等的边即可。',
       },
     ],
     pitfalls: [
@@ -2849,6 +4167,39 @@ export const mathGeometry: MathTopic[] = [
         explanation: '本题考查全等判定条件的辨析与证明纠错表达。评分要点：指出错误在于使用边边角，说明该条件不能唯一确定三角形；给出至少一种正确改正（换成夹角用 SAS，或补充一个角用 AAS、ASA）；归纳判定全等对条件的要求。常见失分点：只说「错了」而不指出错在哪一条判定上；改正时换成了同样无效的条件；把相似判定与全等判定的依据混写。',
         difficulty: 3,
         tags: ['全等判定', '错误辨析', '证明规范'],
+      },
+      {
+        id: 'm-geo-zhengming-yiucuo-z1',
+        type: 'choice',
+        stem: '下列关于几何证明的说法中，正确的是',
+        options: [
+          '证明中写「由图可知」「显然」即可，不必再写推理依据',
+          '由「等边对等角」可以推出两条线段相等',
+          '只要推理的大方向对，判定与性质可以互相替代使用',
+          '证明中每一步都要有依据，依据可以是定义、基本事实、定理或已经推出的结论',
+        ],
+        answer: 'D',
+        explanation:
+          '图形只能帮助思考，不能作为推理依据，A 错；「等边对等角」是由两边相等推出两角相等，反过来由角相等得边相等用的是「等角对等边」，B 把方向弄反了；判定与性质的前提和结论互换、推理方向不同，不能互相替代，C 错；D 正是证明规范的基本要求，正确。',
+        difficulty: 2,
+        tags: ['证明规范', '判定与性质'],
+      },
+      {
+        id: 'm-geo-zhengming-yiucuo-z2',
+        type: 'short',
+        stem: '已知：在 $\\triangle ABC$ 中，$AB=AC$，$D$ 是 $BC$ 边的中点，$DE\\perp AB$ 于点 $E$，$DF\\perp AC$ 于点 $F$。求证：$AE=AF$，$BE=CF$。',
+        answer:
+          '连接 $AD$。因为 $AB=AC$，$BD=CD$，$AD=AD$，所以 $\\triangle ABD\\cong\\triangle ACD$（SSS），得 $\\angle BAD=\\angle CAD$（也可由等腰三角形「三线合一」直接得到 $AD$ 平分顶角）。'
+          + '因为 $DE\\perp AB$，$DF\\perp AC$，所以 $\\angle AED=\\angle AFD=90^\\circ$。又 $\\angle EAD=\\angle FAD$，$AD=AD$，所以 $\\triangle AED\\cong\\triangle AFD$（AAS），得 $AE=AF$。'
+          + '因为 $AB=AC$，$AE=AF$，所以 $BE=AB-AE=AC-AF=CF$。',
+        rubric: [
+          '连接 AD，用 SSS（或三线合一）说明 ∠BAD=∠CAD',
+          '用 AAS 证 △AED≌△AFD，得 AE=AF',
+          '由 AB=AC 与 AE=AF 作差得 BE=CF',
+        ],
+        explanation: '本题考查等腰三角形性质与全等三角形判定的综合运用。评分要点：连 $AD$ 并用 SSS 或「三线合一」得 $\\angle BAD=\\angle CAD$；由两直角、一组等角与公共边用 AAS 证 $\\triangle AED\\cong\\triangle AFD$；利用 $AB=AC$ 与 $AE=AF$ 作差得 $BE=CF$。常见失分点：直接写两个三角形全等却不先证角相等；把 AAS 误写成 SSA；只证 $AE=AF$ 而漏掉 $BE=CF$。',
+        difficulty: 3,
+        tags: ['辅助线', '三线合一'],
       },
     ],
   },

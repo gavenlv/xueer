@@ -299,6 +299,26 @@ export const mthAlgebra: ExamTopic = {
       examples: [
         {
           text: '计算：$\\sqrt{12}-\\sqrt{27}+\\sqrt{\\frac13}$。',
+          figure: {
+            id: 'fig-mth-alg-shishu-3',
+            title: '先化简再合并：把根号里的完全平方因数提出来',
+            caption: '√12=2√3，√27=3√3，√(1/3)=√3/3，都是 √3 的倍数',
+            view: 'wide',
+            alt: '两行流程图：上一行是 √12 箭头 √(4×3) 箭头 2√3，下一行是 √27 箭头 √(9×3) 箭头 3√3，说明二次根式化简时把完全平方因数提到根号外',
+            prims: [
+              { t: 'rect', x: 12, y: 24, w: 16, h: 16, label: '√12' },
+              { t: 'arrow', x1: 28, y1: 32, x2: 36, y2: 32 },
+              { t: 'rect', x: 36, y: 24, w: 20, h: 16, label: '√(4×3)' },
+              { t: 'arrow', x1: 56, y1: 32, x2: 64, y2: 32 },
+              { t: 'rect', x: 64, y: 24, w: 16, h: 16, label: '2√3', tone: 'accent' },
+              { t: 'rect', x: 12, y: 60, w: 16, h: 16, label: '√27' },
+              { t: 'arrow', x1: 28, y1: 68, x2: 36, y2: 68 },
+              { t: 'rect', x: 36, y: 60, w: 20, h: 16, label: '√(9×3)' },
+              { t: 'arrow', x1: 56, y1: 68, x2: 64, y2: 68 },
+              { t: 'rect', x: 64, y: 60, w: 16, h: 16, label: '3√3', tone: 'accent' },
+              { t: 'text', x: 50, y: 90, text: '化简后都是 √3 的倍数，可以合并', anchor: 'middle', size: 3.4, tone: 'muted' },
+            ],
+          },
           steps: [
             '先把每一个二次根式化成最简：$\\sqrt{12}=2\\sqrt3$，$\\sqrt{27}=3\\sqrt3$，$\\sqrt{\\frac13}=\\frac{\\sqrt3}{\\sqrt3\\cdot\\sqrt3}=\\frac{\\sqrt3}{3}$。',
             '判断是否同类：三者都是 $\\sqrt3$ 的倍数，属于同类二次根式，可以合并。',
@@ -311,6 +331,25 @@ export const mthAlgebra: ExamTopic = {
         },
         {
           text: '当 $x$ 取什么值时，式子 $\\frac{\\sqrt{x-2}}{x-5}$ 有意义？',
+          figure: {
+            id: 'fig-mth-alg-shishu-1',
+            title: '在数轴上表示有意义的取值范围',
+            caption: 'x ≥ 2 且 x ≠ 5：实心点含端点 2，空心点排除 5',
+            view: 'wide',
+            alt: '水平数轴上标出 2 与 5 两个刻度，从 2 起向右用粗线表示取值范围，2 处画实心点表示包含，5 处画空心圈表示不包含，体现 x ≥ 2 且 x ≠ 5。',
+            prims: [
+              { t: 'arrow', x1: 8, y1: 50, x2: 92, y2: 50, tone: 'muted' },
+              { t: 'line', x1: 25, y1: 46, x2: 25, y2: 54, tone: 'muted' },
+              { t: 'text', x: 25, y: 60, text: '2', size: 3.6, anchor: 'middle', tone: 'muted' },
+              { t: 'line', x1: 70, y1: 46, x2: 70, y2: 54, tone: 'muted' },
+              { t: 'text', x: 70, y: 60, text: '5', size: 3.6, anchor: 'middle', tone: 'muted' },
+              { t: 'line', x1: 25, y1: 50, x2: 67, y2: 50, tone: 'accent', width: 1.6 },
+              { t: 'line', x1: 73, y1: 50, x2: 90, y2: 50, tone: 'accent', width: 1.6 },
+              { t: 'dot', x: 25, y: 50, tone: 'accent' },
+              { t: 'dot', x: 70, y: 50, hollow: true, tone: 'accent' },
+              { t: 'text', x: 50, y: 40, text: 'x ≥ 2 且 x ≠ 5', size: 3.4, anchor: 'middle', tone: 'accent' },
+            ],
+          },
           steps: [
             '根号要求被开方数非负：$x-2\\ge0$，即 $x\\ge2$。',
             '分母要求不为零：$x-5\\ne0$，即 $x\\ne5$。',
@@ -322,6 +361,26 @@ export const mthAlgebra: ExamTopic = {
         },
         {
           text: '不求近似值，判断 $\\sqrt{17}-1$ 在哪两个连续整数之间。',
+          figure: {
+            id: 'fig-mth-alg-shishu-2',
+            title: '用夹逼法估算 √17 与 √17−1',
+            caption: '16 < 17 < 25，故 4 < √17 < 5，两边减 1 得 3 < √17−1 < 4',
+            view: 'wide',
+            alt: '水平数轴上标出 3、4、5 三个整数刻度，√17 用空心点标在 4 与 5 之间靠近 4 的位置，√17−1 用实心点标在 3 与 4 之间靠近 3 的位置，直观显示 √17−1 落在 3 与 4 之间。',
+            prims: [
+              { t: 'arrow', x1: 10, y1: 50, x2: 90, y2: 50, tone: 'muted' },
+              { t: 'line', x1: 30, y1: 46, x2: 30, y2: 54, tone: 'muted' },
+              { t: 'text', x: 30, y: 60, text: '3', size: 3.6, anchor: 'middle', tone: 'muted' },
+              { t: 'line', x1: 50, y1: 46, x2: 50, y2: 54, tone: 'muted' },
+              { t: 'text', x: 50, y: 60, text: '4', size: 3.6, anchor: 'middle', tone: 'muted' },
+              { t: 'line', x1: 70, y1: 46, x2: 70, y2: 54, tone: 'muted' },
+              { t: 'text', x: 70, y: 60, text: '5', size: 3.6, anchor: 'middle', tone: 'muted' },
+              { t: 'dot', x: 52.5, y: 50, hollow: true, tone: 'accent', label: '√17', labelDx: 0, labelDy: -6 },
+              { t: 'dot', x: 32.5, y: 50, tone: 'main', label: '√17−1', labelDx: -2, labelDy: 6 },
+              { t: 'text', x: 80, y: 38, text: '4 < √17 < 5', size: 3.2, tone: 'accent' },
+              { t: 'text', x: 12, y: 38, text: '3 < √17−1 < 4', size: 3.2, tone: 'main' },
+            ],
+          },
           steps: [
             '找与 17 相邻的两个完全平方数：$16<17<25$。',
             '开方后大小关系不变：$\\sqrt{16}<\\sqrt{17}<\\sqrt{25}$，即 $4<\\sqrt{17}<5$。',
@@ -721,6 +780,25 @@ export const mthAlgebra: ExamTopic = {
       examples: [
         {
           text: '已知一次函数的图象经过点 $(1,3)$ 和 $(-1,-1)$，求这个一次函数的解析式。',
+          figure: {
+            id: 'fig-mth-alg-yici-1',
+            title: '用两个点求一次函数解析式',
+            caption: '直线 y=2x+1 过 (1,3) 与 (−1,−1)，y 轴交点为 (0,1)',
+            view: 'wide',
+            alt: '平面直角坐标系中一条从左下到右上的直线，标注 y=2x+1，直线上用实心点标出 (1,3) 与 (−1,−1) 两个已知点，y 轴交点 (0,1) 也标出。',
+            prims: [
+              { t: 'arrow', x1: 12, y1: 50, x2: 90, y2: 50, tone: 'muted' },
+              { t: 'arrow', x1: 50, y1: 60, x2: 50, y2: 8, tone: 'muted' },
+              { t: 'text', x: 92, y: 48, text: 'x', size: 3.6, tone: 'muted' },
+              { t: 'text', x: 52, y: 9, text: 'y', size: 3.6, tone: 'muted' },
+              { t: 'text', x: 46, y: 54, text: 'O', size: 3.4, tone: 'muted' },
+              { t: 'line', x1: 40, y1: 62, x2: 64, y2: 8, tone: 'accent', width: 0.8 },
+              { t: 'dot', x: 57, y: 29, label: '(1, 3)', labelDx: 3, labelDy: -1 },
+              { t: 'dot', x: 43, y: 57, label: '(-1, -1)', labelDx: -18, labelDy: 1 },
+              { t: 'dot', x: 50, y: 43, label: '(0, 1)', labelDx: 3, labelDy: -1 },
+              { t: 'text', x: 66, y: 12, text: 'y = 2x + 1', size: 3.2, tone: 'accent' },
+            ],
+          },
           steps: [
             '设一次函数的解析式为 $y=kx+b$（$k\\ne0$）。',
             '把两个点的坐标分别代入：$\\begin{cases}k+b=3\\\\-k+b=-1\\end{cases}$。',
@@ -734,6 +812,27 @@ export const mthAlgebra: ExamTopic = {
         },
         {
           text: '已知一次函数 $y=-2x+4$。求它与 $x$ 轴交点 $A$ 的坐标，并写出 $y>0$ 时 $x$ 的取值范围。',
+          figure: {
+            id: 'fig-mth-alg-yici-2',
+            title: '由图象看 y>0 的取值范围',
+            caption: 'A(2,0)，y 轴交点 (0,4)；直线在 x 轴上方的一段对应 x<2',
+            view: 'wide',
+            alt: '平面直角坐标系中一条从左上到右下的下降直线，标注 y=-2x+4，与 x 轴交于实心点 A(2,0)，与 y 轴交于 (0,4)；x 轴上方的那段直线对应 y>0，此时 x<2。',
+            prims: [
+              { t: 'arrow', x1: 12, y1: 50, x2: 90, y2: 50, tone: 'muted' },
+              { t: 'arrow', x1: 50, y1: 60, x2: 50, y2: 8, tone: 'muted' },
+              { t: 'text', x: 92, y: 48, text: 'x', size: 3.6, tone: 'muted' },
+              { t: 'text', x: 52, y: 9, text: 'y', size: 3.6, tone: 'muted' },
+              { t: 'text', x: 46, y: 54, text: 'O', size: 3.4, tone: 'muted' },
+              { t: 'line', x1: 64, y1: 50, x2: 44, y2: 8, tone: 'accent', width: 1.2 },
+              { t: 'line', x1: 64, y1: 50, x2: 70, y2: 62, tone: 'muted', dashed: true, width: 0.6 },
+              { t: 'dot', x: 64, y: 50, label: 'A(2,0)', labelDx: 2, labelDy: 4 },
+              { t: 'dot', x: 50, y: 22, label: '(0,4)', labelDx: 3, labelDy: -1 },
+              { t: 'text', x: 20, y: 18, text: 'y>0', size: 3.4, tone: 'accent' },
+              { t: 'text', x: 20, y: 24, text: '时 x<2', size: 3.4, tone: 'accent' },
+              { t: 'text', x: 72, y: 14, text: 'y=-2x+4', size: 3.2, tone: 'accent' },
+            ],
+          },
           steps: [
             '求与 $x$ 轴的交点：令 $y=0$，得 $-2x+4=0$，解得 $x=2$，所以 $A(2,0)$。',
             '把 $y>0$ 翻译成不等式：$-2x+4>0$。',
@@ -760,6 +859,26 @@ export const mthAlgebra: ExamTopic = {
         },
         {
           text: '把直线 $y=2x+1$ 先沿 $y$ 轴向下平移 3 个单位长度，再沿 $x$ 轴向左平移 2 个单位长度，求所得直线的解析式。',
+          figure: {
+            id: 'fig-mth-alg-yici-3',
+            title: '直线的平移：上加下减常数项，左加右减自变量',
+            caption: 'y=2x+1 → 下移3 → y=2x−2 → 左移2 → y=2x+2',
+            view: 'wide',
+            alt: '平面直角坐标系中有三条互相平行的直线：原直线 y=2x+1，向下平移 3 个单位得到 y=2x−2，再向左平移 2 个单位得到 y=2x+2；三条直线斜率相同、截距不同',
+            prims: [
+              { t: 'arrow', x1: 12, y1: 50, x2: 90, y2: 50, tone: 'muted' },
+              { t: 'arrow', x1: 50, y1: 72, x2: 50, y2: 8, tone: 'muted' },
+              { t: 'text', x: 92, y: 48, text: 'x', size: 3.6, tone: 'muted' },
+              { t: 'text', x: 52, y: 9, text: 'y', size: 3.6, tone: 'muted' },
+              { t: 'text', x: 46, y: 54, text: 'O', size: 3.4, tone: 'muted' },
+              { t: 'line', x1: 40, y1: 65, x2: 65, y2: 15, tone: 'muted', width: 1 },
+              { t: 'line', x1: 45, y1: 70, x2: 65, y2: 30, tone: 'accent', dashed: true, width: 1 },
+              { t: 'line', x1: 40, y1: 60, x2: 60, y2: 20, tone: 'main', width: 1.4 },
+              { t: 'text', x: 68, y: 14, text: 'y=2x+1', size: 3, tone: 'muted' },
+              { t: 'text', x: 68, y: 28, text: 'y=2x−2', size: 3, tone: 'accent' },
+              { t: 'text', x: 62, y: 16, text: 'y=2x+2', size: 3, tone: 'main' },
+            ],
+          },
           steps: [
             '向下平移 3 个单位：「上加下减」，常数项减 3，得 $y=2x+1-3=2x-2$。',
             '向左平移 2 个单位：「左加右减」，把 $x$ 换成 $x+2$，得 $y=2(x+2)-2=2x+2$。',
@@ -804,6 +923,24 @@ export const mthAlgebra: ExamTopic = {
       examples: [
         {
           text: '已知反比例函数的图象经过点 $(-2,3)$，求它的解析式，并判断图象位于哪些象限。',
+          figure: {
+            id: 'fig-mth-alg-fanbi-1',
+            title: 'y=−6/x 的图象在第二、四象限',
+            caption: 'k=xy=(−2)×3=−6<0，双曲线两支分别在 Q2、Q4',
+            view: 'wide',
+            alt: '平面直角坐标系中反比例函数 y=−6/x 的图象，是分布在第二、四象限的两条双曲线分支；第二象限的分支经过点 (−2,3)，第四象限的分支是它关于原点对称的另一支',
+            prims: [
+              { t: 'arrow', x1: 12, y1: 50, x2: 90, y2: 50, tone: 'muted' },
+              { t: 'arrow', x1: 50, y1: 68, x2: 50, y2: 10, tone: 'muted' },
+              { t: 'text', x: 92, y: 48, text: 'x', size: 3.6, tone: 'muted' },
+              { t: 'text', x: 52, y: 9, text: 'y', size: 3.6, tone: 'muted' },
+              { t: 'text', x: 46, y: 54, text: 'O', size: 3.4, tone: 'muted' },
+              { t: 'curve', points: [[18, 47], [26, 44], [35, 38], [40, 35], [44, 30], [46, 22], [47, 14]], tone: 'accent', width: 1.4 },
+              { t: 'curve', points: [[82, 53], [74, 56], [65, 62], [60, 65], [56, 70], [54, 78], [53, 86]], tone: 'accent', width: 1.4 },
+              { t: 'dot', x: 40, y: 35, label: '(-2, 3)', labelDx: -8, labelDy: -4 },
+              { t: 'text', x: 20, y: 22, text: 'y = -6/x', size: 3.2, tone: 'accent' },
+            ],
+          },
           steps: [
             '设解析式为 $y=\\frac kx$（$k\\ne0$）。',
             '把点 $(-2,3)$ 的坐标代入：$k=xy=(-2)\\times3=-6$。',
@@ -816,6 +953,25 @@ export const mthAlgebra: ExamTopic = {
         },
         {
           text: '点 $P$ 在反比例函数 $y=\\frac kx$ 的图象上，过点 $P$ 分别向 $x$ 轴、$y$ 轴作垂线，与两坐标轴围成的矩形面积为 5，且图象位于第二、四象限。求 $k$ 的值。',
+          figure: {
+            id: 'fig-mth-alg-fanbi-2',
+            title: '|k| 的几何意义：矩形面积等于 |k|',
+            caption: '过 P 作两轴的垂线，矩形面积 = |xy| = |k|',
+            view: 'wide',
+            alt: '平面直角坐标系第一象限中有反比例函数的一支曲线，点 P 在曲线上；过 P 分别向 x 轴、y 轴作垂线，与两坐标轴围成一个矩形，该矩形的面积等于 |k|',
+            prims: [
+              { t: 'arrow', x1: 12, y1: 62, x2: 92, y2: 62, tone: 'muted' },
+              { t: 'arrow', x1: 44, y1: 88, x2: 44, y2: 10, tone: 'muted' },
+              { t: 'text', x: 94, y: 60, text: 'x', size: 3.6, tone: 'muted' },
+              { t: 'text', x: 46, y: 9, text: 'y', size: 3.6, tone: 'muted' },
+              { t: 'curve', points: [[52, 30], [60, 40], [70, 48], [82, 52], [90, 54]], tone: 'accent', width: 1.4 },
+              { t: 'rect', x: 44, y: 48, w: 26, h: 14, fill: false, tone: 'accent' },
+              { t: 'line', x1: 70, y1: 48, x2: 70, y2: 62, tone: 'accent', dashed: true },
+              { t: 'line', x1: 44, y1: 48, x2: 70, y2: 48, tone: 'accent', dashed: true },
+              { t: 'dot', x: 70, y: 48, label: 'P(x,y)', labelDx: 3, labelDy: -4 },
+              { t: 'text', x: 57, y: 56, text: '面积 = |k|', anchor: 'middle', size: 3.4, tone: 'accent' },
+            ],
+          },
           steps: [
             '由 $|k|$ 的几何意义：图象上任一点向两坐标轴作垂线所围成的矩形面积等于 $|k|$。',
             '所以 $|k|=5$。',
@@ -885,6 +1041,24 @@ export const mthAlgebra: ExamTopic = {
       examples: [
         {
           text: '用配方法求抛物线 $y=x^2-4x+3$ 的顶点坐标与对称轴。',
+          figure: {
+            id: 'fig-mth-alg-erci-1',
+            title: 'y=(x−2)²−1 的顶点与对称轴',
+            caption: '顶点 (2,−1)，对称轴 x=2，开口向上',
+            view: 'wide',
+            alt: '平面直角坐标系中开口向上的抛物线 y=(x−2)²−1，顶点在 (2,−1)，对称轴为直线 x=2，与 x 轴交于 (1,0) 与 (3,0)，与 y 轴交于 (0,3)',
+            prims: [
+              { t: 'arrow', x1: 12, y1: 72, x2: 88, y2: 72, tone: 'muted' },
+              { t: 'arrow', x1: 50, y1: 80, x2: 50, y2: 10, tone: 'muted' },
+              { t: 'text', x: 90, y: 70, text: 'x', size: 3.6, tone: 'muted' },
+              { t: 'text', x: 52, y: 9, text: 'y', size: 3.6, tone: 'muted' },
+              { t: 'text', x: 46, y: 76, text: 'O', size: 3.4, tone: 'muted' },
+              { t: 'line', x1: 62, y1: 12, x2: 62, y2: 78, tone: 'muted', dashed: true },
+              { t: 'curve', points: [[38, 24], [44, 47], [50, 65], [56, 71], [62, 71], [68, 65], [74, 47], [80, 24]], tone: 'accent', width: 1.6 },
+              { t: 'dot', x: 62, y: 71, label: '(2, −1)', labelDx: 4, labelDy: 4 },
+              { t: 'text', x: 64, y: 18, text: 'x=2', size: 3, tone: 'muted' },
+            ],
+          },
           steps: [
             '配方：加上一次项系数一半的平方再减去同一个数，$y=x^2-4x+4-4+3$。',
             '写成完全平方：$y=(x-2)^2-1$。',
@@ -897,6 +1071,25 @@ export const mthAlgebra: ExamTopic = {
         },
         {
           text: '抛物线 $y=x^2-2x-3$ 与 $x$ 轴交于 $A$、$B$ 两点，顶点为 $C$，求三角形 $ABC$ 的面积。',
+          figure: {
+            id: 'fig-mth-alg-erci-2',
+            title: '抛物线与 x 轴围成的三角形面积',
+            caption: 'A(−1,0)，B(3,0)，C(1,−4)，底 AB=4，高 4，面积 8',
+            view: 'wide',
+            alt: '平面直角坐标系中抛物线 y=(x−1)²−4，与 x 轴交于 A(−1,0) 和 B(3,0)，顶点为 C(1,−4)；连接 A、B、C 得到三角形，底边 AB 长为 4，顶点 C 到 x 轴的距离为 4',
+            prims: [
+              { t: 'arrow', x1: 12, y1: 55, x2: 88, y2: 55, tone: 'muted' },
+              { t: 'arrow', x1: 50, y1: 90, x2: 50, y2: 10, tone: 'muted' },
+              { t: 'text', x: 90, y: 53, text: 'x', size: 3.6, tone: 'muted' },
+              { t: 'text', x: 52, y: 9, text: 'y', size: 3.6, tone: 'muted' },
+              { t: 'text', x: 46, y: 59, text: 'O', size: 3.4, tone: 'muted' },
+              { t: 'curve', points: [[36, 27], [43, 55], [50, 76], [57, 83], [64, 76], [71, 55], [78, 27]], tone: 'accent', width: 1.4 },
+              { t: 'poly', points: [[43, 55], [71, 55], [57, 83]], closed: true, tone: 'muted', fill: false },
+              { t: 'dot', x: 43, y: 55, label: 'A(−1,0)', labelDx: -4, labelDy: 4 },
+              { t: 'dot', x: 71, y: 55, label: 'B(3,0)', labelDx: 3, labelDy: 4 },
+              { t: 'dot', x: 57, y: 83, label: 'C(1,−4)', labelDx: 4, labelDy: 2 },
+            ],
+          },
           steps: [
             '求与 $x$ 轴的交点：令 $y=0$，得 $x^2-2x-3=0$。',
             '因式分解：$(x-3)(x+1)=0$，所以 $x=3$ 或 $x=-1$，即 $A(-1,0)$、$B(3,0)$。',

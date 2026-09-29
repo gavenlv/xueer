@@ -424,6 +424,8 @@ export interface ExamExample {
   steps?: string[];
   /** 数学：答案（可与 `steps` 末步重复，便于快速核对） */
   answer?: string;
+  /** 数学：配图（几何、函数图象等不看图难理解的例子用） */
+  figure?: PhysicsFigure;
 }
 
 /**
@@ -1815,6 +1817,21 @@ export interface MathExample {
   answer: string;
   /** 方法小结或易错提醒 */
   tip?: string;
+  /** 配图：几何、函数、数轴等不看图难理解的例题用 */
+  figure?: PhysicsFigure;
+}
+
+/**
+ * 中考考点（综合）：这个知识点在广州中考里怎么被考。
+ *
+ * 与易错点（写「别怎么做」）互补，考点写「会怎么考」：题位与题型、
+ * 与哪些知识**综合**着考、踩分靠什么——学生据此判断这一块要学到什么深度。
+ */
+export interface MathExamPoint {
+  /** 考点表述：一句话说清考什么（如「以函数图象为背景的动点最值」） */
+  point: string;
+  /** 综合怎么考：题位、常见组合与拿分要点 */
+  how: string;
 }
 
 /** 数学知识点 */
@@ -1829,6 +1846,8 @@ export interface MathTopic {
   summary: string;
   /** 核心概念与定义 */
   concepts: { term: string; explain: string }[];
+  /** 中考考点（综合）：这个知识点在中考里怎么被考、与哪些知识综合 */
+  examPoints?: MathExamPoint[];
   /** 公式与定理 */
   formulas?: MathFormula[];
   /** 例题精讲 */

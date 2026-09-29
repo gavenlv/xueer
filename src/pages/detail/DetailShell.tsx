@@ -15,7 +15,7 @@ import { SupplementList } from '../../components/SupplementList';
 import { SpeechBar } from '../../components/SpeechBar';
 import { ReciteCardGroup } from '../../components/ReciteCards';
 import { extensions, extensionsOfEntry, mindMapsOfEntry, mindMapsOfModule } from '../../data';
-import { getSubject } from '../../data/subjects';
+import { getModuleMeta, getSubject } from '../../data/subjects';
 import { lessonMindMap } from '../../lib/lessonMaps';
 import { speechSegmentsOf } from '../../lib/entrySpeech';
 import { cardStatsOf, reciteCardsOf } from '../../lib/reciteCards';
@@ -194,7 +194,7 @@ function ReciteSection({ entry }: { entry: Entry }) {
 
 export function DetailShell({
   entry,
-  subjectId = 'chinese',
+  subjectId,
   moduleName,
   backTo,
   subtitle,
@@ -204,6 +204,15 @@ export function DetailShell({
   children,
 }: {
   entry: Entry;
+  /**
+   * 所属科目 id。**一般不用传**——不传时按 `entry.moduleId` 到科目注册表里反查
+   * （见下面的 `sid`），注册表才是「哪个模块属于哪个科目」的唯一出处。
+   *
+   * 为什么不再给一个 `= 'chinese'` 的默认值：数学与历史的详情页当初没传这个参数，
+   * 于是面包屑一律显示「首页 / 语文 / 公式定理速查 / 代数公式速查」，
+   * 「知识拓展」还会跳到语文的 `/s/chinese/extras`——默认值写死哪个学科，
+   * 别的学科就会静默串味。现在默认值由模块反查得到，写错的可能性从根上去掉了。
+   */
   subjectId?: string;
   moduleName: string;
   backTo: string;
@@ -217,6 +226,14 @@ export function DetailShell({
   const { isStarred, toggleStar, getProgress } = useStudy();
   const starred = isStarred(entry.id);
   const progress = getProgress(entry.id);
+
+  /**
+   * 面包屑与「知识拓展」指向的科目：优先用调用方显式传进来的，
+   * 否则按模块 id 反查注册表（数学的 `math-*`、历史的 `hist-*` 都从这里拿到自己的科目）。
+   */
+  const moduleMeta = getModuleMeta(entry.moduleId);
+  const sid = subjectId ?? moduleMeta?.subject.id ?? 'chinese';
+  const subjectName = getSubject(sid)?.name ?? moduleMeta?.subject.name ?? '语文';
 
   /**
    * 整页朗读：段落由条目数据推导（`lib/entrySpeech.ts`），所以六个模块的详情页
@@ -233,7 +250,7 @@ export function DetailShell({
             <Crumbs
               items={[
                 { label: '首页', to: '/' },
-                { label: getSubject(subjectId)?.name ?? '语文', to: `/s/${subjectId}` },
+                { label: subjectName, to: `/s/${sid}` },
                 { label: moduleName, to: backTo },
                 { label: entry.title },
               ]}
@@ -276,7 +293,7 @@ export function DetailShell({
       {/* 知识点背诵：把这一课的必背项做成卡片（默认收起，与导图/拓展同一套折叠样式） */}
       <ReciteSection entry={entry} />
 
-      <ExtraSections entry={entry} subjectId={subjectId} />
+      <ExtraSections entry={entry} subjectId={sid} />
 
       {/* 知识联动：同作者 / 同主题 / 同意象 */}
       <RelatedList entry={entry} />
@@ -299,29 +316,76 @@ export function DetailShell({
   );
 }
 
-/** 详情页里的小节包装 */
+/**
+ * 详情页里的小节包装。
+ *
+ * 默认保持原来的「常开卡片」（语文等学科的详情页都按这个观感写的）；
+ * 传 `fold` 时变成**可折叠**卡片：标题行始终是一行（图标 + 名称 + 摘要 + 计数），
+ * 正文点开才渲染——数学知识点页一页有五六个区块，全部铺开会把页面拉得很难用，
+ * 收起时标题行上的摘要足以判断值不值得展开（与 `CollapseCard` 同一套交互）。
+ */
 export function Section({
   title,
   icon,
   extra,
+  summary,
+  fold,
+  defaultOpen = false,
   children,
 }: {
   title: string;
   icon?: string;
   extra?: ReactNode;
+  /** 折叠标题行上的摘要小字（仅在 `fold` 时显示） */
+  summary?: string;
+  /** 折叠成一行卡片（默认 false：常开，其他学科页面不受影响） */
+  fold?: boolean;
+  /** 折叠时的初始状态；默认收起（用户明确的口径：默认折叠） */
+  defaultOpen?: boolean;
   children: ReactNode;
 }) {
+  const [open, setOpen] = useState(defaultOpen);
+  if (!fold) {
+    return (
+      <section className="card">
+        <div className="card__head">
+          <span className="card__title">
+            {icon ? <span>{icon}</span> : null}
+            {title}
+          </span>
+          <span className="spacer" />
+          {extra}
+        </div>
+        <div className="card__body">{children}</div>
+      </section>
+    );
+  }
   return (
     <section className="card">
-      <div className="card__head">
-        <span className="card__title">
-          {icon ? <span>{icon}</span> : null}
-          {title}
+      <button
+        className="ext__head"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        <span className="ext__title">
+          <span style={{ fontWeight: 700 }}>
+            {icon ? <span style={{ marginRight: 6 }}>{icon}</span> : null}
+            {title}
+          </span>
+          {summary ? (
+            <span className="small muted" style={{ display: 'block', fontWeight: 400, marginTop: 2 }}>
+              {summary}
+            </span>
+          ) : null}
         </span>
-        <span className="spacer" />
         {extra}
-      </div>
-      <div className="card__body">{children}</div>
+        <span className={cn('ext__caret', open && 'is-open')}>▼</span>
+      </button>
+      {open ? (
+        <div className="card__body fade-in" style={{ borderTop: '1px solid var(--c-line)' }}>
+          {children}
+        </div>
+      ) : null}
     </section>
   );
 }

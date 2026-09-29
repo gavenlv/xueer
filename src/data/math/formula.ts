@@ -58,6 +58,24 @@ export const mathFormula: MathTopic[] = [
           '整式乘法要合并同类项；因式分解要分解到每个因式都不能再分解；分式结果要化为最简分式或整式；根式结果要被开方数不含分母、不含能开得尽方的因数。',
       },
     ],
+    examPoints: [
+      {
+        point: '乘法公式与幂运算的混合化简',
+        how: '选择题辨运算正误、解答题考整式化简，平方差、完全平方与幂的四条性质常组合出现，中间项系数 2 和指数加减乘是主要扣分点。',
+      },
+      {
+        point: '因式分解的顺序与彻底性',
+        how: '解答题要求先提公因式再用公式，分解到每个因式都不能再分解，只分解一步或没写成乘积形式都会失分。',
+      },
+      {
+        point: '分式与二次根式的化简求值',
+        how: '中考常考先化简再代入求值，分式要约成最简，根式化到被开方数不含分母和开得尽的因数，代入前先看字母取值是否使式子有意义。',
+      },
+      {
+        point: '零指数、负整数指数与有意义条件',
+        how: '选择题常考 $a^0=1$ 的前提和负指数取倒数，凡含分母或偶次根号的式子都要先写取值限制，这是填空高频陷阱。',
+      },
+    ],
     formulas: [
       {
         name: '平方差公式 ★',
@@ -183,6 +201,27 @@ export const mathFormula: MathTopic[] = [
     examples: [
       {
         stem: '计算 $(2x+3y)(2x-3y)-(x+2y)^2$。',
+        figure: {
+          id: 'fig-m-for-daishu-1',
+          title: '平方差公式的面积示意',
+          caption: '边长 a 的大正方形去掉角上边长 b 的小正方形，余下 L 形可拼成 (a+b)(a−b) 的矩形',
+          view: 'wide',
+          alt: '左侧是边长为 a 的大正方形，右下角挖去一个边长为 b 的小正方形，余下的 L 形面积为 a 平方减 b 平方；右侧是一个长为 a 加 b、宽为 a 减 b 的矩形，面积为两数和与两数差的积，两者面积相等',
+          prims: [
+            { t: 'rect', x: 10, y: 13, w: 36, h: 36 },
+            { t: 'rect', x: 33, y: 36, w: 13, h: 13, fill: true, dashed: true, tone: 'muted' },
+            { t: 'text', x: 6.5, y: 33, text: 'a', size: 3.6, anchor: 'end' },
+            { t: 'text', x: 28, y: 53.5, text: 'a', size: 3.6, anchor: 'middle' },
+            { t: 'text', x: 50, y: 44.5, text: 'b', size: 3.6, anchor: 'start' },
+            { t: 'text', x: 39.5, y: 53.5, text: 'b', size: 3.6, anchor: 'middle' },
+            { t: 'text', x: 21, y: 28, text: 'a²−b²', size: 3.6, anchor: 'middle', tone: 'accent' },
+            { t: 'text', x: 53, y: 34, text: '=', size: 4, anchor: 'middle' },
+            { t: 'rect', x: 57, y: 26, w: 38, h: 18 },
+            { t: 'text', x: 76, y: 37, text: '(a+b)(a−b)', size: 3.4, anchor: 'middle' },
+            { t: 'text', x: 76, y: 53.5, text: 'a+b', size: 3.6, anchor: 'middle' },
+            { t: 'text', x: 98, y: 37.5, text: 'a−b', size: 3.6, anchor: 'start' },
+          ],
+        },
         steps: [
           '第一步定位公式：$(2x+3y)(2x-3y)$ 中相同项是 $2x$、相反项是 $3y$，用平方差公式，得 $(2x)^2-(3y)^2=4x^2-9y^2$。',
           '第二步用完全平方公式：$(x+2y)^2=x^2+2\\cdot x\\cdot2y+(2y)^2=x^2+4xy+4y^2$。',
@@ -191,6 +230,28 @@ export const mathFormula: MathTopic[] = [
         ],
         answer: '$3x^2-4xy-13y^2$',
         tip: '先认「结构」再套公式，是这张卡最重要的用法：同样两个括号相乘，只有凑出「相同项与相反项」才能用平方差。去括号、合并同类项这两步决定正确率，负号要逐项处理。',
+      },
+      {
+        stem: '计算 $(-1)^{2026}+\\left(\\frac{1}{3}\\right)^{-2}-(\\pi-3)^0+2^{-1}$。',
+        steps: [
+          '逐项求值：$(-1)^{2026}$ 中指数为偶数，结果为 $1$。',
+          '由负整数指数幂的意义：$\\left(\\frac{1}{3}\\right)^{-2}=3^2=9$。',
+          '由零指数幂的意义：$\\pi-3\\neq 0$，所以 $(\\pi-3)^0=1$；$2^{-1}=\\frac{1}{2}$。',
+          '合并结果：$1+9-1+\\frac{1}{2}=9+\\frac{1}{2}=\\frac{19}{2}$。',
+        ],
+        answer: '$\\frac{19}{2}$',
+        tip: '实数混合运算先分项算幂：负指数变正指数的倒数、非零数的零次幂得 1，再按有理数法则合并；遇到 $(\pi-a)^0$ 要先确认底数不为 0。',
+      },
+      {
+        stem: '先化简，再求值：$(x-2)^2-(x+3)(x-3)+x$，其中 $x=-2$。',
+        steps: [
+          '用完全平方公式展开：$(x-2)^2=x^2-4x+4$。',
+          '用平方差公式展开：$(x+3)(x-3)=x^2-9$。',
+          '代入原式并去括号合并：$x^2-4x+4-(x^2-9)+x=x^2-4x+4-x^2+9+x=-3x+13$。',
+          '把 $x=-2$ 代入：$-3\\times(-2)+13=6+13=19$。',
+        ],
+        answer: '化简结果为 $-3x+13$；当 $x=-2$ 时，原式的值为 19。',
+        tip: '化简求值题必须先化简到最简式再代入，直接把 $x=-2$ 代入原式容易在平方和符号上出错；括号前是负号时，去括号每一项都要变号。',
       },
     ],
     pitfalls: [
@@ -259,6 +320,32 @@ export const mathFormula: MathTopic[] = [
         ],
         tags: ['因式分解', '平方差公式'],
       },
+      {
+        id: 'q-m-for-daishu-z1',
+        type: 'choice',
+        stem: '下列因式分解正确的是',
+        options: [
+          '$x^2-4=(x-2)^2$',
+          '$x^2+2x-1=(x-1)^2$',
+          '$x^3-x=x(x^2-1)$',
+          '$2x^2-8=2(x+2)(x-2)$',
+        ],
+        answer: 'D',
+        explanation:
+          'D 先提公因式 2 得 $2(x^2-4)$，再用平方差公式分解为 $2(x+2)(x-2)$，分解彻底，正确。A 把平方差误写成完全平方，应为 $(x+2)(x-2)$；B 左边不是完全平方式，等号不成立；C 只分解了一步，括号内还能继续分解，应写成 $x(x+1)(x-1)$。',
+        difficulty: 2,
+        tags: ['因式分解', '公式法'],
+      },
+      {
+        id: 'q-m-for-daishu-z2',
+        type: 'fill',
+        stem: '计算 $\\sqrt{12}-\\sqrt{3}$ 的结果是____。',
+        answer: '\\sqrt{3}|√3',
+        explanation:
+          '先把 $\\sqrt{12}$ 化为最简二次根式：$\\sqrt{12}=\\sqrt{4\\times 3}=2\\sqrt{3}$，再合并同类二次根式：$2\\sqrt{3}-\\sqrt{3}=\\sqrt{3}$。被开方数含能开得尽方的因数时必须先化简。',
+        difficulty: 2,
+        tags: ['二次根式', '二次根式化简'],
+      },
     ],
   },
 
@@ -292,6 +379,24 @@ export const mathFormula: MathTopic[] = [
         term: '两个「必须写出来」的动作',
         explain:
           '解分式方程必须写出「检验」（代入最简公分母，判断是否为 $0$）；含参数的一元二次方程必须先讨论二次项系数是否为 $0$、并检验 $\\Delta\\geq0$。这两处不写就是按步扣分。',
+      },
+    ],
+    examPoints: [
+      {
+        point: '判别式与韦达定理的应用',
+        how: '选择填空高频：由 $\\Delta$ 判根的个数、由韦达定理求两根的对称式，含参数题先讨论二次项系数，用韦达定理前确认 $\\Delta\\geq0$。',
+      },
+      {
+        point: '一元二次方程的实际应用',
+        how: '增长率、利润、面积问题是解答题常客，平均增长率列 $a(1\\pm x)^2=b$，解出后按实际意义舍去负根和不合题意的根。',
+      },
+      {
+        point: '分式方程的解法与增根',
+        how: '解答题必须写出去分母、求解、检验三步，根使最简公分母为 0 即增根须舍去，求参数时常由增根反代整式方程。',
+      },
+      {
+        point: '不等式变号与不等式组的解集',
+        how: '两边同乘或除以负数必变号是必考陷阱，不等式组解集画数轴确定，端点能否取等要代回边界逐一核对。',
       },
     ],
     formulas: [
@@ -414,6 +519,46 @@ export const mathFormula: MathTopic[] = [
         answer: '$x_1=1$，$x_2=5$',
         tip: '这张卡的用法是「先选方法、再查结论」：能因式分解就优先因式分解（快且不容易算错），先算 $\\Delta$ 可以提前判断根的个数，避免在 $\\Delta<0$ 时硬套公式。含参数题则先想判别式与韦达定理。',
       },
+      {
+        stem: '某商店 1 月份的利润为 20 万元，由于经营改善，3 月份的利润增加到 24.2 万元。求该商店利润的月平均增长率。',
+        steps: [
+          '设月平均增长率为 $x$，从 1 月到 3 月经过了 2 个月。',
+          '按平均增长率模型列方程：$20(1+x)^2=24.2$。',
+          '两边同除以 20，得 $(1+x)^2=1.21$，开平方得 $1+x=\\pm 1.1$。',
+          '解得 $x_1=0.1$，$x_2=-2.1$；增长率不能为负，舍去 $x_2$，所以月平均增长率为 $10\\%$。',
+        ],
+        answer: '该商店利润的月平均增长率为 $10\\%$。',
+        tip: '连续两期增长用 $a(1+x)^2=b$，不要只增长一次；开平方得到正负两个值后，必须按实际意义舍去负数根。',
+      },
+      {
+        stem: '解不等式组 $\\begin{cases}\\frac{x+1}{2}\\geq 1 \\\\ 3x-2<x+4\\end{cases}$，并把解集在数轴上表示出来。',
+        figure: {
+          id: 'fig-m-for-fangcheng-1',
+          title: '在数轴上表示解集 1≤x<3',
+          caption: '1 处画实心圆点、3 处画空心圆点，两点之间加粗的部分就是公共解集',
+          view: 'wide',
+          alt: '一条水平数轴，刻度 1 的位置画实心圆点，刻度 3 的位置画空心圆点，1 与 3 之间的部分加粗，表示不等式组的解集为 1 小于等于 x 小于 3',
+          prims: [
+            { t: 'arrow', x1: 12, y1: 50, x2: 88, y2: 50 },
+            { t: 'line', x1: 35, y1: 47, x2: 35, y2: 53, tone: 'muted' },
+            { t: 'line', x1: 65, y1: 47, x2: 65, y2: 53, tone: 'muted' },
+            { t: 'line', x1: 35, y1: 50, x2: 65, y2: 50, tone: 'accent', width: 2.5 },
+            { t: 'dot', x: 35, y: 50, r: 1.5, tone: 'accent' },
+            { t: 'dot', x: 65, y: 50, r: 1.5, hollow: true, tone: 'accent' },
+            { t: 'text', x: 35, y: 60, text: '1', size: 3.6, anchor: 'middle' },
+            { t: 'text', x: 65, y: 60, text: '3', size: 3.6, anchor: 'middle' },
+            { t: 'text', x: 50, y: 36, text: '1 ≤ x < 3', size: 3.8, anchor: 'middle', tone: 'accent' },
+          ],
+        },
+        steps: [
+          '解第一个不等式：$\\frac{x+1}{2}\\geq 1$，两边同乘 2 得 $x+1\\geq 2$，解得 $x\\geq 1$。',
+          '解第二个不等式：$3x-2<x+4$，移项合并得 $2x<6$，解得 $x<3$。',
+          '画数轴取两个解集的公共部分：$x\\geq 1$ 处画实心圆点向右，$x<3$ 处画空心圆点向左。',
+          '两部分重叠的区间为 $1\\leq x<3$，这就是不等式组的解集。',
+        ],
+        answer: '不等式组的解集为 $1\\leq x<3$；数轴上 1 处画实心圆点、3 处画空心圆点，取两者之间的部分。',
+        tip: '不等式组的解集是各不等式解集的公共部分；含等号画实心圆点、不含等号画空心圆点，端点取舍不能凭感觉，要逐个代回原不等式检验。',
+      },
     ],
     pitfalls: [
       '不等式两边同乘（除以）负数时忘记改变不等号方向；当乘数是含字母的式子时，不讨论符号就直接乘，也是错的。',
@@ -476,6 +621,27 @@ export const mathFormula: MathTopic[] = [
         ],
         tags: ['分式方程', '增根检验'],
       },
+      {
+        id: 'q-m-for-fangcheng-z1',
+        type: 'choice',
+        stem: '若关于 $x$ 的一元二次方程 $x^2-2x+k=0$ 有两个不相等的实数根，则 $k$ 的取值范围是',
+        options: ['$k<1$', '$k\\leq 1$', '$k>1$', '$k\\neq 1$'],
+        answer: 'A',
+        explanation:
+          '方程有两个不相等的实数根等价于判别式 $\\Delta>0$。这里 $a=1$，$b=-2$，$c=k$，故 $\\Delta=(-2)^2-4\\times 1\\times k=4-4k>0$，解得 $k<1$。取等号时 $\\Delta=0$，方程只有两个相等的实数根，故 B 不正确。',
+        difficulty: 2,
+        tags: ['判别式', '含参数'],
+      },
+      {
+        id: 'q-m-for-fangcheng-z2',
+        type: 'fill',
+        stem: '不等式 $3-2x\\geq 7$ 的解集是____。',
+        answer: 'x\\leq -2|x≤-2',
+        explanation:
+          '移项得 $-2x\\geq 7-3$，即 $-2x\\geq 4$；两边同除以 $-2$，不等号方向改变，得 $x\\leq -2$。最容易出错的一步就是除以负数时忘记把「$\\geq$」改成「$\\leq$」。',
+        difficulty: 2,
+        tags: ['一元一次不等式', '不等号变号'],
+      },
     ],
   },
 
@@ -509,6 +675,24 @@ export const mathFormula: MathTopic[] = [
         term: '先画草图再计算',
         explain:
           '函数题的第一动作是画草图：单调性、交点个数、最值取在哪一点，看草图比空算代数式快得多。比较函数值大小、解 $kx+b>0$ 这类不等式，一律转化为「图像在 $x$ 轴上方（下方）的部分对应的 $x$ 的取值范围」。',
+      },
+    ],
+    examPoints: [
+      {
+        point: '待定系数法求函数解析式',
+        how: '一次函数代两点列方程组，二次函数按交点式、顶点式、一般式的已知条件选形式设式，是函数综合题第一问的固定考法。',
+      },
+      {
+        point: '二次函数的图像特征与最值',
+        how: '由 $a$ 判开口、由顶点式或坐标公式得顶点与对称轴，实际问题最值必须检验顶点横坐标是否在自变量取值范围内。',
+      },
+      {
+        point: '反比例函数 k 的几何意义',
+        how: '矩形面积等于 $|k|$、对应三角形面积等于其半，由面积反求 $k$ 要结合象限定符号，增减性必须表述为「在每一支上」。',
+      },
+      {
+        point: '函数与方程、不等式的转化',
+        how: '图像与 $x$ 轴交点的横坐标就是对应方程的根，$kx+b>0$ 转化为图像在轴上方部分的横坐标范围，用数形结合求解。',
       },
     ],
     formulas: [
@@ -615,6 +799,25 @@ export const mathFormula: MathTopic[] = [
     examples: [
       {
         stem: '已知抛物线经过点 $(1,0)$、$(3,0)$ 和 $(0,3)$，求它的解析式与顶点坐标。',
+        figure: {
+          id: 'fig-m-for-hanshu-1',
+          title: '抛物线 y=(x−1)(x−3) 的图像',
+          caption: '抛物线与 x 轴交于 (1,0)、(3,0)，与 y 轴交于 (0,3)，顶点为 (2,−1)',
+          view: 'wide',
+          alt: '平面直角坐标系中，一条开口向上的抛物线与 x 轴交于点 (1,0) 和 (3,0)，与 y 轴交于点 (0,3)，顶点坐标为 (2,−1)，对称轴为直线 x=2',
+          prims: [
+            { t: 'axis', x: 20, y: 60, w: 70, h: 50, xLabel: 'x', yLabel: 'y', origin: true,
+              xTicks: [{ at: 0.143, label: '1' }, { at: 0.429, label: '3' }],
+              yTicks: [{ at: 0.6, label: '3' }] },
+            { t: 'curve', points: [[20, 30], [25, 42.5], [30, 60], [35, 67.5], [40, 70], [45, 67.5], [50, 60], [55, 42.5], [60, 30]], tone: 'accent', width: 2 },
+            { t: 'line', x1: 40, y1: 8, x2: 40, y2: 72, dashed: true, tone: 'muted' },
+            { t: 'dot', x: 30, y: 60, r: 1.4, label: '(1,0)', labelDx: -3, labelDy: 4 },
+            { t: 'dot', x: 50, y: 60, r: 1.4, label: '(3,0)', labelDx: 2, labelDy: 4 },
+            { t: 'dot', x: 20, y: 30, r: 1.4, label: '(0,3)', labelDx: -14, labelDy: 0 },
+            { t: 'dot', x: 40, y: 70, r: 1.4, tone: 'accent', label: '(2,−1)', labelDx: 3, labelDy: 4 },
+            { t: 'text', x: 40, y: 5, text: 'x=2', size: 3.2, anchor: 'middle', tone: 'muted' },
+          ],
+        },
         steps: [
           '先看清已知条件：抛物线与 $x$ 轴的两个交点分别为 $(1,0)$、$(3,0)$，所以设交点式 $y=a(x-1)(x-3)$。',
           '把第三个点 $(0,3)$ 代入：$3=a(0-1)(0-3)=3a$，解得 $a=1$。',
@@ -623,6 +826,28 @@ export const mathFormula: MathTopic[] = [
         ],
         answer: '$y=x^2-4x+3$，顶点坐标为 $(2,-1)$',
         tip: '这张卡最重要的用法是「按已知条件选形式」：已知与 $x$ 轴的两个交点用交点式，已知顶点用顶点式，只有已知任意三点才用一般式。选对形式可以少列两个方程；求顶点时也可以直接用对称轴是两交点中点的性质。',
+      },
+      {
+        stem: '已知一次函数的图像经过点 $(1,3)$ 和点 $(-1,-1)$。求这个一次函数的解析式，并判断点 $(2,5)$ 是否在该函数的图像上。',
+        steps: [
+          '设一次函数的解析式为 $y=kx+b$（$k\\neq 0$）。',
+          '把两个已知点的坐标分别代入，得方程组 $\\begin{cases}k+b=3 \\\\ -k+b=-1\\end{cases}$，两式相加得 $2b=2$，所以 $b=1$，再代回得 $k=2$。',
+          '所以这个一次函数的解析式为 $y=2x+1$。',
+          '检验点 $(2,5)$：把 $x=2$ 代入解析式得 $y=2\\times 2+1=5$，与该点纵坐标相等，所以点 $(2,5)$ 在该函数的图像上。',
+        ],
+        answer: '一次函数的解析式为 $y=2x+1$；点 $(2,5)$ 在该函数的图像上。',
+        tip: '两点确定一条直线，代两点求 $k$、$b$ 是待定系数法的标准流程；判断一个点是否在图像上，只需把横坐标代入解析式，看算出的纵坐标是否与点的纵坐标相等。',
+      },
+      {
+        stem: '已知反比例函数 $y=\\frac{k}{x}$ 的图像经过点 $A(2,3)$。求 $k$ 的值，并求过点 $A$ 向两坐标轴所作垂线与坐标轴围成的矩形面积，以及连接点 $A$ 与原点把该矩形分成的每个直角三角形的面积。',
+        steps: [
+          '把点 $A(2,3)$ 代入 $y=\\frac{k}{x}$，得 $3=\\frac{k}{2}$，所以 $k=2\\times 3=6$。',
+          '过双曲线上一点向两坐标轴作垂线，围成矩形的面积等于 $|k|$，所以矩形面积为 $|6|=6$。',
+          '也可直接验证：矩形的长和宽分别为 2 和 3，面积为 $2\\times 3=6$。',
+          '连接点 $A$ 与原点，把矩形分成两个全等的直角三角形，每个三角形的面积为矩形面积的一半，即 $\\frac{1}{2}\\times 6=3$。',
+        ],
+        answer: '$k=6$；矩形面积为 6；每个直角三角形的面积为 3。',
+        tip: '反比例函数中 $k$ 的几何意义是面积结论：矩形面积为 $|k|$，直角三角形面积为 $\\frac{1}{2}|k|$。面积不带符号，已知面积反求 $k$ 时还要结合图像所在象限确定正负。',
       },
     ],
     pitfalls: [
@@ -686,6 +911,57 @@ export const mathFormula: MathTopic[] = [
         ],
         tags: ['二次函数', '顶点与最值'],
       },
+      {
+        id: 'q-m-for-hanshu-z1',
+        type: 'choice',
+        stem: '关于二次函数 $y=(x-1)^2+2$ 的图像，下列说法正确的是',
+        options: [
+          '开口向下',
+          '顶点坐标为 $(-1,2)$',
+          '对称轴是直线 $x=-1$',
+          '当 $x=1$ 时，$y$ 取得最小值 2',
+        ],
+        answer: 'D',
+        explanation:
+          '顶点式 $y=a(x-h)^2+k$ 中 $a=1>0$，开口向上，A 错；顶点为 $(h,k)=(1,2)$，不是 $(-1,2)$，B 错；对称轴为直线 $x=1$，C 错；开口向上时顶点 $(1,2)$ 是最低点，故 $x=1$ 时 $y$ 取最小值 2，D 正确。',
+        difficulty: 2,
+        tags: ['二次函数', '顶点式'],
+      },
+      {
+        id: 'q-m-for-hanshu-z2',
+        type: 'short',
+        stem:
+          '如图，用长 24 m 的篱笆靠墙围成一个矩形花圃（墙足够长），设垂直于墙的一边长为 $x$ m，花圃面积为 $S$ m$^2$。求 $S$ 与 $x$ 的函数关系式，并求花圃的最大面积及此时平行于墙的一边长。',
+        figure: {
+          id: 'fig-m-for-hanshu-z2',
+          title: '靠墙围成的矩形花圃',
+          caption: '篱笆只围三边：两条垂直于墙的边长各为 x，平行于墙的边长为 24−2x',
+          view: 'wide',
+          alt: '上方是一道带斜线阴影的墙，下方靠墙围出一个矩形花圃，矩形的左右两条边各标为 x，底边标为 24 减 2x，顶边与墙重合',
+          prims: [
+            { t: 'hatch', x: 15, y: 14, w: 70, h: 6 },
+            { t: 'line', x1: 15, y1: 20, x2: 85, y2: 20, tone: 'muted' },
+            { t: 'line', x1: 32, y1: 20, x2: 32, y2: 58, width: 2 },
+            { t: 'line', x1: 32, y1: 58, x2: 68, y2: 58, width: 2 },
+            { t: 'line', x1: 68, y1: 20, x2: 68, y2: 58, width: 2 },
+            { t: 'text', x: 50, y: 16, text: '墙', size: 3.6, anchor: 'middle', tone: 'muted' },
+            { t: 'text', x: 28, y: 40, text: 'x', size: 3.8, anchor: 'end' },
+            { t: 'text', x: 72, y: 40, text: 'x', size: 3.8, anchor: 'start' },
+            { t: 'text', x: 50, y: 64, text: '24−2x', size: 3.6, anchor: 'middle' },
+          ],
+        },
+        answer:
+          '垂直于墙的一边长为 $x$ m，则平行于墙的一边长为 $(24-2x)$ m，由题意 $x>0$ 且 $24-2x>0$，即 $0<x<12$。面积 $S=x(24-2x)=-2x^2+24x=-2(x-6)^2+72$。因为 $-2<0$ 且 $6$ 在 $0<x<12$ 内，所以当 $x=6$ 时 $S$ 取得最大值 72；此时平行于墙的一边长为 $24-2\\times 6=12$（m）。',
+        explanation:
+          '靠墙围矩形时篱笆只围三边，两条垂直于墙的边各长 $x$，平行于墙的边长为 $24-2x$。面积整理成顶点式后，顶点横坐标 6 在取值范围 $0<x<12$ 内，最值才能在顶点取到；若顶点超出范围，就应比较区间端点的面积。',
+        difficulty: 3,
+        rubric: [
+          '写出平行于墙的边长 $24-2x$ 及面积关系式 $S=x(24-2x)$',
+          '配方为 $S=-2(x-6)^2+72$，并确定自变量范围 $0<x<12$',
+          '由顶点在取值范围内得最大面积 72 m$^2$，并求出平行于墙的边长为 12 m',
+        ],
+        tags: ['二次函数', '实际问题最值'],
+      },
     ],
   },
 
@@ -719,6 +995,20 @@ export const mathFormula: MathTopic[] = [
         term: '所有结论都有前提',
         explain:
           '本卡每一条定理都带前提（同一平面内、两直线平行、过直线外一点等），答题时漏写前提是几何题失分最多的地方：写「同位角相等」必须补上「两直线平行」。',
+      },
+    ],
+    examPoints: [
+      {
+        point: '平行线判定与性质的角度计算',
+        how: '解答题先由同位角、内错角、同旁内角的关系证平行，再由平行推出角的关系，推理方向不能反，「两直线平行」这一前提每步都要写明。',
+      },
+      {
+        point: '余角、补角、对顶角与度分秒计算',
+        how: '选择填空常以度分秒或倍数关系给条件求角，设未知数列方程最稳，同角或等角的余角相等、补角相等是证明两角相等的常用依据。',
+      },
+      {
+        point: '坐标对称、平移与距离公式',
+        how: '给点坐标考关于坐标轴或原点对称、按规律平移、用距离公式与中点公式计算，到坐标轴的距离要加绝对值且勿写反横、纵坐标。',
       },
     ],
     formulas: [
@@ -820,6 +1110,46 @@ export const mathFormula: MathTopic[] = [
         answer: '$AB=5$，$M\\left(1,\\frac{7}{2}\\right)$，$D(-1,1)$',
         tip: '坐标类题目的通用做法：先在本卡找到对应公式（距离、中点、对称、平移），再逐个代入数字。横纵坐标之差不要求定顺序（平方后相同），但平移时「右加左减、上加下减」一定不能反。',
       },
+      {
+        stem: '如图，直线 $a\\parallel b$，直线 $c$ 分别与 $a$、$b$ 相交，其中 $\\angle 1=65^\\circ$，$\\angle 2$ 与 $\\angle 1$ 是同位角，$\\angle 3$ 与 $\\angle 2$ 是邻补角。求 $\\angle 2$、$\\angle 3$ 的度数。',
+        figure: {
+          id: 'fig-m-for-jihe-1',
+          title: '平行线被第三条直线所截',
+          caption: '∠1 与 ∠2 是同位角，∠2 与 ∠3 是邻补角',
+          view: 'wide',
+          alt: '两条水平直线 a 和 b 互相平行，一条从左上到右下的直线 c 分别与 a、b 相交；在 a 与 c 的交点处标有 ∠1（65 度），在 b 与 c 的交点处标有 ∠2（与 ∠1 同位）和 ∠3（与 ∠2 互为邻补角）',
+          prims: [
+            { t: 'line', x1: 12, y1: 28, x2: 88, y2: 28, width: 1.5 },
+            { t: 'line', x1: 12, y1: 64, x2: 88, y2: 64, width: 1.5 },
+            { t: 'line', x1: 28, y1: 14, x2: 58, y2: 80, width: 1.5 },
+            { t: 'text', x: 90, y: 30, text: 'a', size: 4, anchor: 'start' },
+            { t: 'text', x: 90, y: 66, text: 'b', size: 4, anchor: 'start' },
+            { t: 'text', x: 26, y: 12, text: 'c', size: 4, anchor: 'end' },
+            { t: 'angle', x: 34, y: 28, from: 0, to: -65, r: 8, label: '1', tone: 'accent' },
+            { t: 'angle', x: 51, y: 64, from: 0, to: -65, r: 8, label: '2', tone: 'accent' },
+            { t: 'angle', x: 51, y: 64, from: 0, to: 115, r: 8, label: '3', tone: 'muted' },
+          ],
+        },
+        steps: [
+          '看清已知与所求：已知两直线平行，由平行线的性质求角，推理方向是「由线到角」。',
+          '因为 $a\\parallel b$，$\\angle 2$ 与 $\\angle 1$ 是同位角，根据「两直线平行，同位角相等」，得 $\\angle 2=\\angle 1=65^\\circ$。',
+          '$\\angle 3$ 与 $\\angle 2$ 是邻补角，两角之和为 $180^\\circ$，所以 $\\angle 3=180^\\circ-65^\\circ=115^\\circ$。',
+          '检验：$\\angle 1$ 与 $\\angle 3$ 是同旁内角，由「两直线平行，同旁内角互补」得 $65^\\circ+115^\\circ=180^\\circ$，结果一致。',
+        ],
+        answer: '$\\angle 2=65^\\circ$，$\\angle 3=115^\\circ$。',
+        tip: '由平行得到角的关系时，理由必须写成「两直线平行，同位角相等（内错角相等、同旁内角互补）」，「两直线平行」这个前提不能省略。',
+      },
+      {
+        stem: '计算：（1）$32^\\circ 45^{\\prime}$ 的余角和补角；（2）$180^\\circ-65^\\circ 28^{\\prime}$。',
+        steps: [
+          '求余角：先把 $90^\\circ$ 写成 $89^\\circ 60^{\\prime}$ 再相减，$89^\\circ 60^{\\prime}-32^\\circ 45^{\\prime}=57^\\circ 15^{\\prime}$。',
+          '求补角：把 $180^\\circ$ 写成 $179^\\circ 60^{\\prime}$，$179^\\circ 60^{\\prime}-32^\\circ 45^{\\prime}=147^\\circ 15^{\\prime}$。',
+          '验证补角与余角之差：$147^\\circ 15^{\\prime}-57^\\circ 15^{\\prime}=90^\\circ$，符合同一个角的补角比余角大 $90^\\circ$。',
+          '计算第（2）小题：$179^\\circ 60^{\\prime}-65^\\circ 28^{\\prime}=114^\\circ 32^{\\prime}$。',
+        ],
+        answer: '（1）余角为 $57^\\circ 15^{\\prime}$，补角为 $147^\\circ 15^{\\prime}$；（2）$114^\\circ 32^{\\prime}$。',
+        tip: '度、分、秒是六十进制，不够减时从高一位借 1 当 60：$90^\\circ$ 要先化成 $89^\\circ 60^{\\prime}$，不能按十进制借 100。',
+      },
     ],
     pitfalls: [
       '平行线的判定与性质混用：由角推线要用判定，由线推角要用性质；答题时漏写「两直线平行」这个前提。',
@@ -887,6 +1217,27 @@ export const mathFormula: MathTopic[] = [
         ],
         tags: ['余角与补角', '列方程求角'],
       },
+      {
+        id: 'q-m-for-jihe-z1',
+        type: 'choice',
+        stem: '若点 $P(a,b)$ 在第二象限，则点 $Q(-a,b)$ 在',
+        options: ['第一象限', '第二象限', '第三象限', '第四象限'],
+        answer: 'A',
+        explanation:
+          '点 $P(a,b)$ 在第二象限，说明 $a<0$，$b>0$。于是 $-a>0$，点 $Q(-a,b)$ 的横、纵坐标都为正，即 $(+,+)$，所以点 $Q$ 在第一象限。',
+        difficulty: 2,
+        tags: ['平面直角坐标系', '象限'],
+      },
+      {
+        id: 'q-m-for-jihe-z2',
+        type: 'fill',
+        stem: '点 $M(-4,3)$ 到原点的距离是____。',
+        answer: '5',
+        explanation:
+          '点 $P(a,b)$ 到原点的距离为 $\\sqrt{a^2+b^2}$，所以点 $M(-4,3)$ 到原点的距离为 $\\sqrt{(-4)^2+3^2}=\\sqrt{16+9}=\\sqrt{25}=5$。注意平方后负号消去，不要误算成 $\\sqrt{-16+9}$。',
+        difficulty: 2,
+        tags: ['点的坐标', '两点间距离'],
+      },
     ],
   },
 
@@ -925,6 +1276,24 @@ export const mathFormula: MathTopic[] = [
         term: '关于梯形',
         explain:
           '现行人教版教材中梯形不作独立一节，但中考四边形综合题仍常以「一组对边平行」的形式出现，掌握三条常用辅助线（过顶点作高、平移一腰、延长两腰交于一点）即可应付。',
+      },
+    ],
+    examPoints: [
+      {
+        point: '全等三角形的判定与证明',
+        how: '解答题高频题位，从 SSS、SAS、ASA、AAS、HL 中选判定并写出三个条件，对应顶点字母写在对应位置，再由全等得对应边、对应角相等。',
+      },
+      {
+        point: '等腰三角形与勾股定理综合',
+        how: '三线合一常把等腰三角形问题化为直角三角形问题，再用勾股定理求高或面积；已知两边求周长要分类讨论并用三边关系取舍。',
+      },
+      {
+        point: '特殊平行四边形的判定与性质',
+        how: '证明按「先证平行四边形、再补特殊条件」的顺序进行，矩形看直角与对角线相等，菱形看邻边相等与对角线垂直平分。',
+      },
+      {
+        point: '多边形角和与三角形中位线',
+        how: '用 $(n-2)\\times 180^\\circ$ 求边数或内角，外角和恒为 $360^\\circ$；见两边中点想中位线，平行与等于第三边一半两个结论都要写出。',
       },
     ],
     formulas: [
@@ -1058,6 +1427,66 @@ export const mathFormula: MathTopic[] = [
         answer: '$AD=3$，$S_{\\triangle ABC}=12$',
         tip: '等腰三角形已知底边求高（或已知两腰求面积）的标准套路：用「三线合一」把已知条件集中到一个直角三角形里，再用勾股定理求出未知的边。本卡中「等腰三角形的性质」和「勾股定理」几乎总是连在一起用。',
       },
+      {
+        stem: '如图，在 $\\triangle ABC$ 中，$AB=AC$，$AD$ 平分 $\\angle BAC$，交 $BC$ 于点 $D$。求证：$BD=CD$。',
+        figure: {
+          id: 'fig-m-for-sanjiao-2',
+          title: '等腰三角形顶角平分线',
+          caption: 'AB=AC，AD 平分 ∠BAC，可证 △ABD≅△ACD',
+          view: 'square',
+          alt: '等腰三角形 ABC，AB 与 AC 相等，A 在上方、BC 水平在下方；从 A 引出线段 AD 交 BC 于 D，AD 平分顶角 ∠BAC，∠BAD 与 ∠CAD 各用一段弧标出',
+          prims: [
+            { t: 'poly', points: [[22, 72], [50, 18], [78, 72]], closed: true, tone: 'main' },
+            { t: 'line', x1: 50, y1: 18, x2: 50, y2: 72, tone: 'accent' },
+            { t: 'angle', x: 50, y: 18, from: 243, to: 270, r: 10, tone: 'accent' },
+            { t: 'angle', x: 50, y: 18, from: 270, to: 298, r: 10, tone: 'accent' },
+            { t: 'text', x: 50, y: 14, text: 'A', size: 4, anchor: 'middle' },
+            { t: 'text', x: 18, y: 75, text: 'B', size: 4, anchor: 'end' },
+            { t: 'text', x: 82, y: 75, text: 'C', size: 4, anchor: 'start' },
+            { t: 'text', x: 50, y: 78, text: 'D', size: 4, anchor: 'middle' },
+          ],
+        },
+        steps: [
+          '由 $AD$ 平分 $\\angle BAC$，根据角平分线的定义，得 $\\angle BAD=\\angle CAD$。',
+          '在 $\\triangle ABD$ 和 $\\triangle ACD$ 中列出三个条件：$AB=AC$（已知），$\\angle BAD=\\angle CAD$（已证），$AD=AD$（公共边）。',
+          '两边及其夹角对应相等，根据 SAS 判定，得 $\\triangle ABD\\cong\\triangle ACD$。',
+          '由全等三角形的对应边相等，得 $BD=CD$。',
+        ],
+        answer: '由 $AB=AC$、$\\angle BAD=\\angle CAD$、$AD=AD$，根据 SAS 得 $\\triangle ABD\\cong\\triangle ACD$，故 $BD=CD$。',
+        tip: '证明题书写全等要「摆条件、写依据」：把三组对应相等按判定方法的顺序列出，并用大括号括起来；$AD=AD$ 是公共边，不能漏写。',
+      },
+      {
+        stem: '如图，菱形 $ABCD$ 的两条对角线 $AC$、$BD$ 相交于点 $O$，且 $AC=6$，$BD=8$。求菱形的边长和面积。',
+        figure: {
+          id: 'fig-m-for-sanjiao-1',
+          title: '菱形的对角线互相垂直平分',
+          caption: 'AC=6 则 OA=3，BD=8 则 OB=4，△AOB 是直角三角形',
+          view: 'square',
+          alt: '菱形 ABCD，对角线 AC 水平、BD 竖直，交于点 O；OA 长 3，OB 长 4，两条对角线在 O 处互相垂直，形成四个全等的直角三角形',
+          prims: [
+            { t: 'poly', points: [[29, 50], [50, 22], [71, 50], [50, 78]], closed: true, tone: 'main' },
+            { t: 'line', x1: 29, y1: 50, x2: 71, y2: 50, dashed: true, tone: 'muted' },
+            { t: 'line', x1: 50, y1: 22, x2: 50, y2: 78, dashed: true, tone: 'muted' },
+            { t: 'angle', x: 50, y: 50, from: 0, to: 90, right: true, r: 5, tone: 'muted' },
+            { t: 'dot', x: 50, y: 50, r: 1, tone: 'muted' },
+            { t: 'text', x: 24, y: 53, text: 'A', size: 4, anchor: 'end' },
+            { t: 'text', x: 50, y: 16, text: 'B', size: 4, anchor: 'middle' },
+            { t: 'text', x: 76, y: 53, text: 'C', size: 4, anchor: 'start' },
+            { t: 'text', x: 50, y: 84, text: 'D', size: 4, anchor: 'middle' },
+            { t: 'text', x: 52, y: 53, text: 'O', size: 3.6, anchor: 'start', tone: 'muted' },
+            { t: 'text', x: 39, y: 47, text: '3', size: 3.6, anchor: 'middle', tone: 'accent' },
+            { t: 'text', x: 53, y: 37, text: '4', size: 3.6, anchor: 'start', tone: 'accent' },
+          ],
+        },
+        steps: [
+          '由菱形的性质，两条对角线互相垂直平分，所以 $AC\\perp BD$，且 $OA=\\frac{1}{2}AC=3$，$OB=\\frac{1}{2}BD=4$。',
+          '在 $\\mathrm{Rt}\\triangle AOB$ 中，由勾股定理得 $AB=\\sqrt{OA^2+OB^2}=\\sqrt{3^2+4^2}=\\sqrt{25}=5$，即菱形的边长为 5。',
+          '菱形面积等于两条对角线乘积的一半：$S=\\frac{1}{2}AC\\cdot BD=\\frac{1}{2}\\times 6\\times 8=24$。',
+          '用「四个直角三角形面积之和」验证：$4\\times\\frac{1}{2}\\times 3\\times 4=24$，结果一致。',
+        ],
+        answer: '菱形的边长为 5，面积为 24。',
+        tip: '菱形对角线互相垂直平分，把菱形分成四个全等的直角三角形，求边长用勾股定理；已知两条对角线时，面积直接用 $\\frac{1}{2}\\times$ 两条对角线之积。',
+      },
     ],
     pitfalls: [
       '全等判定中出现「SSA」或「AAA」；SAS 的角必须是两边的夹角；HL 只能用于直角三角形。',
@@ -1120,6 +1549,32 @@ export const mathFormula: MathTopic[] = [
         ],
         tags: ['三角形中位线', '平行线的性质'],
       },
+      {
+        id: 'q-m-for-sanjiao-z1',
+        type: 'choice',
+        stem: '下列命题中，正确的是',
+        options: [
+          '对角线相等的四边形是矩形',
+          '对角线互相垂直的四边形是菱形',
+          '一组对边平行、另一组对边相等的四边形是平行四边形',
+          '一组邻边相等的矩形是正方形',
+        ],
+        answer: 'D',
+        explanation:
+          '矩形的四个角都是直角，若再有一组邻边相等，则四条边都相等，它同时是菱形，也就是正方形，D 正确。A、B 都漏掉了「平行四边形」这个前提，等腰梯形的对角线相等、但不是矩形，A 为假命题；C 也可能是等腰梯形，不能判定为平行四边形。',
+        difficulty: 2,
+        tags: ['矩形菱形正方形', '判定定理'],
+      },
+      {
+        id: 'q-m-for-sanjiao-z2',
+        type: 'fill',
+        stem: '一个直角三角形的两条直角边长分别为 5 和 12，则它斜边上的中线长为____。',
+        answer: '6.5|13/2|\\frac{13}{2}',
+        explanation:
+          '先由勾股定理求斜边：$c=\\sqrt{5^2+12^2}=\\sqrt{25+144}=13$。直角三角形斜边上的中线等于斜边的一半，所以斜边上的中线长为 $\\frac{13}{2}=6.5$。',
+        difficulty: 2,
+        tags: ['直角三角形', '斜边中线'],
+      },
     ],
   },
 
@@ -1153,6 +1608,24 @@ export const mathFormula: MathTopic[] = [
         term: '特殊角必须无条件记住',
         explain:
           '$30^\\circ$、$45^\\circ$、$60^\\circ$ 的正弦、余弦、正切值必须牢记，考试中不查表；同时记住 $3,4,5$ 型与 $1,1,\\sqrt{2}$、$1,\\sqrt{3},2$ 型直角三角形的边比，可以大幅提速。',
+      },
+    ],
+    examPoints: [
+      {
+        point: '垂径定理与圆周角定理的计算',
+        how: '求弦长、弦心距用「连半径、作垂线」配勾股定理，求角用同弧所对圆周角等于圆心角的一半，点在哪段弧上要看清。',
+      },
+      {
+        point: '切线的判定、性质与切线长',
+        how: '证切线用「连半径证垂直」或「作垂直证半径」，已知切线先连切点半径，圆外一点引两条切线时切线长相等、连线平分夹角。',
+      },
+      {
+        point: '弧长、扇形面积与圆锥侧面展开',
+        how: '弧长公式分母 180、扇形面积分母 360 不能混，扇形半径是母线长，求展开图圆心角用底面周长等于扇形弧长列方程。',
+      },
+      {
+        point: '解直角三角形的实际应用',
+        how: '仰角俯角、坡度、方向角问题先画水平线、构造直角三角形，按「有斜用弦、无斜用切」选函数，结果要回到实际情境检验。',
       },
     ],
     formulas: [
@@ -1286,6 +1759,75 @@ export const mathFormula: MathTopic[] = [
         answer: '圆心 $O$ 到弦 $AB$ 的距离为 $\\frac{5\\sqrt{2}}{2}$，$\\angle ACB=45^\\circ$',
         tip: '圆中求弦长、弦心距的固定动作是「连半径、作垂线」，把条件集中到一个直角三角形里用勾股定理（$R^2=d^2+\\left(\\frac{a}{2}\\right)^2$）；再由「同弧所对的圆周角等于圆心角的一半」求角，务必看清点在哪一段弧上、角所对的是哪条弧。',
       },
+      {
+        stem: '如图，$PA$、$PB$ 分别切 $\\odot O$ 于点 $A$、$B$，$\\angle APB=60^\\circ$，$\\odot O$ 的半径为 3。求切线长 $PA$。',
+        figure: {
+          id: 'fig-m-for-yuan-1',
+          title: '从圆外一点引圆的两条切线',
+          caption: 'PA=PB，OP 平分 ∠APB，OA⊥PA，OB⊥PB',
+          view: 'wide',
+          alt: '圆 O 右侧有一点 P，从 P 引出两条切线分别与圆相切于上方的点 A 和下方的点 B；连接 OA、OB、OP，OA 垂直于 PA，OB 垂直于 PB，∠APB 标为 60 度',
+          prims: [
+            { t: 'circle', cx: 50, cy: 50, r: 22 },
+            { t: 'line', x1: 86, y1: 50, x2: 59, y2: 34, width: 1.8 },
+            { t: 'line', x1: 86, y1: 50, x2: 59, y2: 66, width: 1.8 },
+            { t: 'line', x1: 50, y1: 50, x2: 59, y2: 34, tone: 'muted' },
+            { t: 'line', x1: 50, y1: 50, x2: 59, y2: 66, tone: 'muted' },
+            { t: 'line', x1: 50, y1: 50, x2: 86, y2: 50, dashed: true, tone: 'muted' },
+            { t: 'angle', x: 59, y: 34, from: 240, to: 330, right: true, r: 5, tone: 'muted' },
+            { t: 'angle', x: 59, y: 66, from: 30, to: 120, right: true, r: 5, tone: 'muted' },
+            { t: 'angle', x: 86, y: 50, from: 149, to: 211, r: 11, label: '60°', tone: 'accent' },
+            { t: 'dot', x: 50, y: 50, r: 1.2 },
+            { t: 'text', x: 46, y: 57, text: 'O', size: 4, anchor: 'end' },
+            { t: 'text', x: 90, y: 52, text: 'P', size: 4, anchor: 'start' },
+            { t: 'text', x: 59, y: 29, text: 'A', size: 4, anchor: 'middle' },
+            { t: 'text', x: 59, y: 72, text: 'B', size: 4, anchor: 'middle' },
+          ],
+        },
+        steps: [
+          '由切线长定理，$PA=PB$，且点 $P$ 与圆心 $O$ 的连线平分两条切线的夹角，所以 $\\angle APO=\\frac{1}{2}\\angle APB=30^\\circ$。',
+          '由切线的性质，圆的切线垂直于过切点的半径，所以 $OA\\perp PA$，即 $\\angle OAP=90^\\circ$，$\\triangle OAP$ 是直角三角形。',
+          '在 $\\mathrm{Rt}\\triangle OAP$ 中，$\\tan 30^\\circ=\\frac{OA}{PA}$，故 $PA=\\frac{OA}{\\tan 30^\\circ}=\\frac{3}{\\frac{\\sqrt{3}}{3}}=3\\sqrt{3}$。',
+          '也可验证：$30^\\circ$ 角所对的直角边 $OA$ 等于斜边 $OP$ 的一半，$OP=6$，再由勾股定理得 $PA=\\sqrt{6^2-3^2}=3\\sqrt{3}$。',
+        ],
+        answer: '切线长 $PA=3\\sqrt{3}$。',
+        tip: '看到圆外一点引两条切线，先想到切线长定理：切线长相等、连线平分夹角；再连切点半径得到直角三角形，用三角函数或勾股定理求长度。',
+      },
+      {
+        stem:
+          '如图，某人在水平地面上的点 $A$ 处测得塔顶 $C$ 的仰角为 $30^\\circ$，沿正对塔的方向前进 60 m 到达点 $B$，在 $B$ 处测得塔顶 $C$ 的仰角为 $60^\\circ$。已知塔底 $D$ 与 $A$、$B$ 在同一直线上，塔 $CD$ 垂直于地面，测量者身高忽略不计，求塔高 $CD$。',
+        figure: {
+          id: 'fig-m-for-yuan-2',
+          title: '两次仰角测塔高',
+          caption: '在 A 处仰角 30°，前进 60 m 到 B 处仰角 60°，求塔高 CD',
+          view: 'wide',
+          alt: '水平地面上从左到右依次是点 A、点 B 和塔底 D，塔 CD 竖直向上，塔顶为 C；从 A 到 C 的视线与水平线夹角为 30 度，从 B 到 C 的视线与水平线夹角为 60 度，AB 段标为 60 m',
+          prims: [
+            { t: 'line', x1: 12, y1: 80, x2: 90, y2: 80, tone: 'muted' },
+            { t: 'line', x1: 70, y1: 80, x2: 70, y2: 59, width: 2.5, tone: 'main' },
+            { t: 'line', x1: 34, y1: 80, x2: 70, y2: 59, tone: 'accent' },
+            { t: 'line', x1: 58, y1: 80, x2: 70, y2: 59, tone: 'accent' },
+            { t: 'line', x1: 34, y1: 80, x2: 66, y2: 80, dashed: true, tone: 'muted' },
+            { t: 'line', x1: 58, y1: 80, x2: 70, y2: 80, dashed: true, tone: 'muted' },
+            { t: 'angle', x: 34, y: 80, from: 0, to: 30, r: 11, label: '30°', tone: 'accent' },
+            { t: 'angle', x: 58, y: 80, from: 0, to: 60, r: 11, label: '60°', tone: 'accent' },
+            { t: 'angle', x: 70, y: 80, from: 90, to: 180, right: true, r: 5, tone: 'muted' },
+            { t: 'text', x: 34, y: 85, text: 'A', size: 4, anchor: 'middle' },
+            { t: 'text', x: 58, y: 85, text: 'B', size: 4, anchor: 'middle' },
+            { t: 'text', x: 70, y: 85, text: 'D', size: 4, anchor: 'middle' },
+            { t: 'text', x: 70, y: 55, text: 'C', size: 4, anchor: 'middle' },
+            { t: 'text', x: 46, y: 76, text: '60 m', size: 3.2, anchor: 'middle', tone: 'muted' },
+          ],
+        },
+        steps: [
+          '设塔高 $CD=h$ m。$CD\\perp AD$，所以 $\\triangle ACD$、$\\triangle BCD$ 都是直角三角形，且 $AD-BD=AB=60$。',
+          '在 $\\mathrm{Rt}\\triangle ACD$ 中，$\\tan 30^\\circ=\\frac{h}{AD}$，所以 $AD=\\frac{h}{\\tan 30^\\circ}=\\sqrt{3}h$。',
+          '在 $\\mathrm{Rt}\\triangle BCD$ 中，$\\tan 60^\\circ=\\frac{h}{BD}$，所以 $BD=\\frac{h}{\\tan 60^\\circ}=\\frac{h}{\\sqrt{3}}$。',
+          '由 $AD-BD=60$ 列方程：$\\sqrt{3}h-\\frac{h}{\\sqrt{3}}=60$，即 $h\\left(\\sqrt{3}-\\frac{1}{\\sqrt{3}}\\right)=\\frac{2h}{\\sqrt{3}}=60$，解得 $h=30\\sqrt{3}$。',
+        ],
+        answer: '塔高 $CD$ 为 $30\\sqrt{3}$ m。',
+        tip: '两次仰角测高的关键是用塔高 $h$ 表示两个水平距离，再利用「前进的距离等于两个水平距离之差」列方程；仰角的对边都是塔高，邻边一长一短，不要写反。',
+      },
     ],
     pitfalls: [
       '切线的判定只写「垂直于半径」而漏掉「经过半径的外端」；用切线性质时忘记先连接圆心与切点得到半径。',
@@ -1347,6 +1889,53 @@ export const mathFormula: MathTopic[] = [
           '用 $S_{\\text{侧}}=\\pi rl$ 得出侧面积 $18\\pi$（保留 $\\pi$）',
         ],
         tags: ['圆锥侧面积', '弧长公式'],
+      },
+      {
+        id: 'q-m-for-yuan-z1',
+        type: 'choice',
+        stem: '如图，$\\triangle ABC$ 内接于 $\\odot O$，$AB$ 是 $\\odot O$ 的直径，$\\angle A=35^\\circ$，则 $\\angle B$ 的度数为',
+        figure: {
+          id: 'fig-m-for-yuan-z1',
+          title: '直径所对的圆周角是直角',
+          caption: 'AB 为直径，故 ∠C=90°，∠A 与 ∠B 互余',
+          view: 'wide',
+          alt: '圆 O 内接三角形 ABC，AB 是水平直径，点 C 在圆上位于 AB 上方；∠A 标为 35 度，∠C 处标有直角符号，表示直径所对的圆周角为直角',
+          prims: [
+            { t: 'circle', cx: 50, cy: 50, r: 30 },
+            { t: 'line', x1: 20, y1: 50, x2: 80, y2: 50, tone: 'main' },
+            { t: 'line', x1: 20, y1: 50, x2: 60, y2: 22, tone: 'main' },
+            { t: 'line', x1: 80, y1: 50, x2: 60, y2: 22, tone: 'main' },
+            { t: 'angle', x: 20, y: 50, from: 0, to: -35, r: 9, label: '35°', tone: 'accent' },
+            { t: 'angle', x: 60, y: 22, from: 215, to: 305, right: true, r: 6, tone: 'muted' },
+            { t: 'dot', x: 50, y: 50, r: 1.2, tone: 'muted' },
+            { t: 'text', x: 16, y: 53, text: 'A', size: 4, anchor: 'end' },
+            { t: 'text', x: 84, y: 53, text: 'B', size: 4, anchor: 'start' },
+            { t: 'text', x: 60, y: 17, text: 'C', size: 4, anchor: 'middle' },
+            { t: 'text', x: 50, y: 57, text: 'O', size: 3.4, anchor: 'middle', tone: 'muted' },
+          ],
+        },
+        options: ['$35^\\circ$', '$45^\\circ$', '$55^\\circ$', '$65^\\circ$'],
+        answer: 'C',
+        explanation:
+          '因为 $AB$ 是直径，直径所对的圆周角是直角，所以 $\\angle C=90^\\circ$。直角三角形的两个锐角互余，故 $\\angle B=90^\\circ-\\angle A=90^\\circ-35^\\circ=55^\\circ$。',
+        difficulty: 2,
+        tags: ['圆周角定理', '直径所对圆周角'],
+      },
+      {
+        id: 'q-m-for-yuan-z2',
+        type: 'short',
+        stem: '一个扇形的半径为 4，圆心角为 $90^\\circ$。求这个扇形的弧长和面积（结果保留 $\\pi$）。',
+        answer:
+          '弧长 $l=\\frac{n\\pi R}{180}=\\frac{90\\pi\\times 4}{180}=2\\pi$；扇形面积 $S=\\frac{n\\pi R^2}{360}=\\frac{90\\pi\\times 4^2}{360}=4\\pi$。',
+        explanation:
+          '弧长公式分母为 180，扇形面积公式分母为 360，二者不要混用；面积公式中是半径的平方 $R^2$，不能写成 $R$。本题也可用 $S=\\frac{1}{2}lR=\\frac{1}{2}\\times 2\\pi\\times 4=4\\pi$ 检验，结果一致。',
+        difficulty: 2,
+        rubric: [
+          '正确代入弧长公式，得弧长 $l=2\\pi$',
+          '正确代入扇形面积公式（注意 $R^2$ 与分母 360），得面积 $S=4\\pi$',
+          '结果保留 $\\pi$，并写清弧长与面积两个量',
+        ],
+        tags: ['弧长公式', '扇形面积'],
       },
     ],
   },

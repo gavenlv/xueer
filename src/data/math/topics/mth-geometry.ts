@@ -261,6 +261,24 @@ export const mthGeometry: ExamTopic = {
       examples: [
         {
           text: '两条直线被第三条直线所截，在所得的 8 个角中（不计平角），共有几对同位角、几对内错角、几对同旁内角？',
+          figure: {
+            id: 'fig-mth-geo-par-1',
+            title: '三线八角：先认截线，再按位置分类',
+            caption: '∠1 与 ∠3 同位；∠2 与 ∠3 内错；∠2 与 ∠4 同旁',
+            view: 'square',
+            prims: [
+              { t: 'line', x1: 12, y1: 30, x2: 88, y2: 30 },
+              { t: 'line', x1: 12, y1: 74, x2: 88, y2: 74 },
+              { t: 'line', x1: 30, y1: 12, x2: 64, y2: 92 },
+              { t: 'angle', x: 37.7, y: 30, from: 113, to: 180, r: 7, label: '1' },
+              { t: 'angle', x: 37.7, y: 30, from: -67, to: 0, r: 7, label: '2' },
+              { t: 'angle', x: 56.4, y: 74, from: 113, to: 180, r: 7, label: '3' },
+              { t: 'angle', x: 56.4, y: 74, from: 0, to: 113, r: 7, label: '4' },
+              { t: 'dot', x: 37.7, y: 30, r: 0.9 },
+              { t: 'dot', x: 56.4, y: 74, r: 0.9 },
+            ],
+            alt: '两条水平直线 a、b 被一条向右下倾斜的截线 c 所截，上交点处标出左侧的角 1 与右下侧的角 2，下交点处标出左侧的角 3 与右侧的角 4：角 1 与角 3 是同位角，角 2 与角 3 是内错角，角 2 与角 4 是同旁内角。',
+          },
           steps: [
             '三条直线两两相交，取其中一条作为截线，它与另外两条直线各交于一点，每个交点处有 $4$ 个角。',
             '同位角：在截线同侧、被截两直线同旁，两个交点处的角可以两两配对，共 $4$ 对。',
@@ -275,6 +293,30 @@ export const mthGeometry: ExamTopic = {
         {
           text:
             '$AB\\parallel CD$，点 $P$ 在 $AB$ 与 $CD$ 之间，连接 $PB$、$PD$。若 $\\angle ABP=40^\\circ$，$\\angle CDP=30^\\circ$，求 $\\angle BPD$ 的度数。',
+          figure: {
+            id: 'fig-mth-geo-par-2',
+            title: '过拐点作平行线，把折角拆成两个内错角',
+            caption: '∠BPQ=∠ABP=40°，∠DPQ=∠CDP=30°，∠BPD=70°',
+            view: 'square',
+            prims: [
+              { t: 'line', x1: 12, y1: 30, x2: 88, y2: 30 },
+              { t: 'line', x1: 12, y1: 70, x2: 88, y2: 70 },
+              { t: 'line', x1: 38, y1: 30, x2: 18.9, y2: 46.1 },
+              { t: 'line', x1: 60.4, y1: 70, x2: 18.9, y2: 46.1 },
+              { t: 'line', x1: 18.9, y1: 46.1, x2: 80, y2: 46.1, dashed: true, tone: 'muted' },
+              { t: 'angle', x: 38, y: 30, from: 180, to: 220, r: 6, label: '40°' },
+              { t: 'angle', x: 60.4, y: 70, from: 150, to: 180, r: 6, label: '30°' },
+              { t: 'angle', x: 18.9, y: 46.1, from: 0, to: 40, r: 6, label: '40°' },
+              { t: 'angle', x: 18.9, y: 46.1, from: -30, to: 0, r: 6, label: '30°' },
+              { t: 'dot', x: 38, y: 30, label: 'B', labelDx: 2.4, labelDy: -2.6 },
+              { t: 'dot', x: 60.4, y: 70, label: 'D', labelDx: 2.4, labelDy: 3.4 },
+              { t: 'dot', x: 18.9, y: 46.1, label: 'P', labelDx: -6.4, labelDy: 0.4 },
+              { t: 'text', x: 13, y: 26, text: 'A', anchor: 'middle' },
+              { t: 'text', x: 13, y: 76, text: 'C', anchor: 'middle' },
+              { t: 'text', x: 81.5, y: 43, text: 'Q', anchor: 'start' },
+            ],
+            alt: '两条平行横线 AB 与 CD，点 P 在两线之间偏左，线段 PB、PD 与 P 相连；过 P 画水平虚线 PQ，图上标出 ∠ABP=40°、∠CDP=30°，辅助线拆出的 ∠BPQ=40° 与 ∠DPQ=30°，所以 ∠BPD 为 70°。',
+          },
           steps: [
             '过点 $P$ 作 $PQ\\parallel AB$，因为 $AB\\parallel CD$，所以 $PQ\\parallel CD$。',
             '由 $PQ\\parallel AB$ 得 $\\angle BPQ=\\angle ABP=40^\\circ$（两直线平行，内错角相等）。',
@@ -331,6 +373,26 @@ export const mthGeometry: ExamTopic = {
       examples: [
         {
           text: '在 $\\triangle ABC$ 中，$AB=AC$，$D$ 是 $BC$ 的中点。求证 $AD\\perp BC$。',
+          figure: {
+            id: 'fig-mth-geo-tri-1',
+            title: '三线合一',
+            caption: 'AB=AC，D 为 BC 中点 ⇒ AD⊥BC',
+            view: 'square',
+            prims: [
+              { t: 'poly', points: [[50, 20], [26, 80], [74, 80]], closed: true },
+              { t: 'line', x1: 50, y1: 20, x2: 50, y2: 80 },
+              { t: 'angle', x: 50, y: 80, from: 90, to: 180, r: 6, right: true },
+              { t: 'line', x1: 36.1, y1: 49.3, x2: 39.9, y2: 50.7 },
+              { t: 'line', x1: 60.1, y1: 49.3, x2: 63.9, y2: 50.7 },
+              { t: 'line', x1: 38, y1: 78, x2: 38, y2: 82 },
+              { t: 'line', x1: 62, y1: 78, x2: 62, y2: 82 },
+              { t: 'dot', x: 50, y: 20, label: 'A' },
+              { t: 'dot', x: 26, y: 80, label: 'B' },
+              { t: 'dot', x: 74, y: 80, label: 'C' },
+              { t: 'dot', x: 50, y: 80, label: 'D', labelDx: 3.5, labelDy: 2 },
+            ],
+            alt: '等腰三角形 ABC，顶点 A 在上、底边 BC 水平在下，D 是底边 BC 的中点，连接 AD；两腰 AB、AC 上有相同的等长记号，BD 与 DC 上也有相同的等长记号，D 处标有直角符号，表示 AD 垂直于 BC',
+          },
           steps: [
             '在 $\\triangle ABD$ 与 $\\triangle ACD$ 中：$AB=AC$（已知），$BD=CD$（$D$ 是 $BC$ 的中点），$AD=AD$（公共边）。',
             '所以 $\\triangle ABD\\cong\\triangle ACD$（SSS）。',
@@ -345,6 +407,30 @@ export const mthGeometry: ExamTopic = {
         {
           text:
             '$AD$ 是 $\\triangle ABC$ 的中线（$D$ 在 $BC$ 上）。延长 $AD$ 到点 $E$，使 $DE=AD$，连接 $BE$。求证 $BE=AC$ 且 $BE\\parallel AC$。',
+          figure: {
+            id: 'fig-mth-geo-tri-2',
+            title: '倍长中线',
+            caption: '延长 AD 至 E 使 DE=AD，连接 BE',
+            view: 'tall',
+            prims: [
+              { t: 'poly', points: [[50, 16], [28, 58], [72, 58]], closed: true },
+              { t: 'line', x1: 50, y1: 16, x2: 50, y2: 58 },
+              { t: 'line', x1: 50, y1: 58, x2: 50, y2: 100, tone: 'accent', dashed: true },
+              { t: 'line', x1: 50, y1: 100, x2: 28, y2: 58, tone: 'accent' },
+              { t: 'angle', x: 50, y: 58, from: 0, to: 90, r: 5 },
+              { t: 'angle', x: 50, y: 58, from: 180, to: 270, r: 5 },
+              { t: 'line', x1: 48, y1: 37, x2: 52, y2: 37 },
+              { t: 'line', x1: 48, y1: 79, x2: 52, y2: 79 },
+              { t: 'line', x1: 39, y1: 56, x2: 39, y2: 60 },
+              { t: 'line', x1: 61, y1: 56, x2: 61, y2: 60 },
+              { t: 'dot', x: 50, y: 16, label: 'A' },
+              { t: 'dot', x: 28, y: 58, label: 'B' },
+              { t: 'dot', x: 72, y: 58, label: 'C' },
+              { t: 'dot', x: 50, y: 58, label: 'D' },
+              { t: 'dot', x: 50, y: 100, label: 'E' },
+            ],
+            alt: '三角形 ABC，A 在上，BC 水平在下，AD 是中线（D 为 BC 中点）；延长 AD 到 E 使 DE=AD（DE 画为虚线），连接 BE；AD 与 DE 上有相同的等长记号，BD 与 DC 上也有相同的等长记号，D 处标有一对对顶角弧线',
+          },
           steps: [
             '在 $\\triangle ADC$ 与 $\\triangle EDB$ 中：$AD=ED$（已作），$\\angle ADC=\\angle EDB$（对顶角相等），$DC=DB$（$AD$ 是中线）。',
             '所以 $\\triangle ADC\\cong\\triangle EDB$（SAS）。',
@@ -402,6 +488,27 @@ export const mthGeometry: ExamTopic = {
         {
           text:
             '在 $\\triangle ABC$ 中，$AB=AC$。点 $D$ 在 $BA$ 的延长线上（$A$ 在 $B$、$D$ 之间），$AE$ 平分 $\\angle DAC$。求证 $AE\\parallel BC$。',
+          figure: {
+            id: 'fig-mth-geo-iso-1',
+            title: '等腰三角形的外角平分线',
+            caption: '∠DAE=∠EAC=∠B ⇒ AE∥BC',
+            view: 'square',
+            prims: [
+              { t: 'poly', points: [[42, 42], [24, 76], [60, 76]], closed: true },
+              { t: 'line', x1: 24, y1: 76, x2: 50.4, y2: 26.1 },
+              { t: 'line', x1: 42, y1: 42, x2: 80, y2: 42, tone: 'accent' },
+              { t: 'angle', x: 42, y: 42, from: 0, to: 62.1, r: 7 },
+              { t: 'angle', x: 42, y: 42, from: -62.1, to: 0, r: 7 },
+              { t: 'angle', x: 24, y: 76, from: 0, to: 62.1, r: 6 },
+              { t: 'angle', x: 60, y: 76, from: 117.9, to: 180, r: 6 },
+              { t: 'dot', x: 42, y: 42, label: 'A', labelDx: -1, labelDy: -4 },
+              { t: 'dot', x: 24, y: 76, label: 'B', labelDx: -6, labelDy: 2 },
+              { t: 'dot', x: 60, y: 76, label: 'C', labelDx: 2, labelDy: 3 },
+              { t: 'dot', x: 50.4, y: 26.1, label: 'D' },
+              { t: 'dot', x: 80, y: 42, label: 'E' },
+            ],
+            alt: '等腰三角形 ABC（AB=AC），BA 延长线上取点 D，AE 平分外角 ∠DAC 交于右侧点 E；A 处 ∠DAE 与 ∠EAC 画有平分的角弧线，底角 ∠B 与 ∠C 也画有角弧线；AE 水平向右，与底边 BC 平行',
+          },
           steps: [
             '因为 $AB=AC$，所以 $\\angle B=\\angle C$（等边对等角）。',
             '$\\angle DAC$ 是 $\\triangle ABC$ 的一个外角，所以 $\\angle DAC=\\angle B+\\angle C=2\\angle B$（三角形的一个外角等于与它不相邻的两个内角之和）。',
@@ -470,6 +577,27 @@ export const mthGeometry: ExamTopic = {
       examples: [
         {
           text: '已知 $\\triangle ABC$ 的三边长分别为 $9$、$12$、$15$。判断这个三角形的形状，并求它最长边上的高。',
+          figure: {
+            id: 'fig-mth-geo-gou-1',
+            title: '9-12-15 直角三角形与斜边上的高',
+            caption: '9²+12²=15² 是直角三角形；斜边上的高 h=7.2',
+            view: 'square',
+            alt: '直角三角形 ABC，∠C=90°，AC=9，BC=12，AB=15；过 C 作 CD 垂直 AB 于 D，CD 是斜边上的高，长度为 7.2',
+            prims: [
+              { t: 'poly', points: [[30, 34], [78, 70], [30, 70]], closed: true },
+              { t: 'line', x1: 30, y1: 70, x2: 47.3, y2: 47, tone: 'accent' },
+              { t: 'angle', x: 30, y: 70, from: 0, to: 90, r: 5, right: true },
+              { t: 'angle', x: 47.3, y: 47, from: 233, to: 323, r: 5, right: true, tone: 'accent' },
+              { t: 'dot', x: 30, y: 34, label: 'A', labelDx: -4, labelDy: -2 },
+              { t: 'dot', x: 78, y: 70, label: 'B', labelDx: 3, labelDy: 3 },
+              { t: 'dot', x: 30, y: 70, label: 'C', labelDx: -5, labelDy: 3 },
+              { t: 'dot', x: 47.3, y: 47, label: 'D', labelDx: 5, labelDy: -3 },
+              { t: 'text', x: 23, y: 52, text: '9', anchor: 'middle', size: 3.6 },
+              { t: 'text', x: 54, y: 77, text: '12', anchor: 'middle', size: 3.6 },
+              { t: 'text', x: 60, y: 44, text: '15', anchor: 'middle', size: 3.6 },
+              { t: 'text', x: 36, y: 60, text: 'h', anchor: 'middle', size: 3.6, tone: 'accent' },
+            ],
+          },
           steps: [
             '最长边是 $15$，检验：$9^2+12^2=81+144=225=15^2$。',
             '所以 $\\triangle ABC$ 是直角三角形（勾股定理的逆定理），边长为 $15$ 的边是斜边，它所对的角是直角。',
@@ -483,6 +611,28 @@ export const mthGeometry: ExamTopic = {
         {
           text:
             '一架长 $2.5\\ \\mathrm{m}$ 的梯子斜靠在竖直的墙上，梯脚到墙脚的距离为 $0.7\\ \\mathrm{m}$。若梯脚沿地面向外滑动 $0.8\\ \\mathrm{m}$，梯顶沿墙下滑多少米？',
+          figure: {
+            id: 'fig-mth-geo-gou-2',
+            title: '梯子滑动：梯长不变，两条直角边此消彼长',
+            caption: '滑动前 h₁=2.4，滑动后 h₂=2.0，下滑 0.4 m',
+            view: 'square',
+            alt: '竖直墙与水平地面成直角。滑动前梯子上端高 2.4 米、梯脚距墙 0.7 米；滑动后梯脚距墙 1.5 米、上端高 2.0 米。梯子长度在两次位置都保持 2.5 米不变',
+            prims: [
+              { t: 'line', x1: 25, y1: 12, x2: 25, y2: 72, width: 1.4 },
+              { t: 'line', x1: 25, y1: 72, x2: 90, y2: 72, width: 1.4 },
+              { t: 'hatch', x: 25, y: 72, w: 65, h: 6 },
+              { t: 'line', x1: 25, y1: 28.8, x2: 37.6, y2: 72, tone: 'main', width: 1.6 },
+              { t: 'line', x1: 25, y1: 36, x2: 52, y2: 72, tone: 'accent', width: 1.6 },
+              { t: 'line', x1: 25, y1: 28.8, x2: 25, y2: 36, tone: 'danger', width: 2 },
+              { t: 'line', x1: 37.6, y1: 72, x2: 52, y2: 72, tone: 'danger', width: 2 },
+              { t: 'angle', x: 25, y: 72, from: 90, to: 180, r: 5, right: true },
+              { t: 'dot', x: 25, y: 28.8, label: 'h₁=2.4', labelDx: -2, labelDy: -4 },
+              { t: 'dot', x: 25, y: 36, label: 'h₂=2.0', labelDx: 3, labelDy: -4 },
+              { t: 'dot', x: 37.6, y: 72, label: '0.7', labelDx: 0, labelDy: 4 },
+              { t: 'dot', x: 52, y: 72, label: '1.5', labelDx: 0, labelDy: 4 },
+              { t: 'text', x: 62, y: 56, text: '梯长 2.5 m', size: 3.2, tone: 'muted' },
+            ],
+          },
           steps: [
             '滑动前：设梯顶到墙脚的距离为 $h_1$，由勾股定理得 $h_1^2+0.7^2=2.5^2$，所以 $h_1=\\sqrt{6.25-0.49}=\\sqrt{5.76}=2.4$（m）。',
             '滑动后梯脚到墙脚的距离为 $0.7+0.8=1.5$（m），梯长不变，仍是 $2.5\\ \\mathrm{m}$。',
@@ -546,6 +696,30 @@ export const mthGeometry: ExamTopic = {
         {
           text:
             '在 平行四边形 $ABCD$ 中，$E$、$F$ 分别是边 $AD$、$BC$ 的中点。求证四边形 $BFDE$ 是平行四边形（用两种不同的方法）。',
+          figure: {
+            id: 'fig-mth-geo-quad-1',
+            title: '取一组对边的中点，证 BFDE 是平行四边形',
+            caption: 'E、F 分别是 AD、BC 的中点，DE 平行且等于 BF',
+            view: 'square',
+            alt: '平行四边形 ABCD，E 是 AD 的中点、F 是 BC 的中点；连接 BE、DF，得到四边形 BFDE；AE 与 ED 上有相同的等长记号，BF 与 FC 上也有相同的等长记号',
+            prims: [
+              { t: 'poly', points: [[20, 25], [70, 25], [85, 65], [35, 65]], closed: true },
+              { t: 'line', x1: 70, y1: 25, x2: 77.5, y2: 45, tone: 'accent' },
+              { t: 'line', x1: 77.5, y1: 45, x2: 35, y2: 65, tone: 'accent' },
+              { t: 'line', x1: 35, y1: 65, x2: 27.5, y2: 45, tone: 'accent' },
+              { t: 'line', x1: 27.5, y1: 45, x2: 70, y2: 25, tone: 'accent' },
+              { t: 'line', x1: 23.5, y1: 35, x2: 25.5, y2: 36 },
+              { t: 'line', x1: 31, y1: 55, x2: 33, y2: 56 },
+              { t: 'line', x1: 73.5, y1: 35, x2: 75.5, y2: 36 },
+              { t: 'line', x1: 81, y1: 55, x2: 83, y2: 56 },
+              { t: 'dot', x: 20, y: 25, label: 'A', labelDx: -4, labelDy: -2 },
+              { t: 'dot', x: 70, y: 25, label: 'B', labelDx: 3, labelDy: -2 },
+              { t: 'dot', x: 85, y: 65, label: 'C', labelDx: 3, labelDy: 3 },
+              { t: 'dot', x: 35, y: 65, label: 'D', labelDx: -5, labelDy: 3 },
+              { t: 'dot', x: 27.5, y: 45, label: 'E', labelDx: -6, labelDy: 0 },
+              { t: 'dot', x: 77.5, y: 45, label: 'F', labelDx: 3, labelDy: 0 },
+            ],
+          },
           steps: [
             '方法一（一组对边平行且相等）：因为四边形 $ABCD$ 是平行四边形，所以 $AD\\parallel BC$ 且 $AD=BC$。',
             '因为 $E$、$F$ 分别是 $AD$、$BC$ 的中点，所以 $DE=\\frac{1}{2}AD$，$BF=\\frac{1}{2}BC$，从而 $DE=BF$。',
@@ -560,6 +734,25 @@ export const mthGeometry: ExamTopic = {
         {
           text:
             '在 平行四边形 $ABCD$ 中，对角线 $AC$、$BD$ 交于点 $O$，且 $\\angle OAB=\\angle OBA$。求证 平行四边形 $ABCD$ 是矩形。',
+          figure: {
+            id: 'fig-mth-geo-quad-2',
+            title: '对角线相等的平行四边形是矩形',
+            caption: '∠OAB=∠OBA ⇒ OA=OB ⇒ AC=BD',
+            view: 'square',
+            alt: '平行四边形 ABCD，对角线 AC 与 BD 交于点 O；在 △OAB 中 ∠OAB 与 ∠OBA 画有相同的角弧线，表示这两个角相等，从而 OA=OB，进而 AC=BD',
+            prims: [
+              { t: 'poly', points: [[25, 30], [75, 30], [85, 70], [35, 70]], closed: true },
+              { t: 'line', x1: 25, y1: 30, x2: 85, y2: 70 },
+              { t: 'line', x1: 75, y1: 30, x2: 35, y2: 70 },
+              { t: 'angle', x: 25, y: 30, from: 0, to: 38.7, r: 8 },
+              { t: 'angle', x: 75, y: 30, from: 141.3, to: 180, r: 8 },
+              { t: 'dot', x: 25, y: 30, label: 'A', labelDx: -5, labelDy: -2 },
+              { t: 'dot', x: 75, y: 30, label: 'B', labelDx: 3, labelDy: -2 },
+              { t: 'dot', x: 85, y: 70, label: 'C', labelDx: 3, labelDy: 3 },
+              { t: 'dot', x: 35, y: 70, label: 'D', labelDx: -5, labelDy: 3 },
+              { t: 'dot', x: 55, y: 50, label: 'O', labelDx: 3, labelDy: -3 },
+            ],
+          },
           steps: [
             '在 $\\triangle AOB$ 中，因为 $\\angle OAB=\\angle OBA$，所以 $OA=OB$（等角对等边）。',
             '因为平行四边形的对角线互相平分，所以 $AC=2OA$，$BD=2OB$。',
@@ -617,6 +810,27 @@ export const mthGeometry: ExamTopic = {
       examples: [
         {
           text: '$\\odot O$ 的半径为 $5$，弦 $AB=8$。求圆心 $O$ 到弦 $AB$ 的距离。',
+          figure: {
+            id: 'fig-mth-geo-yuan-1',
+            title: '垂径定理：半径、半弦、弦心距构成直角三角形',
+            caption: 'OA=5，AC=4，OC=3',
+            view: 'square',
+            alt: '圆 O 中有一条水平弦 AB，过圆心 O 作 OC 垂直 AB 于 C；连接半径 OA，构成直角三角形 OAC，其中 OA=5、AC=4、OC=3',
+            prims: [
+              { t: 'circle', cx: 50, cy: 50, r: 25 },
+              { t: 'line', x1: 30, y1: 65, x2: 70, y2: 65 },
+              { t: 'line', x1: 50, y1: 50, x2: 50, y2: 65, tone: 'accent' },
+              { t: 'line', x1: 50, y1: 50, x2: 30, y2: 65, tone: 'accent' },
+              { t: 'angle', x: 50, y: 65, from: 90, to: 180, r: 5, right: true, tone: 'accent' },
+              { t: 'dot', x: 50, y: 50, label: 'O', labelDx: -4, labelDy: -4 },
+              { t: 'dot', x: 30, y: 65, label: 'A', labelDx: -4, labelDy: 3 },
+              { t: 'dot', x: 70, y: 65, label: 'B', labelDx: 3, labelDy: 3 },
+              { t: 'dot', x: 50, y: 65, label: 'C', labelDx: 3, labelDy: 3 },
+              { t: 'text', x: 38, y: 55, text: '5', anchor: 'middle', size: 3.6, tone: 'accent' },
+              { t: 'text', x: 40, y: 72, text: '4', anchor: 'middle', size: 3.6 },
+              { t: 'text', x: 54, y: 58, text: '3', anchor: 'start', size: 3.6, tone: 'accent' },
+            ],
+          },
           steps: [
             '过点 $O$ 作 $OC\\perp AB$ 于点 $C$，$OC$ 就是这条弦的弦心距。',
             '由垂径定理得 $AC=\\frac{1}{2}AB=\\frac{1}{2}\\times8=4$。',
@@ -629,6 +843,30 @@ export const mthGeometry: ExamTopic = {
         {
           text:
             '已知 $\\odot O$ 中 $A$、$B$ 在圆上，圆心角 $\\angle AOB=80^\\circ$。点 $C$ 在优弧 $AB$ 上，点 $D$ 在劣弧 $AB$ 上。分别求 $\\angle ACB$ 与 $\\angle ADB$ 的度数。',
+          figure: {
+            id: 'fig-mth-geo-yuan-2',
+            title: '同弧所对的圆周角是圆心角的一半',
+            caption: '∠AOB=80°，优弧上的 ∠ACB=40°，劣弧上的 ∠ADB=140°',
+            view: 'square',
+            alt: '圆 O 上有四点 A、B、C、D，其中 C 在优弧 AB 上、D 在劣弧 AB 上；连接 OA、OB 得圆心角 ∠AOB=80°，连接 CA、CB 得圆周角 ∠ACB=40°，连接 DA、DB 得圆周角 ∠ADB=140°',
+            prims: [
+              { t: 'circle', cx: 50, cy: 50, r: 28 },
+              { t: 'line', x1: 50, y1: 50, x2: 78, y2: 50 },
+              { t: 'line', x1: 50, y1: 50, x2: 54.9, y2: 22.4 },
+              { t: 'line', x1: 22, y1: 50, x2: 78, y2: 50 },
+              { t: 'line', x1: 22, y1: 50, x2: 54.9, y2: 22.4 },
+              { t: 'line', x1: 71.5, y1: 32, x2: 78, y2: 50 },
+              { t: 'line', x1: 71.5, y1: 32, x2: 54.9, y2: 22.4 },
+              { t: 'angle', x: 50, y: 50, from: 0, to: 80, r: 10, label: '80°', tone: 'accent' },
+              { t: 'angle', x: 22, y: 50, from: -17.4, to: 22.4, r: 9, label: '40°', tone: 'accent' },
+              { t: 'angle', x: 71.5, y: 32, from: 135, to: 275, r: 8, label: '140°', tone: 'accent' },
+              { t: 'dot', x: 50, y: 50, label: 'O', labelDx: -5, labelDy: 3 },
+              { t: 'dot', x: 78, y: 50, label: 'A', labelDx: 3, labelDy: 3 },
+              { t: 'dot', x: 54.9, y: 22.4, label: 'B', labelDx: 3, labelDy: -3 },
+              { t: 'dot', x: 22, y: 50, label: 'C', labelDx: -5, labelDy: 3 },
+              { t: 'dot', x: 71.5, y: 32, label: 'D', labelDx: 4, labelDy: -3 },
+            ],
+          },
           steps: [
             '$\\angle ACB$ 是劣弧 $AB$ 所对的圆周角，$\\angle AOB$ 是同一段弧所对的圆心角，由圆周角定理得 $\\angle ACB=\\frac{1}{2}\\angle AOB=\\frac{1}{2}\\times80^\\circ=40^\\circ$。',
             '点 $A$、$C$、$B$、$D$ 都在圆上，所以四边形 $ACBD$ 内接于 $\\odot O$，它的对角互补。',
@@ -685,6 +923,28 @@ export const mthGeometry: ExamTopic = {
         {
           text:
             '在 $\\triangle ABC$ 中，$AB=AC$，以 $AB$ 为直径的 $\\odot O$ 交 $BC$ 于点 $D$，$DE\\perp AC$ 于点 $E$。求证 $DE$ 是 $\\odot O$ 的切线。',
+          figure: {
+            id: 'fig-mth-geo-qie-1',
+            title: '见切线先连半径：OD⊥DE 即得切线',
+            caption: 'OD∥AC，又 DE⊥AC，故 DE⊥OD',
+            view: 'square',
+            alt: '等腰三角形 ABC 中 AB=AC，以 AB 为直径作圆 O 交 BC 于 D；过 D 作 DE 垂直 AC 于 E。连接半径 OD，OD 平行于 AC，因而 DE 垂直于 OD，D 在圆上，所以 DE 是圆 O 的切线',
+            prims: [
+              { t: 'poly', points: [[50, 20], [25, 70], [75, 70]], closed: true },
+              { t: 'circle', cx: 37.5, cy: 45, r: 28 },
+              { t: 'line', x1: 37.5, y1: 45, x2: 50, y2: 70, tone: 'accent' },
+              { t: 'line', x1: 50, y1: 70, x2: 70, y2: 60, tone: 'danger' },
+              { t: 'line', x1: 70, y1: 60, x2: 75, y2: 70, tone: 'muted', dashed: true },
+              { t: 'angle', x: 50, y: 70, from: 63.4, to: 153.4, r: 6, right: true, tone: 'danger' },
+              { t: 'angle', x: 70, y: 60, from: 243.4, to: 333.4, r: 5, right: true, tone: 'muted' },
+              { t: 'dot', x: 50, y: 20, label: 'A', labelDx: 0, labelDy: -4 },
+              { t: 'dot', x: 25, y: 70, label: 'B', labelDx: -5, labelDy: 3 },
+              { t: 'dot', x: 75, y: 70, label: 'C', labelDx: 3, labelDy: 3 },
+              { t: 'dot', x: 50, y: 70, label: 'D', labelDx: -4, labelDy: 4 },
+              { t: 'dot', x: 70, y: 60, label: 'E', labelDx: 3, labelDy: -3 },
+              { t: 'dot', x: 37.5, y: 45, label: 'O', labelDx: -6, labelDy: -2 },
+            ],
+          },
           steps: [
             '连接 $OD$（要证切线，先连出过点 $D$ 的半径）。',
             '因为 $AB=AC$，所以 $\\angle B=\\angle C$（等边对等角）；因为 $OB=OD$（同圆半径），所以 $\\angle B=\\angle ODB$。',
@@ -699,6 +959,29 @@ export const mthGeometry: ExamTopic = {
         {
           text:
             '$PA$、$PB$ 是 $\\odot O$ 的切线，$A$、$B$ 为切点，$\\angle APB=60^\\circ$，$PA=6$。求 $\\odot O$ 的半径与 $\\angle AOB$ 的度数。',
+          figure: {
+            id: 'fig-mth-geo-qie-2',
+            title: '切线长定理：PA=PB，OP 平分 ∠APB',
+            caption: '∠APO=30°，OA⊥PA，∠AOB=120°',
+            view: 'square',
+            alt: '圆 O 外一点 P，PA、PB 是圆的两条切线，A、B 为切点；连接 OA、OB、OP，OA 垂直 PA、OB 垂直 PB；∠APB=60° 被 OP 平分为两个 30° 角；四边形 OAPB 中 ∠AOB=120°',
+            prims: [
+              { t: 'circle', cx: 50, cy: 50, r: 20 },
+              { t: 'line', x1: 32.7, y1: 60, x2: 50, y2: 90, tone: 'accent' },
+              { t: 'line', x1: 67.3, y1: 60, x2: 50, y2: 90, tone: 'accent' },
+              { t: 'line', x1: 50, y1: 50, x2: 32.7, y2: 60, tone: 'main' },
+              { t: 'line', x1: 50, y1: 50, x2: 67.3, y2: 60, tone: 'main' },
+              { t: 'line', x1: 50, y1: 50, x2: 50, y2: 90, tone: 'muted', dashed: true },
+              { t: 'angle', x: 32.7, y: 60, from: 30, to: 120, r: 6, right: true, tone: 'main' },
+              { t: 'angle', x: 67.3, y: 60, from: 60, to: 150, r: 6, right: true, tone: 'main' },
+              { t: 'angle', x: 50, y: 90, from: 120, to: 180, r: 10, label: '30°', tone: 'accent' },
+              { t: 'angle', x: 50, y: 90, from: 180, to: 240, r: 10, label: '30°', tone: 'accent' },
+              { t: 'dot', x: 50, y: 50, label: 'O', labelDx: 4, labelDy: -2 },
+              { t: 'dot', x: 32.7, y: 60, label: 'A', labelDx: -6, labelDy: 2 },
+              { t: 'dot', x: 67.3, y: 60, label: 'B', labelDx: 3, labelDy: 2 },
+              { t: 'dot', x: 50, y: 90, label: 'P', labelDx: 3, labelDy: 3 },
+            ],
+          },
           steps: [
             '连接 $OA$，由切线的性质得 $OA\\perp PA$。',
             '由切线长定理得 $PA=PB$，且 $OP$ 平分 $\\angle APB$，所以 $\\angle APO=\\frac{1}{2}\\times60^\\circ=30^\\circ$。',
@@ -754,6 +1037,29 @@ export const mthGeometry: ExamTopic = {
         {
           text:
             '在 $\\triangle ABC$ 中，$D$ 在 $AB$ 上，$E$ 在 $AC$ 上，$DE\\parallel BC$，$AD=4$，$DB=6$，$AE=3$。求 $EC$ 的长。',
+          figure: {
+            id: 'fig-mth-geo-xiang-1',
+            title: 'A 型相似：DE∥BC ⇒ △ADE∽△ABC',
+            caption: 'AD=4，DB=6，AE=3，EC=4.5',
+            view: 'square',
+            alt: '三角形 ABC 中，DE 平行于 BC，D 在 AB 上、E 在 AC 上，形成 A 型相似；标注 AD=4、DB=6、AE=3，由相似比 AD/AB=AE/AC 可求出 EC=4.5',
+            prims: [
+              { t: 'poly', points: [[50, 20], [25, 75], [75, 75]], closed: true },
+              { t: 'line', x1: 40, y1: 42, x2: 60, y2: 42, tone: 'accent' },
+              { t: 'line', x1: 35.5, y1: 50, x2: 37.5, y2: 51 },
+              { t: 'line', x1: 42, y1: 34, x2: 44, y2: 35 },
+              { t: 'line', x1: 62.5, y1: 50, x2: 64.5, y2: 51 },
+              { t: 'line', x1: 56, y1: 34, x2: 58, y2: 35 },
+              { t: 'dot', x: 50, y: 20, label: 'A', labelDx: 0, labelDy: -4 },
+              { t: 'dot', x: 25, y: 75, label: 'B', labelDx: -5, labelDy: 3 },
+              { t: 'dot', x: 75, y: 75, label: 'C', labelDx: 3, labelDy: 3 },
+              { t: 'dot', x: 40, y: 42, label: 'D', labelDx: -6, labelDy: 0 },
+              { t: 'dot', x: 60, y: 42, label: 'E', labelDx: 3, labelDy: 0 },
+              { t: 'text', x: 31, y: 32, text: '4', anchor: 'middle', size: 3.4 },
+              { t: 'text', x: 26, y: 60, text: '6', anchor: 'middle', size: 3.4 },
+              { t: 'text', x: 69, y: 32, text: '3', anchor: 'middle', size: 3.4 },
+            ],
+          },
           steps: [
             '因为 $DE\\parallel BC$，所以 $\\triangle ADE\\sim\\triangle ABC$（平行于三角形一边的直线和其他两边相交，所构成的三角形与原三角形相似）。',
             '由相似三角形的对应边成比例得 $\\frac{AD}{AB}=\\frac{AE}{AC}$。',
@@ -780,6 +1086,26 @@ export const mthGeometry: ExamTopic = {
         {
           text:
             '在 $\\mathrm{Rt}\\triangle ABC$ 中，$\\angle ACB=90^\\circ$，$CD\\perp AB$ 于点 $D$，$AD=4$，$BD=9$。求 $CD$ 的长。',
+          figure: {
+            id: 'fig-mth-geo-xiang-2',
+            title: '斜边上的高分出相似三角形',
+            caption: '△ACD∽△CBD，CD²=AD·BD=36，CD=6',
+            view: 'square',
+            alt: '直角三角形 ABC，∠C=90°，CD 是斜边 AB 上的高，D 在 AB 上；AD=4，BD=9，CD=6；∠A 与 ∠BCD 都与 ∠ACD 互余，故 △ACD 与 △CBD 相似',
+            prims: [
+              { t: 'poly', points: [[30, 41.2], [73.3, 70], [30, 70]], closed: true },
+              { t: 'line', x1: 30, y1: 70, x2: 43.3, y2: 50, tone: 'accent' },
+              { t: 'angle', x: 30, y: 70, from: 0, to: 90, r: 5, right: true },
+              { t: 'angle', x: 43.3, y: 50, from: 116.6, to: 206.6, r: 5, right: true, tone: 'accent' },
+              { t: 'dot', x: 30, y: 41.2, label: 'A', labelDx: -5, labelDy: -2 },
+              { t: 'dot', x: 73.3, y: 70, label: 'B', labelDx: 3, labelDy: 3 },
+              { t: 'dot', x: 30, y: 70, label: 'C', labelDx: -5, labelDy: 3 },
+              { t: 'dot', x: 43.3, y: 50, label: 'D', labelDx: 5, labelDy: -3 },
+              { t: 'text', x: 36, y: 56, text: '6', anchor: 'middle', size: 3.6, tone: 'accent' },
+              { t: 'text', x: 36, y: 64, text: '4', anchor: 'middle', size: 3.4 },
+              { t: 'text', x: 58, y: 64, text: '9', anchor: 'middle', size: 3.4 },
+            ],
+          },
           steps: [
             '因为 $CD\\perp AB$，所以 $\\angle ADC=\\angle CDB=90^\\circ$。',
             '因为 $\\angle A+\\angle ACD=90^\\circ$，又 $\\angle A+\\angle B=90^\\circ$（直角三角形两锐角互余），所以 $\\angle ACD=\\angle B$。',
@@ -824,6 +1150,24 @@ export const mthGeometry: ExamTopic = {
       examples: [
         {
           text: '在 $\\mathrm{Rt}\\triangle ABC$ 中，$\\angle C=90^\\circ$，$BC=5$，$AB=13$。求 $\\sin A$、$\\cos A$、$\\tan A$ 的值。',
+          figure: {
+            id: 'fig-mth-geo-rui-1',
+            title: '5-12-13 直角三角形：对着 ∠A 指认对边与邻边',
+            caption: 'BC=5 是 ∠A 的对边，AC=12 是邻边，AB=13 是斜边',
+            view: 'square',
+            alt: '直角三角形 ABC，∠C=90°，BC=5，AC=12，AB=13；对着锐角 ∠A，BC 是对边、AC 是邻边、AB 是斜边',
+            prims: [
+              { t: 'poly', points: [[30, 22], [50, 70], [30, 70]], closed: true },
+              { t: 'angle', x: 30, y: 70, from: 0, to: 90, r: 5, right: true },
+              { t: 'angle', x: 30, y: 22, from: 90, to: 112.6, r: 9, label: 'A' },
+              { t: 'dot', x: 30, y: 22, label: 'A', labelDx: -5, labelDy: -2 },
+              { t: 'dot', x: 50, y: 70, label: 'B', labelDx: 3, labelDy: 3 },
+              { t: 'dot', x: 30, y: 70, label: 'C', labelDx: -5, labelDy: 3 },
+              { t: 'text', x: 42, y: 76, text: '5', anchor: 'middle', size: 3.6 },
+              { t: 'text', x: 22, y: 46, text: '12', anchor: 'middle', size: 3.6 },
+              { t: 'text', x: 44, y: 42, text: '13', anchor: 'middle', size: 3.6 },
+            ],
+          },
           steps: [
             '先求未知的直角边：$AC=\\sqrt{AB^2-BC^2}=\\sqrt{13^2-5^2}=\\sqrt{144}=12$。',
             '对着 $\\angle A$ 指认同边：$\\angle A$ 的对边是 $BC=5$，邻边是 $AC=12$，斜边是 $AB=13$。',
@@ -849,6 +1193,28 @@ export const mthGeometry: ExamTopic = {
         {
           text:
             '在水平地面上点 $A$ 处测得某建筑物顶端 $C$ 的仰角为 $30^\\circ$；向建筑物的方向沿水平地面前进 $12\\ \\mathrm{m}$ 到达点 $B$ 处，测得顶端 $C$ 的仰角为 $60^\\circ$。测角仪的高度忽略不计，求这个建筑物的高度（结果保留根号）。',
+          figure: {
+            id: 'fig-mth-geo-rui-2',
+            title: '两次仰角测建筑物高度：公共边设为 h',
+            caption: '∠CAD=30°，∠CBD=60°，AB=12，CD=6√3',
+            view: 'wide',
+            alt: '水平地面上有一座竖直建筑物 CD，D 是底端。观测点 A 在左、B 在右（B 更靠近建筑物），AB=12 米。从 A 看顶端 C 的仰角为 30°，从 B 看顶端 C 的仰角为 60°',
+            prims: [
+              { t: 'line', x1: 10, y1: 70, x2: 90, y2: 70 },
+              { t: 'line', x1: 55, y1: 70, x2: 55, y2: 49.2, width: 1.6, tone: 'accent' },
+              { t: 'line', x1: 19, y1: 70, x2: 55, y2: 49.2 },
+              { t: 'line', x1: 43, y1: 70, x2: 55, y2: 49.2 },
+              { t: 'hatch', x: 10, y: 70, w: 80, h: 5 },
+              { t: 'angle', x: 19, y: 70, from: 0, to: 25.6, r: 9, label: '30°' },
+              { t: 'angle', x: 43, y: 70, from: 0, to: 42.3, r: 8, label: '60°' },
+              { t: 'dot', x: 19, y: 70, label: 'A', labelDx: 0, labelDy: 4 },
+              { t: 'dot', x: 43, y: 70, label: 'B', labelDx: 0, labelDy: 4 },
+              { t: 'dot', x: 55, y: 70, label: 'D', labelDx: 0, labelDy: 4 },
+              { t: 'dot', x: 55, y: 49.2, label: 'C', labelDx: 3, labelDy: -2 },
+              { t: 'text', x: 31, y: 76, text: '12 m', anchor: 'middle', size: 3.4 },
+              { t: 'text', x: 58, y: 60, text: 'h', anchor: 'start', size: 3.6, tone: 'accent' },
+            ],
+          },
           steps: [
             '设建筑物的底端为 $D$，高度 $CD=h\\ \\mathrm{m}$，则 $CD\\perp AD$，$\\triangle ACD$ 与 $\\triangle BCD$ 都是直角三角形。',
             '在 $\\mathrm{Rt}\\triangle BCD$ 中，$\\angle CBD=60^\\circ$，$\\tan60^\\circ=\\frac{CD}{BD}$，所以 $BD=\\frac{h}{\\tan60^\\circ}=\\frac{\\sqrt{3}}{3}h$。',
@@ -957,6 +1323,30 @@ export const mthGeometry: ExamTopic = {
       type: 'choice',
       stem:
         '$AB\\parallel CD$，点 $P$ 在 $AB$ 与 $CD$ 之间，连接 $PB$、$PD$。若 $\\angle ABP=35^\\circ$，$\\angle CDP=25^\\circ$，则 $\\angle BPD$ 等于',
+      figure: {
+        id: 'fig-mth-geo-par-3',
+        title: '折线拐点：过拐点作平行线',
+        caption: 'PQ∥AB，把 ∠BPD 拆成 ∠BPQ 与 ∠DPQ',
+        view: 'square',
+        prims: [
+          { t: 'line', x1: 12, y1: 30, x2: 88, y2: 30 },
+          { t: 'line', x1: 12, y1: 70, x2: 88, y2: 70 },
+          { t: 'line', x1: 40, y1: 30, x2: 18.7, y2: 44.9 },
+          { t: 'line', x1: 18.7, y1: 44.9, x2: 72.4, y2: 70 },
+          { t: 'line', x1: 18.7, y1: 44.9, x2: 80, y2: 44.9, tone: 'muted', dashed: true },
+          { t: 'angle', x: 40, y: 30, from: 180, to: 215, r: 6, label: '35°' },
+          { t: 'angle', x: 72.4, y: 70, from: 155, to: 180, r: 6, label: '25°' },
+          { t: 'angle', x: 18.7, y: 44.9, from: 0, to: 35, r: 6, label: '35°' },
+          { t: 'angle', x: 18.7, y: 44.9, from: -25, to: 0, r: 6, label: '25°' },
+          { t: 'dot', x: 40, y: 30, label: 'B' },
+          { t: 'dot', x: 72.4, y: 70, label: 'D' },
+          { t: 'dot', x: 18.7, y: 44.9, label: 'P' },
+          { t: 'text', x: 13, y: 26, text: 'A' },
+          { t: 'text', x: 13, y: 76, text: 'C' },
+          { t: 'text', x: 81.5, y: 42, text: 'Q', anchor: 'start' },
+        ],
+        alt: '两条平行线 AB 与 CD，点 P 在两线之间，线段 PB、PD 连接 P 与两线上的点 B、D；过 P 作虚线 PQ 平行于 AB，标注 ∠ABP=35°、∠CDP=25°，以及拆分出的 ∠BPQ=35°、∠DPQ=25°',
+      },
       options: ['$50^\\circ$', '$55^\\circ$', '$65^\\circ$', '$60^\\circ$'],
       answer: 'D',
       explanation:
@@ -980,6 +1370,30 @@ export const mthGeometry: ExamTopic = {
       type: 'fill',
       stem:
         '$AB\\parallel CD$，直线 $EF$ 与 $AB$、$CD$ 分别交于点 $E$、$F$，点 $B$、$D$ 在直线 $EF$ 的同侧。$\\angle BEF$ 的平分线与 $\\angle EFD$ 的平分线交于点 $P$，则 $\\angle EPF=$ ____。（只填度数）',
+      figure: {
+        id: 'fig-mth-geo-par-4',
+        title: '同旁内角的平分线互相垂直',
+        caption: 'EP、FP 分别平分 ∠BEF 与 ∠EFD',
+        view: 'square',
+        prims: [
+          { t: 'line', x1: 14, y1: 25, x2: 88, y2: 25 },
+          { t: 'line', x1: 14, y1: 70, x2: 88, y2: 70 },
+          { t: 'line', x1: 50, y1: 25, x2: 29.2, y2: 70 },
+          { t: 'line', x1: 50, y1: 25, x2: 64.3, y2: 47.5, tone: 'accent' },
+          { t: 'line', x1: 29.2, y1: 70, x2: 64.3, y2: 47.5, tone: 'accent' },
+          { t: 'angle', x: 50, y: 25, from: 245.2, to: 360, r: 7 },
+          { t: 'angle', x: 29.2, y: 70, from: 0, to: 65.2, r: 7 },
+          { t: 'angle', x: 64.3, y: 47.5, from: 122.4, to: 212.7, r: 7, right: true },
+          { t: 'dot', x: 50, y: 25, label: 'E' },
+          { t: 'dot', x: 29.2, y: 70, label: 'F' },
+          { t: 'dot', x: 64.3, y: 47.5, label: 'P' },
+          { t: 'dot', x: 78, y: 25, label: 'B' },
+          { t: 'dot', x: 80, y: 70, label: 'D' },
+          { t: 'text', x: 13, y: 21, text: 'A' },
+          { t: 'text', x: 13, y: 76, text: 'C' },
+        ],
+        alt: '两条平行线 AB 与 CD，直线 EF 分别交 AB 于 E、交 CD 于 F，B、D 在 EF 右侧；EP 平分 ∠BEF、FP 平分 ∠EFD，两条平分线交于点 P，P 处标有直角符号，∠EPF=90°',
+      },
       answer: '90',
       explanation:
         '同旁内角互补，所以 $\\angle BEF+\\angle EFD=180^\\circ$；两条平分线各取一半，得 $\\angle PEF+\\angle EFP=90^\\circ$；在 $\\triangle PEF$ 中由内角和得 $\\angle EPF=180^\\circ-90^\\circ=90^\\circ$。怎么想到的：角平分线题把「一半」写成式子，剩下的交给三角形内角和，不用去猜图形长什么样。',
@@ -1036,6 +1450,26 @@ export const mthGeometry: ExamTopic = {
       type: 'choice',
       stem:
         '$AD$ 是 $\\triangle ABC$ 的中线（$D$ 在 $BC$ 上），$AD=5$。延长 $AD$ 到点 $E$ 使 $DE=AD$，连接 $BE$。则 $AB+AC$ 与 $10$ 的大小关系是',
+      figure: {
+        id: 'fig-mth-geo-tri-3',
+        title: '倍长中线',
+        caption: 'DE=AD=5，AE=2AD=10，BE=AC',
+        view: 'tall',
+        prims: [
+          { t: 'poly', points: [[50, 18], [28, 58], [72, 58]], closed: true },
+          { t: 'line', x1: 50, y1: 18, x2: 50, y2: 58 },
+          { t: 'line', x1: 50, y1: 58, x2: 50, y2: 98, tone: 'accent', dashed: true },
+          { t: 'line', x1: 50, y1: 98, x2: 28, y2: 58, tone: 'accent' },
+          { t: 'text', x: 54, y: 38, text: 'AD=5', anchor: 'start', size: 3.6 },
+          { t: 'text', x: 54, y: 78, text: 'DE=5', anchor: 'start', size: 3.6 },
+          { t: 'dot', x: 50, y: 18, label: 'A' },
+          { t: 'dot', x: 28, y: 58, label: 'B' },
+          { t: 'dot', x: 72, y: 58, label: 'C' },
+          { t: 'dot', x: 50, y: 58, label: 'D' },
+          { t: 'dot', x: 50, y: 98, label: 'E' },
+        ],
+        alt: '三角形 ABC，AD 是 BC 边上的中线且 AD=5；延长 AD 到 E 使 DE=AD（虚线），连接 BE；图上标注 AD=5 与 DE=5，竖直线段 AE 全长为 10',
+      },
       options: ['$AB+AC>10$', '$AB+AC=10$', '$AB+AC<10$', '无法确定'],
       answer: 'A',
       explanation:
@@ -1068,6 +1502,25 @@ export const mthGeometry: ExamTopic = {
       id: 'mth-geometry-q12',
       type: 'short',
       stem: '在四边形 $ABCD$ 中，$AB=AD$，$CB=CD$，连接 $AC$。求证 $\\angle B=\\angle D$。',
+      figure: {
+        id: 'fig-mth-geo-tri-4',
+        title: '筝形与公共边',
+        caption: 'AB=AD，CB=CD，公共边 AC',
+        view: 'square',
+        prims: [
+          { t: 'poly', points: [[50, 14], [28, 50], [50, 92], [72, 50]], closed: true },
+          { t: 'line', x1: 50, y1: 14, x2: 50, y2: 92, tone: 'accent', dashed: true },
+          { t: 'line', x1: 37.3, y1: 31, x2: 40.7, y2: 33 },
+          { t: 'line', x1: 59.3, y1: 33, x2: 62.7, y2: 31 },
+          { t: 'line', x1: 37.4, y1: 71.8, x2: 40.6, y2: 70.2 },
+          { t: 'line', x1: 59.4, y1: 70.2, x2: 62.6, y2: 71.8 },
+          { t: 'dot', x: 50, y: 14, label: 'A' },
+          { t: 'dot', x: 28, y: 50, label: 'B' },
+          { t: 'dot', x: 50, y: 92, label: 'C' },
+          { t: 'dot', x: 72, y: 50, label: 'D' },
+        ],
+        alt: '筝形（风筝形）四边形 ABCD：A 在上、C 在下、B 在左、D 在右；AB 与 AD 有相同的等长记号，CB 与 CD 有相同的等长记号，竖直虚线 AC 是公共边兼对称轴',
+      },
       answer:
         '在 $\\triangle ABC$ 与 $\\triangle ADC$ 中，$AB=AD$（已知），$CB=CD$（已知），$AC=AC$（公共边），所以 $\\triangle ABC\\cong\\triangle ADC$（SSS）。因为全等三角形的对应角相等，所以 $\\angle B=\\angle D$。',
       rubric: [
