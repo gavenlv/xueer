@@ -1578,6 +1578,23 @@ export const topics: PhysicsTopic[] = [
         type: 'short',
         stem:
           '某小组要探究「弹簧的伸长量与拉力的关系」，器材有弹簧、铁架台、钩码（每个 0.5 N）、刻度尺。请写出实验步骤，并说明为什么要在弹簧下挂不同数量的钩码多次测量。',
+        figure: {
+          id: 'fig-mech-3-spring-plan',
+          title: '弹簧的伸长量与拉力的关系',
+          caption: '在弹性限度内，弹簧的伸长量与所受拉力成正比：拉力每增加 0.5 N，伸长量按相同比例增加，图像是一条过原点的直线',
+          view: 'square',
+          alt: '以拉力为横轴、弹簧伸长量为纵轴的坐标系中，一条直线从原点出发向右上方延伸；旁边画着竖直悬挂的弹簧，下端挂着一个钩码',
+          prims: [
+            { t: 'axis', x: 34, y: 84, w: 52, h: 56, xLabel: 'F/N', yLabel: 'Δx/cm', origin: true, grid: true, xTicks: [{ at: 0.25, label: '0.5' }, { at: 0.5, label: '1.0' }, { at: 0.75, label: '1.5' }] },
+            { t: 'curve', points: [[34, 84], [86, 28]], tone: 'accent', width: 1 },
+            { t: 'line', x1: 16, y1: 14, x2: 28, y2: 14, tone: 'muted', width: 0.8 },
+            { t: 'spring', x1: 22, y1: 14, x2: 22, y2: 40, coils: 6, label: '弹簧' },
+            { t: 'line', x1: 22, y1: 40, x2: 22, y2: 46, tone: 'main', width: 0.5 },
+            { t: 'rect', x: 15, y: 46, w: 14, h: 10, tone: 'muted', fill: true },
+            { t: 'text', x: 22, y: 66, text: '0.5 N', size: 3.2, tone: 'muted', anchor: 'middle' },
+            { t: 'text', x: 22, y: 74, text: '逐次加钩码', size: 3.4, tone: 'accent', anchor: 'middle' },
+          ],
+        },
         answer:
           '步骤：① 把弹簧的一端固定在铁架台上，让弹簧自然下垂，用刻度尺测出弹簧的原长 L₀；② 在弹簧下端挂 1 个钩码，待弹簧静止后测出弹簧的总长度 L₁，算出伸长量 ΔL₁ = L₁ − L₀；③ 依次挂 2 个、3 个、4 个钩码，重复测量并记录每次的拉力 F 与伸长量 ΔL；④ 以 F 为纵轴、ΔL 为横轴描点作图（或计算 F 与 ΔL 的比值），分析得出结论。多次测量的目的：得到多组数据，才能看出伸长量与拉力之间是否存在正比关系，同时减小偶然误差，避免由一组数据得出片面结论。',
         rubric: [
@@ -2083,6 +2100,29 @@ export const topics: PhysicsTopic[] = [
         type: 'short',
         stem:
           '一辆汽车以 15 m/s 的速度在平直公路上匀速行驶，司机发现情况后经过 0.8 s 开始刹车，刹车后汽车又滑行了 9 m 才停下。求反应时间内汽车行驶的路程，以及从发现情况到汽车停下的总路程。',
+        figure: {
+          id: 'fig-mech-4-brake',
+          title: '反应距离与刹车距离',
+          caption: '从发现情况到开始刹车（0.8 s）汽车仍以 15 m/s 匀速前进，这段是反应距离；刹车后又滑行 9 m 才停下',
+          view: 'wide',
+          alt: '平直的公路上有一辆汽车，司机位置画有发现情况的标记；从该处到开始刹车处标出反应距离，从开始刹车处到停车处标出刹车距离 9 米',
+          prims: [
+            { t: 'line', x1: 4, y1: 48, x2: 96, y2: 48, tone: 'muted', width: 1 },
+            { t: 'hatch', x: 4, y: 48, w: 92, h: 3, tone: 'muted' },
+            { t: 'rect', x: 12, y: 36, w: 16, h: 10, tone: 'main', fill: true },
+            { t: 'circle', cx: 16, cy: 47, r: 2.2, tone: 'muted' },
+            { t: 'circle', cx: 24, cy: 47, r: 2.2, tone: 'muted' },
+            { t: 'text', x: 20, y: 33, text: 'v = 15 m/s', size: 3.4, tone: 'accent', anchor: 'middle' },
+            { t: 'text', x: 28, y: 30, text: '发现情况（开始计时）', size: 3.2, tone: 'danger', anchor: 'start' },
+            { t: 'line', x1: 28, y1: 24, x2: 28, y2: 48, tone: 'danger', dashed: true },
+            { t: 'line', x1: 52, y1: 24, x2: 52, y2: 48, tone: 'danger', dashed: true },
+            { t: 'line', x1: 76, y1: 24, x2: 76, y2: 48, tone: 'danger', dashed: true },
+            { t: 'arrow', x1: 28, y1: 20, x2: 52, y2: 20, tone: 'accent', label: '反应距离' },
+            { t: 'arrow', x1: 52, y1: 20, x2: 76, y2: 20, tone: 'muted', label: '刹车距离 9 m' },
+            { t: 'rect', x: 60, y: 36, w: 16, h: 10, tone: 'muted', fill: true, dashed: true },
+            { t: 'text', x: 50, y: 58, text: '反应距离 = vt = 15 m/s × 0.8 s = 12 m；总路程 = 12 m + 9 m', size: 3.6, tone: 'main', anchor: 'middle' },
+          ],
+        },
         answer:
           '反应时间内汽车仍按原速度做匀速直线运动：$s_1=vt=15\\ \\mathrm{m/s}\\times 0.8\\ \\mathrm{s}=12\\ \\mathrm{m}$。刹车后滑行的路程 $s_2=9\\ \\mathrm{m}$。总路程 $s=s_1+s_2=12\\ \\mathrm{m}+9\\ \\mathrm{m}=21\\ \\mathrm{m}$。',
         answerSteps: [

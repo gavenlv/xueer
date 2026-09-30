@@ -1462,7 +1462,7 @@ const texFailures: string[] = [];
  */
 const EATEN_BACKSLASH =
   /(?<![\\A-Za-z])(?:rac\{|imes|riangle|ecause|herefore|angle|circ|sqrt|perp|parallel|cdot|neq|geq|leq)/;
-const eatenBackslashByTopic = new Map<string, { n: number; sample: string }>();
+const eatenBackslashByTopic = new Map<string, { n: number; sample: string; where: string }>();
 
 function checkTex(tex: string, where: string) {
   texTotal += 1;
@@ -1471,6 +1471,44 @@ function checkTex(tex: string, where: string) {
   } catch (e) {
     texFailures.push(`${where}  【${tex.slice(0, 60)}】 → ${(e as Error).message.split('\n')[0].slice(0, 70)}`);
   }
+}
+
+/**
+ * 递归收集一张图解里**所有当成纯文本渲染的文字**。
+ *
+ * 图是 SVG，里面的 `<text>` 直接吃字符串，**不经过 RichText**：图注里写
+ * `M(a-1,\ a+2)` 就会看到那个反斜杠，写 `$x$` 就会看到美元符号。所以它们的判据
+ * 和正文**正好相反**——正文要求 `$…$` 成对且 KaTeX 合法，这里出现 `$` 或 `\` 一律算错。
+ *
+ * 图的位置很多（概念、例题、步骤、公式、题目、专题的趋势与角度…），按字段名逐个枚举
+ * 迟早会漏掉新增的那一处，所以这里不枚举，而是**找「带 prims 的对象」**：
+ * 以后把图挂到哪儿都会被自动覆盖。
+ */
+function collectFigureText(node: unknown, path: string, out: [string, string | undefined][]): void {
+  if (node == null) return;
+  if (Array.isArray(node)) {
+    node.forEach((v, i) => collectFigureText(v, `${path}[${i}]`, out));
+    return;
+  }
+  if (typeof node !== 'object') return;
+  const o = node as Record<string, unknown>;
+  if (Array.isArray(o.prims)) {
+    const join = (k: string) => (path ? `${path}.${k}` : k);
+    out.push(
+      [join('title'), o.title as string | undefined],
+      [join('caption'), o.caption as string | undefined],
+      [join('alt'), o.alt as string | undefined],
+    );
+    (o.prims as unknown[]).forEach((p, i) => {
+      const pt = (p ?? {}) as Record<string, unknown>;
+      for (const k of ['text', 'label', 'xLabel', 'yLabel']) {
+        const v = pt[k];
+        if (typeof v === 'string') out.push([join(`prims[${i}].${k}`), v]);
+      }
+    });
+    return;
+  }
+  for (const [k, v] of Object.entries(o)) collectFigureText(v, path ? `${path}.${k}` : k, out);
 }
 
 for (const entry of allEntries) {
@@ -1486,6 +1524,14 @@ for (const entry of allEntries) {
    * 的入口，所以两类字段分别收集，然后跑同一套公式检查。
    */
   const fields: [string, string | undefined][] = [];
+
+  /**
+   * **纯文本**渲染的字段：图里的文字（SVG `<text>`）、步骤小标题、概念词条名、公式名。
+   * 它们在 `MathDetail.tsx` 里是直接插值的，写 `$…$` 或 `\angle` 只会把符号原样显示
+   * 给学生，所以判据和正文相反——出现 `$` 或反斜杠就算错（见 `collectFigureText`）。
+   */
+  const plain: [string, string | undefined][] = [];
+  collectFigureText(entry.data, '', plain);
 
   if (isExamTopicData(entry.data)) {
     const t = entry.data;
@@ -1540,13 +1586,32 @@ for (const entry of allEntries) {
   } else {
     const t = entry.data as import('../src/types').MathTopic;
     fields.push(['summary', t.summary]);
+    /**
+     * 系统讲解的分步推演。
+     *
+     * 这三段以前**完全没进校验**：`body` 里的 `$180^\circ$` 在单引号字符串里写成单反斜杠
+     * 时，`\c` 只是把反斜杠丢掉、KaTeX 照样解析得动，于是静默渲染成「180circ」——
+     * 校验一路绿灯，学生看到的是一串斜体字母。同批漏掉的还有考点 `examPoints`。
+     */
+    (t.steps ?? []).forEach((s, i) => {
+      fields.push([`steps[${i}].body`, s.body], [`steps[${i}].note`, s.note]);
+      plain.push([`steps[${i}].heading`, s.heading]);
+    });
     // 解析（insight）也要过 KaTeX：它与 explain 同走 RichText，写错公式同样会露在页面上
-    (t.concepts ?? []).forEach((c, i) =>
-      fields.push([`concepts[${i}]`, c.explain], [`concepts[${i}].insight`, c.insight]),
+    (t.concepts ?? []).forEach((c, i) => {
+      fields.push([`concepts[${i}]`, c.explain], [`concepts[${i}].insight`, c.insight]);
+      // 词条名是 `<h3>` 纯文本，同时也是折叠摘要的素材——写 `$…$` 只会显示美元符号
+      plain.push([`concepts[${i}].term`, c.term]);
+    });
+    // 中考考点：`point` 既进正文也进折叠摘要（摘要已改走 RichText），`how` 只在正文
+    (t.examPoints ?? []).forEach((p, i) =>
+      fields.push([`examPoints[${i}].point`, p.point], [`examPoints[${i}].how`, p.how]),
     );
     (t.formulas ?? []).forEach((f, i) => {
       if (f.tex) checkTex(f.tex, `${where}.formulas[${i}].tex`);
       fields.push([`formulas[${i}].text`, f.text], [`formulas[${i}].note`, f.note]);
+      // 公式名渲染在 `div.formula__name` 里（纯文本），也是折叠摘要的素材
+      plain.push([`formulas[${i}].name`, f.name]);
     });
     (t.examples ?? []).forEach((x, i) => {
       fields.push([`examples[${i}].stem`, x.stem], [`examples[${i}].answer`, x.answer], [`examples[${i}].tip`, x.tip]);
@@ -1574,19 +1639,44 @@ for (const entry of allEntries) {
     if (dollars % 2 !== 0) err(`${where}.${name}: $ 符号个数为奇数（${dollars}），行内公式未闭合`);
     for (const sub of inlineTexOf(value)) {
       checkTex(sub, `${where}.${name}`);
-      // 专题正文里的行内公式按规范必须是 `$…$` 包裹的 KaTeX 源码，因此可以放心按形状查
-      if (isExamTopicData(entry.data) && EATEN_BACKSLASH.test(sub)) {
-        const cur = eatenBackslashByTopic.get(entry.id) ?? { n: 0, sample: sub.slice(0, 40) };
+      // 正文里的行内公式按规范必须是 `$…$` 包裹的 KaTeX 源码，因此可以放心按形状查。
+      // 专题与知识点都查：之前只查专题，于是 geometry.ts 系统讲解里那批被吃掉的
+      // `\circ`／`\angle` 全部漏过去了。
+      if (EATEN_BACKSLASH.test(sub)) {
+        const cur = eatenBackslashByTopic.get(entry.id) ?? { n: 0, sample: sub.slice(0, 40), where };
         cur.n += 1;
         eatenBackslashByTopic.set(entry.id, cur);
       }
     }
   }
+
+  /**
+   * 纯文本字段的检查。
+   *
+   * 这里判据与正文相反：这些字段**不会**被渲染成公式，出现 `$` 或反斜杠就是原样显示。
+   * 反斜杠被 JS 吃掉的那种（图注里 `angleAOB`）KaTeX 也不会报错——因为它压根不经过 KaTeX——
+   * 所以只能用形状启发式兜。
+   */
+  for (const [name, value] of plain) {
+    if (!value || typeof value !== 'string') continue;
+    if (value.includes('$') || value.includes('\\')) {
+      err(
+        `${where}.${name}: 这是**纯文本**渲染的字段（图解里的 SVG 文字 / 小标题 / 词条名），` +
+          `写 $ 或反斜杠会原样显示给学生：「${value.slice(0, 40)}」——` +
+          `公式请去掉 $ 改写成纯文本（如「∠A=65°」），图解文字不经过 KaTeX`,
+      );
+    } else if (EATEN_BACKSLASH.test(value)) {
+      err(
+        `${where}.${name}: 疑似 LaTeX 命令的反斜杠被 JS 字符串转义吃掉（「${value.slice(0, 40)}」）——` +
+          `这个字段不过 KaTeX，KaTeX 报不出错，只能按形状兜底；请改写成纯文本`,
+      );
+    }
+  }
 }
 
-for (const [topicId, info] of eatenBackslashByTopic) {
+for (const info of eatenBackslashByTopic.values()) {
   err(
-    `[math-topics] ${topicId}: 有 ${info.n} 处 LaTeX 命令的反斜杠被 JS 字符串转义吃掉` +
+    `${info.where}: 有 ${info.n} 处 LaTeX 命令的反斜杠被 JS 字符串转义吃掉` +
       `（例如「${info.sample}」）——在单引号/双引号字符串里必须写两个反斜杠（$\\angle ABC$），` +
       `否则 KaTeX 虽然不报错，却会把 ∠ 渲染成一串斜体字母，学生看到的是「angle ABC」`,
   );

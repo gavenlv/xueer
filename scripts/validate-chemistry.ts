@@ -62,6 +62,36 @@ export function validateChemistry(opts: {
   };
 
   /**
+   * 图是不是「配」上了（与物理同一条红线）。
+   *
+   * 化学里「非图说不清」的说法集中在装置、操作与图像三类：
+   *   ① 写了「如图／图中」却没有图 → 报错（题面自相矛盾）；
+   *   ② 提到「装置图／结构示意图／流程图／图象／原子结构」却没有图 → 报错。
+   *
+   * 例外同样是**卷面策略**类条目（`chem-exam-strategy-*`）：它们说「先看装置图」
+   * 是讲答题顺序，不是给自己的正文配图。
+   */
+  const SAY_FIG = /如图|图中|下图|见图|图甲|图乙|图丙/;
+  const SAY_CHART =
+    /装置图|结构示意图|示意图|流程图|模型图|图象|图像|坐标图|原子结构|粒子模型|微观示意/;
+  const checkFigureText = (
+    where: string,
+    at: string,
+    text: string,
+    figs: ({ id?: string; prims?: unknown[] } | undefined)[],
+  ): void => {
+    if (/strategy/.test(at)) return;
+    if (figs.some((f) => f && Array.isArray(f.prims) && f.prims.length)) return;
+    if (SAY_FIG.test(text)) {
+      bad += 1;
+      err(`${at}: ${where} 写了「如图／图中」却没有配图（题面得有图可指）`);
+    } else if (SAY_CHART.test(text)) {
+      bad += 1;
+      err(`${at}: ${where} 提到装置图／结构示意图／图象这类非图说不清的内容，却没有配图`);
+    }
+  };
+
+  /**
    * 化学方程式配平检查：把式子按 `=`／`→` 拆成两侧，逐元素统计原子个数是否相等。
    *
    * 这里必须自己写一个小解析器，**不能**用 `\d` 加正则硬凑：
@@ -203,6 +233,7 @@ export function validateChemistry(opts: {
     for (const [i, s] of t.steps.entries()) {
       if (!s.heading?.trim() || !s.body?.trim()) err(`${at}: 第 ${i + 1} 步缺少标题或正文`);
       if (checkFigureAlt(`第 ${i + 1} 步`, s.figure, at)) figures += 1;
+      checkFigureText(`讲解第 ${i + 1} 步「${s.heading}」`, at, `${s.heading}${s.body}`, [s.figure]);
     }
     for (const [i, e] of (t.equations ?? []).entries()) {
       if (!e.equation?.trim()) err(`${at}: 第 ${i + 1} 个化学方程式为空`);
@@ -229,6 +260,7 @@ export function validateChemistry(opts: {
         err(`${at}: 实验「${x.title}」缺少注意事项（安全与操作顺序是中考必考）`);
       }
       if (checkFigureAlt(`实验「${x.title}」`, x.figure, at)) figures += 1;
+      checkFigureText(`实验「${x.title}」`, at, `${x.title}${x.purpose}${x.phenomenon}`, [x.figure]);
     }
     for (const [i, a] of t.apps.entries()) {
       if (!a.title?.trim() || !a.scene?.trim() || !a.analysis?.trim()) {
@@ -237,6 +269,7 @@ export function validateChemistry(opts: {
       if (a.steps.length < 2) err(`${at}: 应用「${a.title}」的解答步骤不足 2 步`);
       if (!a.result?.trim()) err(`${at}: 应用「${a.title}」缺少结论`);
       if (checkFigureAlt(`应用「${a.title}」`, a.figure, at)) figures += 1;
+      checkFigureText(`应用「${a.title}」`, at, `${a.title}${a.scene}${a.analysis}`, [a.figure]);
     }
     for (const f of t.formulas ?? []) {
       if (!f.usage?.trim()) err(`${at}: 计算关系「${f.name}」缺少 usage（适用范围）`);
@@ -246,6 +279,7 @@ export function validateChemistry(opts: {
       if (!q.explanation?.trim()) err(`${at}: 题目 ${q.id} 缺少解析（化学要讲清为什么）`);
       if (checkFigureAlt(`题目 ${q.id}`, q.figure, at)) figures += 1;
       if (checkFigureAlt(`题目 ${q.id} 的参考答案图`, q.answerFigure, at)) figures += 1;
+      checkFigureText(`题目 ${q.id}`, at, `${q.stem}${q.explanation ?? ''}`, [q.figure, q.answerFigure]);
       if (q.type === 'choice' && (q.options?.length ?? 0) !== 4) {
         err(`${at}: 选择题 ${q.id} 的选项数为 ${q.options?.length ?? 0}（应为 4）`);
       }

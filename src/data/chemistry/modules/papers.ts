@@ -3364,6 +3364,22 @@ export const topics: ChemTopic[] = [
       },
       {
         heading: '图像与表格类计算：先找「拐点」',
+        figure: {
+          id: 'fig-chem-strategy3-step6',
+          title: '图像题先找「拐点」',
+          caption: '曲线由上升转为水平的那一点就是「恰好完全反应」的拐点：拐点之前按加入量计算，拐点之后再加反应物，生成物也不再增加',
+          view: 'square',
+          alt: '以加入反应物的质量为横轴、生成气体的质量为纵轴的图像上，曲线先沿斜线上升，到某一点后变成水平；拐点处画有虚线并标注「恰好完全反应」',
+          prims: [
+            { t: 'axis', x: 20, y: 78, w: 64, h: 58, xLabel: '加入反应物的质量/g', yLabel: '生成气体的质量/g', origin: true, grid: true },
+            { t: 'curve', points: [[20, 78], [30, 66], [40, 54], [50, 42], [56, 36], [72, 36], [84, 36]], tone: 'accent', width: 1 },
+            { t: 'line', x1: 56, y1: 36, x2: 56, y2: 78, tone: 'danger', dashed: true },
+            { t: 'line', x1: 20, y1: 36, x2: 56, y2: 36, tone: 'danger', dashed: true },
+            { t: 'dot', x: 56, y: 36, tone: 'danger' },
+            { t: 'text', x: 58, y: 32, text: '拐点：恰好完全反应', size: 3.6, tone: 'danger', anchor: 'start' },
+            { t: 'text', x: 26, y: 90, text: '拐点之前：按加入量算；之后再加也不增加', size: 3.6, tone: 'muted' },
+          ],
+        },
         representation: '应用',
         body:
           '带图像或表格的计算题，最关键的一步是从数据中找到「恰好完全反应」的那个点。表格题看哪一组数据之后不再变化；图像题看曲线由上升转为水平的那一点，或者两条曲线的交点。找到拐点之后，把该点对应的数据代入方程式，就是最可靠的算法。切忌随便挑一组数据就代入——如果挑的是「反应物已经过量」的那一组，算出来的结果一定是错的。',

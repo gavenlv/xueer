@@ -66,24 +66,21 @@ export const MATH_MODULE_IDS: MathModuleId[] = [
  */
 const EAGER_MODULE_IDS = MATH_MODULE_IDS.filter((id) => id !== 'math-topics');
 
-/* ----------------------------- 原始数据（按模块装配） ----------------------------- */
-
-import { mathNumber } from './number';
-import { mathGeometry } from './geometry';
-import { mathStats } from './stats';
-import { mathFormula } from './formula';
-import { mathModel } from './model';
-import { mathExam } from './exam';
-
-/** 各模块的知识点 */
-const TOPICS_BY_MODULE: Partial<Record<MathModuleId, MathTopic[]>> = {
-  'math-number': mathNumber,
-  'math-geometry': mathGeometry,
-  'math-stats': mathStats,
-  'math-formula': mathFormula,
-  'math-model': mathModel,
-  'math-exam': mathExam,
-};
+/**
+ * ⚠️ 这里**不能**写 `import { mathNumber } from './number'` 这类静态导入。
+ *
+ * 各模块的知识点数据只能经 `./topics` **动态** import（就在下面的 `load()` 里）。
+ * 一旦在文件顶部静态导入它们，Rollup 会把 `number/geometry/stats/…` 放进**调用方那个
+ * chunk**（校验脚本里就是 `validate.mjs` 本身），而 `./topics` 这个懒加载 chunk 又要
+ * 反过来从它 import——于是形成「入口 chunk ⟷ topics chunk」的循环。入口脚本第一行就是
+ * `await ensureAll()`，而 ESM 的循环会被**顶层 await 卡死**：topics 等入口求值完，
+ * 入口等 topics 加载完，两边都不动。现象是 `pnpm validate` / `pnpm smoke` 永久挂起、
+ * 退出码 13（`Warning: Detected unsettled top-level await … await ensureAll()`），
+ * 而且**一个字符的错误都不报**，看起来像内容有问题。
+ *
+ * （原先此处确实有一份静态导入 + 一份没人用的 `TOPICS_BY_MODULE` 副本，`load()` 里读的是
+ * 动态模块的 `m.TOPICS_BY_MODULE`，那份副本是死代码，删掉即解环。）
+ */
 
 /* ------------------------------ 装配 Entry ------------------------------ */
 

@@ -1424,6 +1424,28 @@ export const topics: PhysicsTopic[] = [
         type: 'short',
         stem:
           '小明用如图装置探究「动能的大小与哪些因素有关」：斜面、小球、木块、刻度尺。请回答：(1) 实验中怎样比较小球动能的大小？这用了什么方法？(2) 要探究动能与速度的关系，应怎样操作？(3) 要探究动能与质量的关系，应怎样操作？',
+        figure: {
+          id: 'fig-work-3-q8',
+          title: '探究动能大小与哪些因素有关的装置',
+          caption: '同一小球从不同高度由静止滚下，到达水平面时的速度不同；小球推动木块，木块被推得越远，说明小球撞击时的动能越大',
+          view: 'wide',
+          alt: '左侧是一段斜面，小球从斜面上不同高度处由静止释放，滚下后撞到水平面上的木块，木块被推动一段距离；水平面右端放着一把刻度尺',
+          prims: [
+            { t: 'poly', points: [[10, 56], [48, 20], [48, 56]], closed: true, tone: 'muted' },
+            { t: 'line', x1: 6, y1: 56, x2: 94, y2: 56 },
+            { t: 'hatch', x: 6, y: 56, w: 88, h: 3, tone: 'muted' },
+            { t: 'circle', cx: 38, cy: 31, r: 3, tone: 'accent' },
+            { t: 'circle', cx: 26, cy: 42, r: 3, tone: 'main', dashed: true },
+            { t: 'arrow', x1: 30, y1: 39, x2: 37, y2: 32, tone: 'accent' },
+            { t: 'text', x: 20, y: 14, text: '同一小球，可放在不同高度', size: 3.4, tone: 'muted' },
+            { t: 'rect', x: 64, y: 46, w: 10, h: 10, tone: 'main', fill: true },
+            { t: 'text', x: 69, y: 42, text: '木块', size: 3.4, tone: 'main' },
+            { t: 'line', x1: 48, y1: 56, x2: 60, y2: 56, tone: 'accent', dashed: true },
+            { t: 'text', x: 54, y: 61, text: '被推动的距离 s', size: 3.4, tone: 'accent', anchor: 'middle' },
+            { t: 'rect', x: 80, y: 50, w: 12, h: 6, tone: 'muted' },
+            { t: 'text', x: 86, y: 47, text: '刻度尺', size: 3.4, tone: 'muted', anchor: 'middle' },
+          ],
+        },
         answer:
           '(1) 让小球从斜面滚下撞击水平面上的木块，用木块被推动的距离来比较小球的动能：木块被推得越远，说明小球的动能越大。这用了转换法。(2) 用同一小球从斜面的不同高度由静止滚下（控制质量不变），比较木块被推动的距离，即可研究动能与速度的关系。(3) 用质量不同的小球从斜面的同一高度由静止滚下（控制到达底端的速度相同），比较木块被推动的距离，即可研究动能与质量的关系。',
         rubric: [
@@ -2091,6 +2113,28 @@ export const topics: PhysicsTopic[] = [
     apps: [
       {
         title: '晾衣架上的定滑轮',
+        figure: {
+          id: 'fig-work-5-fixed-pulley',
+          title: '定滑轮：不省力，但改变用力方向',
+          caption: '定滑轮的轴固定不动，相当于等臂杠杆：拉力与衣架和衣服的总重相等，但绳端可以向下拉，绳端移动的距离等于衣架上升的高度',
+          view: 'square',
+          alt: '天花板下固定着一个滑轮，绳子跨过滑轮：一端向下系着晾衣架与衣服，另一端被人向下拉住，两个方向各画一个箭头表示力的方向',
+          prims: [
+            { t: 'line', x1: 10, y1: 10, x2: 90, y2: 10, tone: 'muted', width: 1 },
+            { t: 'hatch', x: 10, y: 7, w: 80, h: 3, tone: 'muted' },
+            { t: 'pulley', x: 50, y: 24, r: 9, kind: 'fixed', label: '定滑轮' },
+            { t: 'line', x1: 41, y1: 24, x2: 41, y2: 56, tone: 'main', width: 0.5 },
+            { t: 'line', x1: 59, y1: 24, x2: 59, y2: 56, tone: 'main', width: 0.5 },
+            { t: 'line', x1: 34, y1: 56, x2: 48, y2: 56, tone: 'main', width: 0.8 },
+            { t: 'rect', x: 33, y: 56, w: 16, h: 9, tone: 'muted', fill: true },
+            { t: 'text', x: 41, y: 74, text: '衣架与衣服：G', size: 3.4, tone: 'main', anchor: 'middle' },
+            { t: 'arrow', x1: 59, y1: 40, x2: 59, y2: 56, tone: 'danger' },
+            { t: 'arrow', x1: 41, y1: 44, x2: 41, y2: 56, tone: 'accent' },
+            { t: 'text', x: 63, y: 52, text: '拉力 F', size: 3.4, tone: 'danger', anchor: 'start' },
+            { t: 'text', x: 22, y: 46, text: 'G', size: 3.6, tone: 'accent', anchor: 'middle' },
+            { t: 'text', x: 50, y: 86, text: 'F = G；绳端下降多少，衣架就上升多少', size: 3.6, tone: 'main', anchor: 'middle' },
+          ],
+        },
         scene: '阳台上的晾衣架用了一个定滑轮：站在地面向下拉绳，衣架带着衣服升到高处。',
         model:
           '定滑轮的轴固定在一个支架上，绕线不动：它不省力，拉力与衣架和衣服的总重相等（不计摩擦），但绳端的移动距离等于衣架上升的高度。',

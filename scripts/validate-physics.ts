@@ -72,6 +72,37 @@ export function validatePhysics(opts: {
     return true;
   };
 
+  /**
+   * 图是不是「配」上了。
+   *
+   * 判据只有两条，都从**正文自己说的话**出发：
+   *   ① 写了「如图／图中／下图」却**没有图** → 报错。这是题面自相矛盾：学生对着空气读题。
+   *   ② 提到「装置图／电路图／光路图／图象／天平读数」这类**成图说法**却没有图 → 报错。
+   *      这类话在物理里几乎都要一张图才落得下去（读数题要表盘、实验题要装置、图像题要曲线）。
+   *
+   * 唯一的例外是**卷面策略**类条目（`phy-exam-strategy-*`）：它们说「先读实验题的装置图」
+   * 是在讲答题方法，不是给自己的正文配图；对它们报错只会逼作者删掉有用的表述。
+   */
+  const SAY_FIG = /如图|图中|下图|见图|图甲|图乙|图丙/;
+  const SAY_CHART =
+    /电路图|光路图|受力示意图|受力分析|装置图|示意图|图象|图像|坐标图|表盘|读数示意|(?:电流表|电压表|温度计|体温计|天平|量筒|弹簧测力计|停表|刻度尺)的?读数/;
+  const checkFigureText = (
+    where: string,
+    at: string,
+    text: string,
+    figs: (PhysicsFigure | undefined)[],
+  ): void => {
+    if (/strategy/.test(at)) return;
+    if (figs.some((f) => f && f.prims?.length)) return;
+    if (SAY_FIG.test(text)) {
+      bad += 1;
+      err(`${at}: ${where} 写了「如图／图中」却没有配图（题面得有图可指）`);
+    } else if (SAY_CHART.test(text)) {
+      bad += 1;
+      err(`${at}: ${where} 提到装置图／图象／读数这类非图说不清的内容，却没有配图`);
+    }
+  };
+
   for (const t of allTopics as PhysicsTopic[]) {
     const at = `[物理] ${t.id}`;
     const need = (cond: boolean, msg: string) => {
@@ -117,6 +148,7 @@ export function validatePhysics(opts: {
     for (const [i, s] of t.steps.entries()) {
       if (!s.heading?.trim() || !s.body?.trim()) err(`${at}: 第 ${i + 1} 步缺少标题或正文`);
       if (checkFigureAlt(`第 ${i + 1} 步`, s.figure, at)) figures += 1;
+      checkFigureText(`讲解第 ${i + 1} 步「${s.heading}」`, at, `${s.heading}${s.body}`, [s.figure]);
     }
     for (const [i, a] of t.apps.entries()) {
       if (!a.title?.trim() || !a.scene?.trim() || !a.model?.trim()) {
@@ -125,6 +157,7 @@ export function validatePhysics(opts: {
       if (a.steps.length < 2) err(`${at}: 应用「${a.title}」的解答步骤不足 2 步（要写清卷面上怎么写）`);
       if (!a.result?.trim()) err(`${at}: 应用「${a.title}」缺少结论`);
       if (checkFigureAlt(`应用「${a.title}」`, a.figure, at)) figures += 1;
+      checkFigureText(`应用「${a.title}」`, at, `${a.title}${a.scene}${a.model}`, [a.figure]);
     }
     for (const f of t.formulas ?? []) {
       if (!f.usage?.trim()) {
@@ -136,6 +169,7 @@ export function validatePhysics(opts: {
       if (!q.explanation?.trim()) err(`${at}: 题目 ${q.id} 缺少解析（理科要讲清「为什么」）`);
       if (checkFigureAlt(`题目 ${q.id}`, q.figure, at)) figures += 1;
       if (checkFigureAlt(`题目 ${q.id} 的参考答案图`, q.answerFigure, at)) figures += 1;
+      checkFigureText(`题目 ${q.id}`, at, `${q.stem}${q.explanation ?? ''}`, [q.figure, q.answerFigure]);
       if (q.type === 'choice' && (q.options?.length ?? 0) !== 4) {
         err(`${at}: 选择题 ${q.id} 的选项数为 ${q.options?.length ?? 0}（应为 4）`);
       }
@@ -147,6 +181,7 @@ export function validatePhysics(opts: {
       for (const q of g.questions) {
         if (!q.answer?.trim()) err(`${at}: 综合题设问 ${q.id} 没有参考答案`);
         if (!q.rubric?.length) err(`${at}: 综合题设问 ${q.id} 没有踩分点`);
+        checkFigureText(`综合题设问 ${q.id}`, at, `${q.stem}${q.explanation ?? ''}`, [q.figure, q.answerFigure]);
       }
     }
   }
