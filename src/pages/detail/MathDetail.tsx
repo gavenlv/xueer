@@ -38,6 +38,23 @@ import { DetailShell, Section } from './DetailShell';
  * 先知道学什么，再知道考什么，例题与练习才有针对性。
  */
 
+/**
+ * 例题标题的截断：**不许把 `$…$` 切开**。
+ *
+ * `RichText` 靠成对的 `$` 才认出公式；切在公式中间时它匹配不到，于是把落单的 `$`
+ * 与半截 LaTeX 当纯文本原样显示（「例 1 计算：$-3^{2}+\left(-\frac{1}{2…」）。
+ * 切点在公式内时：公式就在附近就补到闭合处，实在隔着很远就退回公式之前。
+ */
+function excerpt(text: string, max: number): string {
+  if (text.length <= max) return text;
+  let cut = text.slice(0, max);
+  if ((cut.match(/\$/g) ?? []).length % 2 === 1) {
+    const close = text.indexOf('$', max);
+    cut = close >= 0 && close - max <= 8 ? text.slice(0, close + 1) : cut.slice(0, cut.lastIndexOf('$'));
+  }
+  return `${cut}…`;
+}
+
 export function MathDetail({ entry, moduleName }: { entry: MathEntry; moduleName: string }) {
   const t = entry.data;
 
@@ -75,7 +92,13 @@ export function MathDetail({ entry, moduleName }: { entry: MathEntry; moduleName
                   <RichText text={s.body} />
                 </div>
                 {s.figure ? <PhysicsFigureView figure={s.figure} /> : null}
-                {s.note ? <div className="physics-step__note">⚠️ {s.note}</div> : null}
+                {/* 步骤的提醒里带行内公式（`$180^\circ$`、`$\sqrt{a}$`），必须走 RichText——
+                    直接插值会把 `$` 与 LaTeX 源码一起原样显示出来 */}
+                {s.note ? (
+                  <div className="physics-step__note">
+                    ⚠️ <RichText text={s.note} />
+                  </div>
+                ) : null}
               </li>
             ))}
           </ol>
@@ -124,7 +147,8 @@ export function MathDetail({ entry, moduleName }: { entry: MathEntry; moduleName
           title={`中考考点（${t.examPoints.length} 条）`}
           icon="🎯"
           fold
-          summary={t.examPoints[0]?.point}
+          // 摘要行是纯文本渲染，考点原文带 $k$ 这类行内公式，必须走 RichText
+          summary={t.examPoints[0]?.point ? <RichText text={t.examPoints[0].point} /> : undefined}
           extra={<Tag tone="gold">综合</Tag>}
         >
           <div className="stack stack--sm">
@@ -195,7 +219,7 @@ export function MathDetail({ entry, moduleName }: { entry: MathEntry; moduleName
                   <span>
                     例 {i + 1}
                     <span className="muted" style={{ marginLeft: 8, fontWeight: 400 }}>
-                      <RichText text={ex.stem.slice(0, 28) + (ex.stem.length > 28 ? '…' : '')} />
+                      <RichText text={excerpt(ex.stem, 28)} />
                     </span>
                   </span>
                 }

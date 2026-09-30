@@ -336,8 +336,14 @@ export function Section({
   title: string;
   icon?: string;
   extra?: ReactNode;
-  /** 折叠标题行上的摘要小字（仅在 `fold` 时显示） */
-  summary?: string;
+  /**
+   * 折叠标题行上的摘要小字（仅在 `fold` 时显示）。
+   *
+   * 类型是 `ReactNode` 而不是 `string`：数学考点的摘要（`examPoints[0].point`）
+   * 里带 `$k$` 这类行内公式，而这一行是**纯文本**渲染——直接塞字符串会把
+   * `$` 与 LaTeX 源码原样显示出来。调用方传 `RichText` 即可正常渲染公式。
+   */
+  summary?: ReactNode;
   /** 折叠成一行卡片（默认 false：常开，其他学科页面不受影响） */
   fold?: boolean;
   /** 折叠时的初始状态；默认收起（用户明确的口径：默认折叠） */

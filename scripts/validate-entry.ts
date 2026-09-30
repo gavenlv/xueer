@@ -154,30 +154,59 @@ function checkMathFigure(where: string, fig?: { id?: string; alt?: string; prims
 const ACRONYMS = new Set(['SSS', 'SAS', 'ASA', 'AAS', 'SSA', 'AAA', 'HL', 'Rt', 'Rt△']);
 
 /**
- * 量名字母：`S` 是面积、`V` 是体积，几何图上也**不用**这两个字母标点
+ * 量名字母：`S` 是面积、`V` 是体积、`R` 是半径，几何图上也**不用**这几个字母标点
  * （与量名撞车，教材一律避开），所以不要求它们在图上出现。
  */
-const QUANTITY_NAMES = new Set(['S', 'V']);
+const QUANTITY_NAMES = new Set(['S', 'V', 'R']);
+
+/**
+ * 「点 $A$」「交于点 $O$」「延长到 $E$」这类**上下文**——单个大头字母只有在这种
+ * 语境里才是「图上的点」；`$A$、$B$ 两种型号`、`$\frac{A}{B}$` 里的 A、B 只是代号。
+ */
+const POINT_CONTEXT = '点|顶点|交点|中点|端点|圆心|原点|垂足|交于|延长到|延长|连接|取|记为|记作|设为';
+
+/** 几何／函数／坐标语境的标志词：没有它们，正文里的字母一律按代数变量看待 */
+const GEOM_CONTEXT =
+  /点|线段|直线|射线|数轴|角|边|三角形|四边形|圆|弧|切线|垂直|垂足|平行|中点|交于|相交|延长|连接|坐标|图象|图像|对称|旋转|平移|全等|相似|勾股|原点/;
 
 /**
  * 正文是否在**用字母指代点／线段**（「$D$ 是 $AB$ 的中点」）。
  *
- * 这是「图文配套」的判据：文字用字母说话，图上就必须有这些字母；
- * 只认 `$...$` 里成串的大写字母与「如图」两种写法，避免把普通中文当图形描述。
+ * 这是「图文配套」的判据：文字用字母说话，图上就必须有这些字母。
+ * 只认三种写法，避免把变量、代号、量名当成点：
+ *
+ *   ① 几何记号：`$\triangle ABC$`、`$\angle ACD$`、`$\odot O$`；
+ *   ② 连写的大写字母串：`$AB$`、`$ABCD$`（单字母不算，`$A$` 可能是型号或变量）；
+ *   ③ 点相关上下文里的单字母：`点 $P$`、`交于点 $O$`、`延长到 $E$`。
+ *
+ * 走这三条的代价是可能漏掉极少数写法（如「以 $A$ 为圆心」），但换来的是不误报——
+ * 误报会逼着作者给「事件 $A$」也画一张图，红线就没人看了。
  */
 function pointLetters(text: string): Set<string> {
   const out = new Set<string>();
   if (!text) return out;
+  // 先过一道语境闸门：只有几何／函数／坐标类条目才可能「用字母指代点」。
+  // 代数里的连写字母是真的式子——`$A^{3}+B^{3}$` 的 A、B 是表达式，`$AB=0$` 的 AB 是两个因式的积，
+  // 给它们要求图上标点纯属误报，而误报会让这条红线失去约束力。
+  if (!GEOM_CONTEXT.test(text)) return out;
   for (const m of text.match(/\$[^$]*\$/g) ?? []) {
-    // 去掉 LaTeX 命令（\triangle、\angle、\mathrm…）后再看剩下的字母
-    const body = m.slice(1, -1).replace(/\\[a-zA-Z]+/g, ' ');
-    // 只有**全大写**的字母串才是点名字母：`\mathrm{Rt}` 去掉命令后剩下的 `Rt`、
-    // 以及 `\frac` 里的 `frac`，都是命令残渣，不能当成点 A 之类的标记。
-    for (const run of body.match(/[A-Za-z]{1,4}/g) ?? []) {
-      if (!/^[A-Z]+$/.test(run) || ACRONYMS.has(run)) continue;
-      for (const ch of run) if (!QUANTITY_NAMES.has(ch)) out.add(ch);
+    const raw = m.slice(1, -1);
+    for (const x of raw.matchAll(/\\triangle\s*([A-Z]+)/g)) for (const ch of x[1]) out.add(ch);
+    for (const x of raw.matchAll(/\\angle\s*([A-Z]+)/g)) for (const ch of x[1]) out.add(ch);
+    for (const x of raw.matchAll(/\\odot\s*([A-Z])/g)) out.add(x[1]);
+    // 去掉 LaTeX 命令后剩下的连写大写字母（`\mathrm{Rt}` 残渣、`\frac` 之类都不是）
+    const body = raw.replace(/\\[a-zA-Z]+/g, ' ');
+    for (const m2 of body.matchAll(/([A-Z]{2,4})(\s*=\s*0)?/g)) {
+      const run = m2[1];
+      if (ACRONYMS.has(run)) continue;
+      // `$AB=0$ 得 $A=0$ 或 $B=0$`：这里的 AB 是两个因式的积，是代数写法而不是线段
+      if (m2[2]) continue;
+      for (const ch of run) out.add(ch);
     }
   }
+  const ctx = new RegExp(`(?:${POINT_CONTEXT})\\s*\\$\\s*([A-Z])\\s*\\$`, 'g');
+  for (const m of text.matchAll(ctx)) out.add(m[1]);
+  for (const ch of [...out]) if (QUANTITY_NAMES.has(ch)) out.delete(ch);
   return out;
 }
 
@@ -195,7 +224,8 @@ function figureLetters(fig: PhysicsFigure): Set<string> {
   };
   for (const p of fig.prims) {
     if (p.t === 'dot' && p.label) take(p.label);
-    else if (p.t === 'text' && /^[A-Z][′']?$/.test(p.text.trim())) take(p.text.trim());
+    // 「A」与「A(2,3)」「A(0, 3)」都算标了 A：后者是坐标标注，点名字母在最前面
+    else if (p.t === 'text' && /^[A-Z][′']?\s*(?:[（(]|$)/.test(p.text.trim())) take(p.text.trim());
     // 坐标系图元自带原点字母 O（渲染器画出来的），不能因为作者没再写一个 dot 就判「没标」
     else if (p.t === 'plane') take('O');
     else if (p.t === 'axis' && p.origin) take('O');
@@ -241,6 +271,9 @@ function checkMathFigureText(where: string, t: import('../src/types').MathTopic)
       warn(`${where}: ${item.at} 用字母／图说话但没有配图（几何不看图讲不清）`);
       continue;
     }
+    // 只有正文**真的在用字母指代点**时才要求图上标字母：火柴棒、面积剪拼、统计图
+    // 这类示意图本来就没有点名，正文只用「如图」引一下，不能逼着作者硬造字母。
+    if (!want.size) continue;
     const got = figureLetters(item.figure);
     if (!got.size) {
       err(`${where}: ${item.at} 的图「${item.figure.id}」一个字母都没标——正文靠字母指代点，图必须标出来`);
