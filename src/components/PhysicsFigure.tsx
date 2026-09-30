@@ -392,6 +392,160 @@ function renderPrim(p: FigurePrim, key: number) {
       return <g key={key}>{lines}</g>;
     }
 
+    /* ------------------------- 数学元件 ------------------------- */
+
+    case 'plane': {
+      const ox = p.x;
+      const oy = p.y;
+      return (
+        <g key={key}>
+          {p.grid
+            ? (p.xTicks ?? []).map((t, i) => (
+                <line
+                  key={`pgx${i}`}
+                  x1={ox + t.at}
+                  y1={oy - p.up}
+                  x2={ox + t.at}
+                  y2={oy + p.down}
+                  stroke="var(--c-line)"
+                  strokeWidth={0.3}
+                />
+              ))
+            : null}
+          {p.grid
+            ? (p.yTicks ?? []).map((t, i) => (
+                <line
+                  key={`pgy${i}`}
+                  x1={ox - p.left}
+                  y1={oy - t.at}
+                  x2={ox + p.right}
+                  y2={oy - t.at}
+                  stroke="var(--c-line)"
+                  strokeWidth={0.3}
+                />
+              ))
+            : null}
+          <line x1={ox - p.left} y1={oy} x2={ox + p.right} y2={oy} stroke={toneOf('main')} strokeWidth={0.5} />
+          <polygon points={head(ox, oy, ox + p.right, oy)} fill={toneOf('main')} />
+          <line x1={ox} y1={oy + p.down} x2={ox} y2={oy - p.up} stroke={toneOf('main')} strokeWidth={0.5} />
+          <polygon points={head(ox, oy, ox, oy - p.up)} fill={toneOf('main')} />
+          {(p.xTicks ?? []).map((t, i) => (
+            <g key={`ptx${i}`}>
+              <line x1={ox + t.at} y1={oy} x2={ox + t.at} y2={oy + 1.4} stroke={toneOf('main')} strokeWidth={0.4} />
+              <Label x={ox + t.at} y={oy + 4.4} text={t.label} size={3.6} />
+            </g>
+          ))}
+          {(p.yTicks ?? []).map((t, i) => (
+            <g key={`pty${i}`}>
+              <line x1={ox - 1.4} y1={oy - t.at} x2={ox} y2={oy - t.at} stroke={toneOf('main')} strokeWidth={0.4} />
+              <Label x={ox - 2.6} y={oy - t.at} text={t.label} size={3.6} anchor="end" />
+            </g>
+          ))}
+          <Label x={ox - 2.6} y={oy + 4.4} text="O" size={3.6} anchor="end" />
+          <Label x={ox + p.right + 1} y={oy + 4.4} text={p.xLabel ?? 'x'} anchor="start" size={4} />
+          <Label x={ox - 1} y={oy - p.up - 3.4} text={p.yLabel ?? 'y'} anchor="end" size={4} />
+        </g>
+      );
+    }
+
+    case 'sector': {
+      const span = Math.abs(p.to - p.from);
+      const large = span > 180 ? 1 : 0;
+      const sweep = p.to >= p.from ? 0 : 1;
+      const [sx, sy] = polar(p.cx, p.cy, p.r, p.from);
+      const [ex, ey] = polar(p.cx, p.cy, p.r, p.to);
+      const [lx, ly] = polar(p.cx, p.cy, p.r * (p.labelR ?? 0.62), (p.from + p.to) / 2);
+      const t = p.tone ?? 'accent';
+      return (
+        <g key={key}>
+          <path
+            d={`M ${p.cx} ${p.cy} L ${sx} ${sy} A ${p.r} ${p.r} 0 ${large} ${sweep} ${ex} ${ey} Z`}
+            fill={p.fill ? toneOf(t) : 'none'}
+            fillOpacity={p.fill ? 0.2 : undefined}
+            stroke={toneOf(t)}
+            strokeWidth={0.5}
+          />
+          {p.label ? <Label x={lx} y={ly} text={p.label} tone={t} size={3.8} /> : null}
+        </g>
+      );
+    }
+
+    case 'solid': {
+      const w = p.w ?? 28;
+      const h = p.h ?? 24;
+      const d = p.d ?? 6;
+      const vy = d * 0.5;
+      const sp = stroke(p.tone);
+      const x0 = p.x - w / 2;
+      const x1 = p.x + w / 2;
+      const yb = p.y;
+      const yt = p.y - h;
+      const rx = w / 2;
+      const ry = w / 6;
+      const parts: JSX.Element[] = [];
+
+      if (p.kind === 'cube') {
+        parts.push(
+          <polygon key="top" points={`${x0},${yt} ${x0 + d},${yt - vy} ${x1 + d},${yt - vy} ${x1},${yt}`} fill="none" stroke={sp} strokeWidth={0.5} />,
+          <polygon key="side" points={`${x1},${yt} ${x1 + d},${yt - vy} ${x1 + d},${yb - vy} ${x1},${yb}`} fill="none" stroke={sp} strokeWidth={0.5} />,
+          <rect key="front" x={x0} y={yt} width={w} height={h} fill="none" stroke={sp} strokeWidth={0.5} />,
+          <line key="hb1" x1={x0 + d} y1={yt - vy} x2={x0 + d} y2={yb - vy} stroke={sp} strokeWidth={0.5} strokeDasharray="1.6 1.4" />,
+          <line key="hb2" x1={x0 + d} y1={yb - vy} x2={x1 + d} y2={yb - vy} stroke={sp} strokeWidth={0.5} strokeDasharray="1.6 1.4" />,
+        );
+      } else if (p.kind === 'cylinder') {
+        parts.push(
+          <ellipse key="top" cx={p.x} cy={yt} rx={rx} ry={ry} fill="none" stroke={sp} strokeWidth={0.5} />,
+          <line key="l" x1={x0} y1={yt} x2={x0} y2={yb} stroke={sp} strokeWidth={0.5} />,
+          <line key="r" x1={x1} y1={yt} x2={x1} y2={yb} stroke={sp} strokeWidth={0.5} />,
+          <path key="bot" d={`M ${x0} ${yb} A ${rx} ${ry} 0 0 0 ${x1} ${yb}`} fill="none" stroke={sp} strokeWidth={0.5} />,
+          <path key="back" d={`M ${x0} ${yb} A ${rx} ${ry} 0 0 1 ${x1} ${yb}`} fill="none" stroke={sp} strokeWidth={0.5} strokeDasharray="1.6 1.4" />,
+        );
+      } else if (p.kind === 'cone') {
+        parts.push(
+          <line key="l" x1={p.x} y1={yt} x2={x0} y2={yb} stroke={sp} strokeWidth={0.5} />,
+          <line key="r" x1={p.x} y1={yt} x2={x1} y2={yb} stroke={sp} strokeWidth={0.5} />,
+          <path key="bot" d={`M ${x0} ${yb} A ${rx} ${ry} 0 0 0 ${x1} ${yb}`} fill="none" stroke={sp} strokeWidth={0.5} />,
+          <path key="back" d={`M ${x0} ${yb} A ${rx} ${ry} 0 0 1 ${x1} ${yb}`} fill="none" stroke={sp} strokeWidth={0.5} strokeDasharray="1.6 1.4" />,
+        );
+      } else if (p.kind === 'sphere') {
+        // 球：`(x, y)` 是球的下缘，圆心在 y - r
+        const r = w / 2;
+        const cy = p.y - r;
+        parts.push(
+          <circle key="ball" cx={p.x} cy={cy} r={r} fill="none" stroke={sp} strokeWidth={0.5} />,
+          <ellipse key="eq" cx={p.x} cy={cy} rx={r} ry={r * 0.32} fill="none" stroke={sp} strokeWidth={0.5} strokeDasharray="1.6 1.4" />,
+        );
+      } else if (p.kind === 'prism') {
+        // 三棱柱（竖放）：正三角形拉伸
+        parts.push(
+          <polygon key="fb" points={`${x0},${yb} ${x1},${yb} ${p.x},${yt}`} fill="none" stroke={sp} strokeWidth={0.5} />,
+          <polygon key="bb" points={`${x0 + d},${yb - vy} ${x1 + d},${yb - vy} ${p.x + d},${yt - vy}`} fill="none" stroke={sp} strokeWidth={0.5} strokeDasharray="1.6 1.4" />,
+          <line key="c1" x1={p.x} y1={yt} x2={p.x + d} y2={yt - vy} stroke={sp} strokeWidth={0.5} />,
+          <line key="c2" x1={x1} y1={yb} x2={x1 + d} y2={yb - vy} stroke={sp} strokeWidth={0.5} />,
+          <line key="c3" x1={x0} y1={yb} x2={x0 + d} y2={yb - vy} stroke={sp} strokeWidth={0.5} strokeDasharray="1.6 1.4" />,
+        );
+      } else {
+        // 四棱锥
+        const bx0 = x0;
+        const bx1 = x1;
+        const ax = p.x + d / 2;
+        parts.push(
+          <polygon key="base" points={`${bx0},${yb} ${bx1},${yb} ${bx1 + d},${yb - vy} ${bx0 + d},${yb - vy}`} fill="none" stroke={sp} strokeWidth={0.5} />,
+          <line key="e1" x1={ax} y1={yt} x2={bx0} y2={yb} stroke={sp} strokeWidth={0.5} />,
+          <line key="e2" x1={ax} y1={yt} x2={bx1} y2={yb} stroke={sp} strokeWidth={0.5} />,
+          <line key="e3" x1={ax} y1={yt} x2={bx1 + d} y2={yb - vy} stroke={sp} strokeWidth={0.5} />,
+          <line key="e4" x1={ax} y1={yt} x2={bx0 + d} y2={yb - vy} stroke={sp} strokeWidth={0.5} strokeDasharray="1.6 1.4" />,
+        );
+      }
+
+      return (
+        <g key={key}>
+          {parts}
+          {p.label ? <Label x={p.x} y={p.y + 4.6} text={p.label} tone={p.tone} /> : null}
+        </g>
+      );
+    }
+
     /* ------------------------- 电学符号 ------------------------- */
 
     case 'battery': {

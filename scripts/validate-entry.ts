@@ -135,6 +135,20 @@ function warn(msg: string) {
   warnings.push(msg);
 }
 
+/**
+ * 数学的图必须带 `alt` 与 `prims`。
+ *
+ * 与物理同一条红线：整页朗读靠 `alt` 把图读出来、检索靠 `alt` 把问题搜到图上，
+ * 缺了就等于一段「读不出也搜不到」的内容；`prims` 为空则图上什么都没有。
+ */
+function checkMathFigure(where: string, fig?: { id?: string; alt?: string; prims?: unknown[] }) {
+  if (!fig) return;
+  if (!fig.alt?.trim()) err(`${where}: 图「${fig.id || '(无 id)'}」缺少 alt（朗读与检索要用它）`);
+  if (!Array.isArray(fig.prims) || !fig.prims.length) {
+    err(`${where}: 图「${fig.id || '(无 id)'}」没有图元 prims`);
+  }
+}
+
 // 加载进度管线的自测结果（必须在 ensureAll 之前跑，见上面的 bootErrors）
 for (const m of bootErrors) err(m);
 
@@ -327,6 +341,8 @@ for (const entry of allEntries as Entry[]) {
             if (!f.tex?.trim() && !f.text?.trim()) err(`${where}: 公式「${f.name}」既无 tex 也无 text`);
             // tex 必须是裸 KaTeX 源码，不能带 $ 包裹（渲染器直接传给 katex）
             if (f.tex && f.tex.includes('$')) err(`${where}: 公式「${f.name}」的 tex 不应包含 $ 符号`);
+            // 判定定理的配图与其它图同一条红线：必须能朗读、必须画得出东西
+            checkMathFigure(`${where}: 公式「${f.name}」`, f.figure);
           }
         }
         if (t.examples) {
@@ -334,8 +350,27 @@ for (const entry of allEntries as Entry[]) {
             if (!ex.stem?.trim()) err(`${where}: 例题缺少题干`);
             if (!ex.steps?.length) err(`${where}: 例题缺少解题步骤`);
             if (!ex.answer?.trim()) err(`${where}: 例题缺少答案`);
+            if (!ex.figure) warn(`${where}: 例题「${ex.stem.slice(0, 16)}」没有配图`);
+            checkMathFigure(`${where}: 例题`, ex.figure);
           }
         }
+        /**
+         * 「系统讲解」与配图：数学的图不是装饰（数轴、几何图形、函数图象、统计图
+         * 不看图讲不清），物理已有的 `alt` 红线这里照搬——**图必须能朗读**。
+         * 缺图只告警、缺 `alt` 直接报错：前者是内容还没写完，后者是写错了。
+         */
+        if (!t.steps?.length) warn(`${where}: 数学知识点缺少系统讲解 steps`);
+        else {
+          for (const [i, s] of t.steps.entries()) {
+            if (!s.heading?.trim() || !s.body?.trim()) err(`${where}: 系统讲解第 ${i + 1} 步不完整`);
+            if (!s.figure) warn(`${where}: 系统讲解第 ${i + 1} 步没有配图`);
+            checkMathFigure(`${where}: 系统讲解第 ${i + 1} 步`, s.figure);
+          }
+        }
+        if (t.concepts?.length && !t.concepts.some((c) => c.figure)) {
+          warn(`${where}: 核心概念一条配图都没有`);
+        }
+        for (const c of t.concepts ?? []) checkMathFigure(`${where}: 概念「${c.term}」`, c.figure);
         if (!t.pitfalls?.length) warn(`${where}: 数学知识点缺少易错点 pitfalls`);
         if (!t.methods?.length) warn(`${where}: 数学知识点缺少解题方法 methods`);
         if (!t.chapter?.trim()) warn(`${where}: 数学知识点缺少章节归属 chapter`);
@@ -1368,7 +1403,10 @@ for (const entry of allEntries) {
   } else {
     const t = entry.data as import('../src/types').MathTopic;
     fields.push(['summary', t.summary]);
-    (t.concepts ?? []).forEach((c, i) => fields.push([`concepts[${i}]`, c.explain]));
+    // 解析（insight）也要过 KaTeX：它与 explain 同走 RichText，写错公式同样会露在页面上
+    (t.concepts ?? []).forEach((c, i) =>
+      fields.push([`concepts[${i}]`, c.explain], [`concepts[${i}].insight`, c.insight]),
+    );
     (t.formulas ?? []).forEach((f, i) => {
       if (f.tex) checkTex(f.tex, `${where}.formulas[${i}].tex`);
       fields.push([`formulas[${i}].text`, f.text], [`formulas[${i}].note`, f.note]);

@@ -327,7 +327,8 @@ export function searchTextOf(entry: Entry): string {
         title: string;
         chapter: string;
         summary: string;
-        concepts: { term: string; explain: string }[];
+        concepts: { term: string; explain: string; insight?: string; figure?: { title?: string; alt?: string } }[];
+        steps?: { heading?: string; body?: string; note?: string; figure?: { title?: string; alt?: string } }[];
         formulas?: { name: string; text?: string; tex?: string }[];
         pitfalls?: string[];
         methods?: string[];
@@ -336,7 +337,14 @@ export function searchTextOf(entry: Entry): string {
         m.title,
         m.chapter,
         m.summary,
-        m.concepts.map((c) => `${c.term}${c.explain}`),
+        m.steps?.map(
+          (s) => `${s.heading ?? ''}${s.body ?? ''}${s.note ?? ''}${s.figure?.title ?? ''}${s.figure?.alt ?? ''}`,
+        ),
+        // 解析（insight）也要进检索文本：学生按「夹角」「循环论证」这类说法应该搜得到概念
+        m.concepts.map(
+          (c) =>
+            `${c.term}${c.explain}${c.insight ?? ''}${c.figure?.title ?? ''}${c.figure?.alt ?? ''}`,
+        ),
         m.formulas?.map((f) => `${f.name}${f.text ?? ''}${f.tex ?? ''}`),
         m.pitfalls,
         m.methods,

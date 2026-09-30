@@ -3125,6 +3125,125 @@ button.mm-label:hover {
   line-height: 1.7;
 }
 
+/*
+ * 判定定理的配图：贴在公式卡右侧，窄屏落到公式下方。
+ *
+ * 选择器写成两段（`.formula .formula__fig`）是为了压过 `PhysicsFigure.tsx` 那边的
+ * 通用 `.fig { margin: 12px 0 }`——它在本文件里**定义得更靠后**，同为单类选择器时
+ * 后者胜出，`margin: 0` 会被吃掉，图卡在栏内上下多出 24px 的错位留白。
+ */
+.formula .formula__fig {
+  flex: 0 0 260px;
+  max-width: 280px;
+  margin: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* 核心概念：一条一整行的图文卡（不再用注释表的四列小格，理由见            */
+/* pages/detail/MathDetail.tsx 顶部「核心概念为什么不是格子」）            */
+/* ------------------------------------------------------------------ */
+.mcon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mcon {
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-line);
+}
+
+.mcon__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+/* 序号不参与换行，概念名再长也顶到右边去 */
+.mcon__idx {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 20px;
+  border-radius: var(--r-xs);
+  background: var(--c-primary-soft);
+  color: var(--c-primary-ink);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.mcon__term {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 750;
+  color: var(--c-ink);
+  line-height: 1.5;
+}
+
+/* 无图：正文独占一整行；有图：正文在左、图在右（图宽封顶，正文优先） */
+.mcon__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.mcon__grid--fig {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 400px);
+}
+
+.mcon__text {
+  font-size: 14.5px;
+  line-height: 1.9;
+  color: var(--c-ink-2);
+}
+
+/* 解析：定义之外那一层「为什么、怎么用」，用一道竖线把它与定义分开 */
+.mcon__insight {
+  margin-top: 9px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--c-surface);
+  border-left: 3px solid var(--c-jade);
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--c-ink-2);
+}
+
+.mcon__insightTag {
+  margin-right: 6px;
+  font-weight: 700;
+  color: var(--c-jade);
+}
+
+/* 图卡自带 `.fig` 的 12px 外边距（定义在本文件更靠后），这里用两段选择器压掉它 */
+.mcon__grid .mcon__fig {
+  margin: 0;
+}
+
+/* 窄屏：图文两栏并排放不下，图落到正文下方；公式卡的图同理落回下一行 */
+@media (max-width: 760px) {
+  .mcon__grid--fig {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .formula {
+    flex-wrap: wrap;
+  }
+
+  /* 与上面的桌面规则同一段数（两段选择器），否则特异性更低、这条会被它压回去 */
+  .formula .formula__fig {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}
+
 /* 例题精讲 */
 .example {
   border: 1px solid var(--c-line);

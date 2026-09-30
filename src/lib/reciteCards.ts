@@ -428,14 +428,17 @@ function fromEnglish(b: CardBuilder, d: EnglishKnowledge): void {
 function fromMath(
   b: CardBuilder,
   d: {
-    concepts: { term: string; explain: string }[];
+    /** 概念有两条线索：定义（explain）与解析（insight），背诵卡两面都要给 */
+    concepts: { term: string; explain: string; insight?: string }[];
     formulas?: { name: string; tex?: string; text?: string; note?: string }[];
     pitfalls?: string[];
     methods?: string[];
     questions: QuizQuestion[];
   },
 ): void {
-  for (const c of d.concepts) b.add('概念', c.term, c.explain);
+  for (const c of d.concepts) {
+    b.add('概念', c.term, c.insight ? `${c.explain}\n怎么理解：${c.insight}` : c.explain);
+  }
   for (const f of d.formulas ?? []) {
     const back = f.tex ? `$${f.tex}$${f.text ? `\n${f.text}` : ''}` : (f.text ?? '');
     b.add('公式定理', f.name, back, { note: f.note });

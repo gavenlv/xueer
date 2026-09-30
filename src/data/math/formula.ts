@@ -31,6 +31,89 @@ export const mathFormula: MathTopic[] = [
     chapter: '速查 · 数与代数',
     summary:
       '整式乘法、幂的运算、因式分解、分式与二次根式的公式集中成一张卡，按「乘法公式 → 幂 → 因式分解 → 分式 → 根式」排列，考场 5 分钟过一遍。',
+    steps: [
+      {
+        heading: '先看这批公式解决哪一类问题',
+        body: '这张卡收的是「运算」类结论：整式乘法、幂的运算、因式分解、分式化简、二次根式化简，五类各有一套固定公式。做题时先给式子归类，再去对应区间取公式，比从第一行往下背快得多。',
+        figure: {
+          id: 'fig-for-daishu-s1',
+          title: '五类运算与对应公式的分区',
+          caption: '先给式子归类，再取公式',
+          view: 'wide',
+          alt: '五个并排的方框，依次标着整式乘法、幂的运算、因式分解、分式运算、二次根式，表示这张速查卡按运算类型分成五个区',
+          prims: [
+            { t: 'rect', x: 2, y: 22, w: 18, h: 14, tone: 'main', label: '整式乘法' },
+            { t: 'rect', x: 21.5, y: 22, w: 18, h: 14, tone: 'main', label: '幂的运算' },
+            { t: 'rect', x: 41, y: 22, w: 18, h: 14, tone: 'main', label: '因式分解' },
+            { t: 'rect', x: 60.5, y: 22, w: 18, h: 14, tone: 'main', label: '分式运算' },
+            { t: 'rect', x: 80, y: 22, w: 18, h: 14, tone: 'main', label: '二次根式' },
+            { t: 'text', x: 50, y: 13, text: '按运算类型分区取公式', size: 3.6, tone: 'muted' },
+          ],
+        },
+      },
+      {
+        heading: '平方差最容易被误用',
+        body: '平方差公式 $(a+b)(a-b)=a^2-b^2$ 要求两个括号里一个是「相同项」、另一个是「相反项」。对应到图形上，就是边长 $a$ 的正方形挖掉角上边长 $b$ 的小正方形，剩下的 L 形恰好能拼成 $(a+b)$ 乘 $(a-b)$ 的矩形。',
+        figure: {
+          id: 'fig-for-daishu-s2',
+          title: '平方差公式的面积示意',
+          caption: '边长 a 的正方形挖去边长 b 的小正方形，余下的 L 形拼成矩形',
+          view: 'wide',
+          alt: '左侧是边长 a 的正方形挖去右下角边长 b 的小正方形后剩下的 L 形，面积为 a 平方减 b 平方；右侧是一个长 a 加 b、宽 a 减 b 的矩形，两者面积相等',
+          prims: [
+            { t: 'poly', points: [[10, 10], [50, 10], [50, 36], [36, 36], [36, 50], [10, 50]], closed: true, tone: 'main', fill: true },
+            { t: 'rect', x: 36, y: 36, w: 14, h: 14, dashed: true, tone: 'muted' },
+            { t: 'text', x: 7, y: 33, text: 'a', size: 4, anchor: 'end' },
+            { t: 'text', x: 30, y: 56, text: 'a', size: 4 },
+            { t: 'text', x: 43, y: 33.5, text: 'b', size: 3.4, tone: 'muted' },
+            { t: 'text', x: 22, y: 25, text: 'a²−b²', size: 3.6, tone: 'accent' },
+            { t: 'text', x: 55, y: 34, text: '=', size: 4.6 },
+            { t: 'rect', x: 58, y: 22, w: 40, h: 20, tone: 'accent' },
+            { t: 'text', x: 78, y: 33, text: '(a+b)(a−b)', size: 4 },
+            { t: 'text', x: 78, y: 18, text: 'a−b', size: 3.6 },
+            { t: 'text', x: 78, y: 47, text: 'a+b', size: 3.6 },
+          ],
+        },
+      },
+      {
+        heading: '完全平方公式怎么变形',
+        body: '完全平方公式 $(a\\pm b)^2=a^2\\pm2ab+b^2$ 的中间项系数是 $2$，不是 $1$。把拼图里的两块 $ab$ 去掉，就得到变形 $a^2+b^2=(a+b)^2-2ab$；已知 $a+b$、$ab$、$a^2+b^2$ 中任意两个量，都能用这条变形求第三个。',
+        figure: {
+          id: 'fig-for-daishu-s3',
+          title: '完全平方公式的变形',
+          caption: '从 (a+b)² 的拼图里去掉两块 ab，剩下 a²+b²',
+          view: 'square',
+          alt: '边长为 a 加 b 的正方形分成四块：左上角是边长 a 的正方形 a 平方，右下角是边长 b 的正方形 b 平方，右上与左下两块都是长 a 宽 b 的矩形 ab；去掉两块 ab 后剩下 a 平方加 b 平方',
+          prims: [
+            { t: 'rect', x: 15, y: 15, w: 45, h: 45, tone: 'main', fill: true, label: 'a²' },
+            { t: 'rect', x: 60, y: 15, w: 25, h: 45, tone: 'muted', fill: true, dashed: true, label: 'ab' },
+            { t: 'rect', x: 15, y: 60, w: 45, h: 25, tone: 'muted', fill: true, dashed: true, label: 'ab' },
+            { t: 'rect', x: 60, y: 60, w: 25, h: 25, tone: 'main', fill: true, label: 'b²' },
+            { t: 'text', x: 37, y: 12, text: 'a', size: 4 },
+            { t: 'text', x: 72, y: 12, text: 'b', size: 4 },
+            { t: 'text', x: 12, y: 38, text: 'a', size: 4, anchor: 'end' },
+            { t: 'text', x: 12, y: 73, text: 'b', size: 4, anchor: 'end' },
+            { t: 'text', x: 50, y: 93, text: 'a²+b²=(a+b)²−2ab', size: 4.2, tone: 'accent' },
+          ],
+        },
+      },
+      {
+        heading: '幂的三条规则别混用',
+        body: '同底数幂相乘指数相加，幂的乘方指数相乘，积的乘方每个因式分别乘方：$a^m\\cdot a^n=a^{m+n}$、$(a^m)^n=a^{mn}$、$(ab)^n=a^nb^n$。题目给出两个量求第三个量时，先判断属于哪条规则，再代入变形，不要凭印象搬公式。',
+        figure: {
+          id: 'fig-for-daishu-s4',
+          title: '幂的三条运算规则',
+          caption: '指数相加、指数相乘、分别乘方，三条各管一种结构',
+          view: 'wide',
+          alt: '三个方框，分别写着同底数幂相乘对应指数相加、幂的乘方对应指数相乘、积的乘方对应各因式分别乘方',
+          prims: [
+            { t: 'rect', x: 8, y: 12, w: 84, h: 12, tone: 'main', label: '同底数幂相乘 → 指数相加' },
+            { t: 'rect', x: 8, y: 28, w: 84, h: 12, tone: 'main', label: '幂的乘方 → 指数相乘' },
+            { t: 'rect', x: 8, y: 44, w: 84, h: 12, tone: 'main', label: '积的乘方 → 各因式分别乘方' },
+          ],
+        },
+      },
+    ],
     concepts: [
       {
         term: '本卡怎么用',
@@ -41,16 +124,62 @@ export const mathFormula: MathTopic[] = [
         term: '看到什么就找哪一条',
         explain:
           '见「两数和乘两数差」找平方差；见三项平方或题目给出 $a+b$、$a-b$、$ab$、$a^2+b^2$ 中两个量，找完全平方公式的变形；见指数运算找幂的四条性质；见分式先想分式基本性质，见根号先看被开方数是否非负。',
+        figure: {
+          id: 'fig-for-daishu-c2',
+          title: '完全平方公式的面积拼图',
+          caption: '两数和的平方 = 平方和 + 两倍积',
+          view: 'square',
+          alt: '边长 a 加 b 的正方形被分成四块：左上角是 a 平方，右下角是 b 平方，右上与左下两块都是 ab，说明两数和的平方等于平方和加两倍积',
+          prims: [
+            { t: 'rect', x: 15, y: 15, w: 45, h: 45, tone: 'main', fill: true, label: 'a²' },
+            { t: 'rect', x: 60, y: 15, w: 25, h: 45, tone: 'accent', fill: true, label: 'ab' },
+            { t: 'rect', x: 15, y: 60, w: 45, h: 25, tone: 'accent', fill: true, label: 'ab' },
+            { t: 'rect', x: 60, y: 60, w: 25, h: 25, tone: 'main', fill: true, label: 'b²' },
+            { t: 'text', x: 37, y: 12, text: 'a', size: 4 },
+            { t: 'text', x: 72, y: 12, text: 'b', size: 4 },
+            { t: 'text', x: 12, y: 38, text: 'a', size: 4, anchor: 'end' },
+            { t: 'text', x: 12, y: 73, text: 'b', size: 4, anchor: 'end' },
+            { t: 'text', x: 50, y: 93, text: '(a+b)²=a²+2ab+b²', size: 4.2, tone: 'accent' },
+          ],
+        },
       },
       {
         term: '带 ★ 的是必考',
         explain:
           '带 ★ 的条目是广州中考与各区模考的高频点：平方差公式、完全平方公式、幂的四条运算性质、零指数与负整数指数、提公因式与公式法分解因式、分式的基本性质与四则运算、二次根式的性质 $\\sqrt{a^2}=|a|$。',
+        figure: {
+          id: 'fig-for-daishu-c3',
+          title: '必考公式速查框',
+          caption: '平方差、完全平方、积的乘方这三条出现频率最高',
+          view: 'wide',
+          alt: '三个速查方框，分别是平方差公式、完全平方公式与积的乘方公式，表示这三条在考试中出现频率最高',
+          prims: [
+            { t: 'rect', x: 8, y: 10, w: 84, h: 12, tone: 'main', label: '(a+b)(a−b)=a²−b²' },
+            { t: 'rect', x: 8, y: 26, w: 84, h: 12, tone: 'main', label: '(a±b)²=a²±2ab+b²' },
+            { t: 'rect', x: 8, y: 42, w: 84, h: 12, tone: 'main', label: '(ab)ⁿ=aⁿbⁿ' },
+          ],
+        },
       },
       {
         term: '两个前提不能忘',
         explain:
           '凡含分母的公式都要求分母不为 $0$；凡含偶次根号的式子都要求被开方数非负。这是填空题与化简题最常见的扣分点。',
+        figure: {
+          id: 'fig-for-daishu-c4',
+          title: '二次根式有意义的条件',
+          caption: '被开方数非负，即 a ≥ 0',
+          view: 'wide',
+          alt: '一条数轴，原点标 0，从 0 向右到正半轴的部分加粗并标注 a 大于等于 0，表示二次根式有意义的条件是被开方数非负',
+          prims: [
+            { t: 'arrow', x1: 12, y1: 42, x2: 92, y2: 42 },
+            { t: 'line', x1: 45, y1: 38, x2: 45, y2: 46, tone: 'main' },
+            { t: 'line', x1: 45, y1: 42, x2: 90, y2: 42, tone: 'accent', width: 2.6 },
+            { t: 'dot', x: 45, y: 42, r: 1.6, tone: 'accent' },
+            { t: 'text', x: 45, y: 52, text: '0', size: 3.8 },
+            { t: 'text', x: 68, y: 33, text: 'a ≥ 0', size: 4, tone: 'accent' },
+            { t: 'text', x: 50, y: 22, text: '√a 有意义', size: 3.6, tone: 'muted' },
+          ],
+        },
       },
       {
         term: '结果要「收到最简」',
@@ -233,6 +362,20 @@ export const mathFormula: MathTopic[] = [
       },
       {
         stem: '计算 $(-1)^{2026}+\\left(\\frac{1}{3}\\right)^{-2}-(\\pi-3)^0+2^{-1}$。',
+        figure: {
+          id: 'fig-for-daishu-e2',
+          title: '逐项算幂',
+          caption: '负指数取倒数、非零数的零次幂为 1',
+          view: 'wide',
+          alt: '四个方框列出各幂的值：负一的 2026 次幂为 1，三分之一的负二次幂为 9，π 减 3 的零次幂为 1，二的负一次幂为二分之一',
+          prims: [
+            { t: 'rect', x: 6, y: 12, w: 40, h: 14, tone: 'main', label: '(−1)²⁰²⁶ = 1' },
+            { t: 'rect', x: 54, y: 12, w: 40, h: 14, tone: 'accent', label: '(1/3)⁻² = 9' },
+            { t: 'rect', x: 6, y: 34, w: 40, h: 14, tone: 'accent', label: '(π−3)⁰ = 1' },
+            { t: 'rect', x: 54, y: 34, w: 40, h: 14, tone: 'accent', label: '2⁻¹ = 1/2' },
+            { t: 'text', x: 50, y: 56, text: '先逐项算幂，再合并', size: 3.6, tone: 'muted' },
+          ],
+        },
         steps: [
           '逐项求值：$(-1)^{2026}$ 中指数为偶数，结果为 $1$。',
           '由负整数指数幂的意义：$\\left(\\frac{1}{3}\\right)^{-2}=3^2=9$。',
@@ -244,6 +387,25 @@ export const mathFormula: MathTopic[] = [
       },
       {
         stem: '先化简，再求值：$(x-2)^2-(x+3)(x-3)+x$，其中 $x=-2$。',
+        figure: {
+          id: 'fig-for-daishu-e3',
+          title: '先展开、再合并、最后代入',
+          caption: '两个公式各自展开后合并同类项，化简到最简式再代入',
+          view: 'wide',
+          alt: '两个方框分别把 (x−2) 的平方展开为 x 平方减 4x 加 4、把 (x+3)(x−3) 展开为 x 平方减 9，两个结果合并后得到负 3x 加 13',
+          prims: [
+            { t: 'rect', x: 4, y: 14, w: 26, h: 13, tone: 'main', label: '(x−2)²' },
+            { t: 'arrow', x1: 30.5, y1: 20.5, x2: 35.5, y2: 20.5 },
+            { t: 'rect', x: 36, y: 14, w: 28, h: 13, tone: 'accent', label: 'x²−4x+4' },
+            { t: 'rect', x: 4, y: 34, w: 26, h: 13, tone: 'main', label: '(x+3)(x−3)' },
+            { t: 'arrow', x1: 30.5, y1: 40.5, x2: 35.5, y2: 40.5 },
+            { t: 'rect', x: 36, y: 34, w: 28, h: 13, tone: 'accent', label: 'x²−9' },
+            { t: 'arrow', x1: 64.5, y1: 20.5, x2: 73.5, y2: 26 },
+            { t: 'arrow', x1: 64.5, y1: 40.5, x2: 73.5, y2: 35 },
+            { t: 'rect', x: 74, y: 24, w: 22, h: 15, tone: 'main', fill: true, label: '−3x+13' },
+            { t: 'text', x: 50, y: 56, text: '合并同类项后代入 x=−2', size: 3.4, tone: 'muted' },
+          ],
+        },
         steps: [
           '用完全平方公式展开：$(x-2)^2=x^2-4x+4$。',
           '用平方差公式展开：$(x+3)(x-3)=x^2-9$。',
@@ -359,21 +521,145 @@ export const mathFormula: MathTopic[] = [
     chapter: '速查 · 方程与不等式',
     summary:
       '一元一次方程、二元一次方程组、一元二次方程与不等式（组）的解法步骤和结论集中速查，重点是求根公式、判别式、韦达定理与不等号变号。',
+    steps: [
+      {
+        heading: '先看这批公式解决哪一类问题',
+        body: '这张卡按方程类型分区：一元一次方程、二元一次方程组、一元二次方程、分式方程、不等式与不等式组。解方程类题目先给方程归类型，再照对应步骤走，最后一步永远是检验。',
+        figure: {
+          id: 'fig-for-fangcheng-s1',
+          title: '五类方程与不等式',
+          caption: '先给方程归类型，再照对应步骤走',
+          view: 'wide',
+          alt: '五个方框分别标着一元一次方程、二元一次方程组、一元二次方程、分式方程、不等式与不等式组，表示这张卡按方程类型分区',
+          prims: [
+            { t: 'rect', x: 4, y: 8, w: 44, h: 13, tone: 'main', label: '一元一次方程' },
+            { t: 'rect', x: 52, y: 8, w: 44, h: 13, tone: 'main', label: '二元一次方程组' },
+            { t: 'rect', x: 4, y: 26, w: 44, h: 13, tone: 'main', label: '一元二次方程' },
+            { t: 'rect', x: 52, y: 26, w: 44, h: 13, tone: 'main', label: '分式方程' },
+            { t: 'rect', x: 4, y: 44, w: 92, h: 13, tone: 'main', label: '不等式与不等式组' },
+          ],
+        },
+      },
+      {
+        heading: '判别式决定抛物线与 x 轴的交点个数',
+        body: '判别式 $\\Delta=b^2-4ac$ 是「方程有几个实数根」的开关：$\\Delta>0$ 有两个不等实根，$\\Delta=0$ 有两个相等实根，$\\Delta<0$ 无实数根。把二次方程看成一个二次函数，这三种情况恰好对应抛物线与 $x$ 轴交点的个数，数形一对照就不会记混。',
+        figure: {
+          id: 'fig-for-fangcheng-s2',
+          title: '判别式与抛物线和 x 轴的位置',
+          caption: 'Δ<0 无交点、Δ=0 一个交点、Δ>0 两个交点',
+          view: 'tall',
+          alt: '三个开口向上的抛物线并排画在同一条水平轴上方：左边一个整体在轴上方、与轴无交点；中间一个顶点恰好落在轴上、与轴只有一个交点；右边一个穿过轴、与轴有两个交点',
+          prims: [
+            { t: 'line', x1: 6, y1: 110, x2: 94, y2: 110, tone: 'main' },
+            { t: 'text', x: 20, y: 18, text: 'Δ<0：无交点', size: 3.6, tone: 'muted' },
+            { t: 'text', x: 50, y: 18, text: 'Δ=0：一个交点', size: 3.6, tone: 'muted' },
+            { t: 'text', x: 80, y: 18, text: 'Δ>0：两个交点', size: 3.6, tone: 'muted' },
+            { t: 'curve', points: [[7, 93.8], [10, 80], [13, 69.8], [16, 63.2], [20, 60], [24, 63.2], [27, 69.8], [30, 80], [33, 93.8]], tone: 'accent' },
+            { t: 'curve', points: [[38, 135.9], [40, 128], [43, 118.8], [46, 112.9], [50, 110], [54, 112.9], [57, 118.8], [60, 128], [62, 135.9]], tone: 'accent' },
+            { t: 'curve', points: [[72, 124], [74, 110], [76, 100], [78, 94], [80, 92], [82, 94], [84, 100], [86, 110], [88, 124]], tone: 'accent' },
+            { t: 'dot', x: 74, y: 110, r: 1.4, tone: 'accent' },
+            { t: 'dot', x: 86, y: 110, r: 1.4, tone: 'accent' },
+          ],
+        },
+      },
+      {
+        heading: '用韦达定理前先验判别式',
+        body: '韦达定理 $x_1+x_2=-\\frac{b}{a}$、$x_1x_2=\\frac{c}{a}$ 只在方程确实有实数根时才成立，所以用之前必须先算 $\\Delta\\geq0$。两根的和带负号、积不带负号，这两个符号是本条最容易写反的地方。',
+        figure: {
+          id: 'fig-for-fangcheng-s3',
+          title: '根与系数的关系',
+          caption: '两根之和是一次项系数除以二次项系数的相反数',
+          view: 'wide',
+          alt: '两个方框写着韦达定理：两根之和等于负 a 分之 b，两根之积等于 a 分之 c，并注明前提是判别式大于等于零',
+          prims: [
+            { t: 'rect', x: 10, y: 12, w: 80, h: 12, tone: 'main', label: 'x₁+x₂ = −b/a' },
+            { t: 'rect', x: 10, y: 28, w: 80, h: 12, tone: 'accent', label: 'x₁x₂ = c/a' },
+            { t: 'text', x: 50, y: 50, text: '前提：Δ ≥ 0', size: 3.6, tone: 'muted' },
+          ],
+        },
+      },
+      {
+        heading: '换个题型：分式方程为什么必须检验',
+        body: '解分式方程的关键动作是「去分母」，两边同乘的是含未知数的整式，这个整式可能为 $0$，所以求出的根要代回最简公分母检验：不为 $0$ 才是原方程的根，为 $0$ 就是增根、必须舍去。换个题型也一样——只要两边同乘过含未知数的式子，就一定要检验。',
+        figure: {
+          id: 'fig-for-fangcheng-s4',
+          title: '解分式方程：一乘、二解、三检验',
+          caption: '检验这一步是采分点，不能省',
+          view: 'wide',
+          alt: '一个流程：先去分母化为整式方程并求解，再把根代入最简公分母检验，不为零则保留、为零则是增根必须舍去',
+          prims: [
+            { t: 'rect', x: 8, y: 8, w: 36, h: 11, tone: 'main', label: '去分母 → 整式方程' },
+            { t: 'arrow', x1: 44.5, y1: 13.5, x2: 49.5, y2: 13.5 },
+            { t: 'rect', x: 50, y: 8, w: 42, h: 11, tone: 'main', label: '解整式方程' },
+            { t: 'arrow', x1: 71, y1: 19.5, x2: 71, y2: 24 },
+            { t: 'rect', x: 36, y: 24, w: 50, h: 11, tone: 'accent', label: '代入最简公分母检验' },
+            { t: 'arrow', x1: 50, y1: 35.5, x2: 30, y2: 40 },
+            { t: 'arrow', x1: 70, y1: 35.5, x2: 72, y2: 40 },
+            { t: 'rect', x: 8, y: 40, w: 42, h: 11, tone: 'ok', label: '≠0：保留' },
+            { t: 'rect', x: 52, y: 40, w: 42, h: 11, tone: 'danger', label: '=0：增根，舍去' },
+          ],
+        },
+      },
+    ],
     concepts: [
       {
         term: '本卡怎么用',
         explain:
           '按「一元一次方程 → 二元一次方程组 → 一元二次方程 → 分式方程 → 不等式与不等式组」的顺序排布。解方程类题目先看方程类型，再照对应步骤走，最后一步永远是检验。',
+        figure: {
+          id: 'fig-for-fangcheng-c1',
+          title: '解一元一次方程的步骤',
+          caption: '去分母 → 去括号 → 移项 → 合并同类项 → 系数化为 1',
+          view: 'wide',
+          alt: '一条从左到右的流程，依次是去分母、去括号、移项、合并同类项、系数化为一，表示解一元一次方程的标准步骤',
+          prims: [
+            { t: 'rect', x: 3, y: 24, w: 17, h: 14, tone: 'main' },
+            { t: 'rect', x: 22, y: 24, w: 17, h: 14, tone: 'main' },
+            { t: 'rect', x: 41, y: 24, w: 17, h: 14, tone: 'main' },
+            { t: 'rect', x: 60, y: 24, w: 17, h: 14, tone: 'main' },
+            { t: 'rect', x: 79, y: 24, w: 17, h: 14, tone: 'main' },
+            { t: 'text', x: 11.5, y: 32.4, text: '去分母', size: 3.2 },
+            { t: 'text', x: 30.5, y: 32.4, text: '去括号', size: 3.2 },
+            { t: 'text', x: 49.5, y: 32.4, text: '移项', size: 3.2 },
+            { t: 'text', x: 68.5, y: 32.4, text: '合并同类项', size: 3.2 },
+            { t: 'text', x: 87.5, y: 32.4, text: '系数化为 1', size: 3.2 },
+          ],
+        },
       },
       {
         term: '看到什么就找哪一条',
         explain:
           '要判断根的个数找判别式 $\\Delta=b^2-4ac$；要算两根的和、积或它们的对称式找韦达定理；方程一边是平方形式（如 $(x-1)^2=9$）用直接开平方法；含未知数的分母先找最简公分母并准备验根。',
+        figure: {
+          id: 'fig-for-fangcheng-c2',
+          title: '一元二次方程四种解法的选用',
+          caption: '按方程的形状选最快的那一种',
+          view: 'wide',
+          alt: '四个方框分别写明四种解法的适用情形：形如平方等于常数的用直接开平方法，二次项系数为一且一次项系数为偶数的用配方法，一般的用公式法，左边容易分解的用因式分解法',
+          prims: [
+            { t: 'rect', x: 3, y: 12, w: 45, h: 14, tone: 'main', label: '平方形式 → 开平方' },
+            { t: 'rect', x: 52, y: 12, w: 45, h: 14, tone: 'main', label: '一次项系数偶 → 配方' },
+            { t: 'rect', x: 3, y: 34, w: 45, h: 14, tone: 'main', label: '一般情形 → 公式法' },
+            { t: 'rect', x: 52, y: 34, w: 45, h: 14, tone: 'main', label: '可分解 → 因式分解' },
+          ],
+        },
       },
       {
         term: '带 ★ 的是必考',
         explain:
           '带 ★ 的条目是高频点：求根公式、判别式的三种情况、韦达定理、因式分解法解一元二次方程、分式方程的增根检验、不等式两边同乘负数要变号、不等式组解集的四种情况。',
+        figure: {
+          id: 'fig-for-fangcheng-c3',
+          title: '必考的三条结论',
+          caption: '求根公式、根与系数的关系、不等号变号',
+          view: 'wide',
+          alt: '三个方框列出必考结论：一元二次方程求根公式、根与系数的关系、不等式两边同乘或除以负数时不等号方向改变',
+          prims: [
+            { t: 'rect', x: 8, y: 12, w: 84, h: 12, tone: 'main', label: '求根公式：x=(−b±√(b²−4ac)) / 2a' },
+            { t: 'rect', x: 8, y: 28, w: 84, h: 12, tone: 'accent', label: '韦达定理：x₁+x₂=−b/a，x₁x₂=c/a' },
+            { t: 'rect', x: 8, y: 44, w: 84, h: 12, tone: 'danger', label: '两边同乘（除以）负数 → 不等号变号' },
+          ],
+        },
       },
       {
         term: '两个「必须写出来」的动作',
@@ -510,6 +796,25 @@ export const mathFormula: MathTopic[] = [
     examples: [
       {
         stem: '解方程 $x^2-6x+5=0$，并说明为什么可以用两种方法。',
+        figure: {
+          id: 'fig-for-fangcheng-e1',
+          title: '抛物线 y=(x−1)(x−5) 与 x 轴的交点',
+          caption: '两根 1、5 就是抛物线与 x 轴交点的横坐标，顶点为 (3,−4)',
+          view: 'square',
+          alt: '平面直角坐标系中一条开口向上的抛物线，与 x 轴交于点 (1,0) 和 (5,0)，顶点坐标为 (3,−4)，对称轴为直线 x=3，与 y 轴交于 (0,5)',
+          prims: [
+            { t: 'plane', x: 25, y: 60, right: 60, left: 25, up: 50, down: 35, xLabel: 'x', yLabel: 'y',
+              xTicks: [{ at: 10, label: '1' }, { at: 30, label: '3' }, { at: 50, label: '5' }],
+              yTicks: [{ at: 30, label: '5' }, { at: -24, label: '−4' }] },
+            { t: 'line', x1: 55, y1: 20, x2: 55, y2: 92, dashed: true, tone: 'muted' },
+            { t: 'text', x: 55, y: 16, text: 'x=3', size: 3.2, tone: 'muted' },
+            { t: 'curve', points: [[25, 30], [30, 45], [35, 60], [40, 71], [45, 78], [50, 82], [55, 84], [60, 82], [65, 78], [70, 71], [75, 60], [80, 45], [85, 30]], tone: 'accent', width: 2 },
+            { t: 'dot', x: 35, y: 60, r: 1.4, label: '(1,0)', labelDx: -3, labelDy: 5 },
+            { t: 'dot', x: 75, y: 60, r: 1.4, label: '(5,0)', labelDx: 2, labelDy: 5 },
+            { t: 'dot', x: 55, y: 84, r: 1.4, tone: 'accent', label: '(3,−4)', labelDx: 3, labelDy: 4 },
+            { t: 'dot', x: 25, y: 30, r: 1.4, tone: 'muted', label: '(0,5)', labelDx: 2, labelDy: 4 },
+          ],
+        },
         steps: [
           '方法一（因式分解法）：把左边分解为 $(x-1)(x-5)=0$，由「两个因式的积为 $0$」得 $x-1=0$ 或 $x-5=0$，所以 $x_1=1$，$x_2=5$。',
           '方法二（公式法）：$a=1$，$b=-6$，$c=5$，先算 $\\Delta=(-6)^2-4\\times1\\times5=16>0$，说明有两个不相等的实数根。',
@@ -521,6 +826,28 @@ export const mathFormula: MathTopic[] = [
       },
       {
         stem: '某商店 1 月份的利润为 20 万元，由于经营改善，3 月份的利润增加到 24.2 万元。求该商店利润的月平均增长率。',
+        figure: {
+          id: 'fig-for-fangcheng-e2',
+          title: '连续两期增长：20(1+x)²=24.2',
+          caption: '1 月到 3 月经过 2 个月，每月都是乘 (1+x)',
+          view: 'wide',
+          alt: '三个逐渐升高的柱子，分别标着 1 月的 20 万元、2 月的 20 乘 (1 加 x)、3 月的 24.2 万元，柱子之间有箭头表示每个月都乘一次 (1 加 x)',
+          prims: [
+            { t: 'line', x1: 8, y1: 56, x2: 92, y2: 56, tone: 'muted' },
+            { t: 'rect', x: 16, y: 38, w: 14, h: 18, tone: 'main', fill: true },
+            { t: 'rect', x: 42, y: 30, w: 14, h: 26, tone: 'accent', fill: true },
+            { t: 'rect', x: 68, y: 22, w: 14, h: 34, tone: 'ok', fill: true },
+            { t: 'text', x: 23, y: 34, text: '20', size: 3.6 },
+            { t: 'text', x: 49, y: 26, text: '20(1+x)', size: 3.4 },
+            { t: 'text', x: 75, y: 18, text: '24.2', size: 3.6 },
+            { t: 'text', x: 23, y: 61, text: '1 月', size: 3.4, tone: 'muted' },
+            { t: 'text', x: 49, y: 61, text: '2 月', size: 3.4, tone: 'muted' },
+            { t: 'text', x: 75, y: 61, text: '3 月', size: 3.4, tone: 'muted' },
+            { t: 'arrow', x1: 30.5, y1: 50, x2: 41.5, y2: 50 },
+            { t: 'arrow', x1: 56.5, y1: 50, x2: 67.5, y2: 50 },
+            { t: 'text', x: 50, y: 8, text: '每个月都乘一次 (1+x)', size: 3.4, tone: 'muted' },
+          ],
+        },
         steps: [
           '设月平均增长率为 $x$，从 1 月到 3 月经过了 2 个月。',
           '按平均增长率模型列方程：$20(1+x)^2=24.2$。',

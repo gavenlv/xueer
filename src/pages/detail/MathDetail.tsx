@@ -1,10 +1,11 @@
-/** 数学知识点详情：概念、中考考点（综合）、公式定理（KaTeX 渲染）、例题精讲、易错点、解题方法 */
+/** 数学知识点详情：系统讲解、核心概念、中考考点（综合）、公式定理（KaTeX 渲染）、例题精讲、易错点、解题方法 */
 
 import type { MathEntry } from '../../types';
 import { Accordion, Tag } from '../../components/common';
 import { PhysicsFigureView } from '../../components/PhysicsFigure';
 import { RichText } from '../../components/RichText';
 import { Tex } from '../../components/Tex';
+import { cn } from '../../lib/utils';
 import { DetailShell, Section } from './DetailShell';
 
 /**
@@ -18,12 +19,25 @@ import { DetailShell, Section } from './DetailShell';
  * 全部用 `Section` 的 `fold` 模式（见 `DetailShell.tsx`），观感与
  * 思维导图 / 知识点背诵那些折叠卡片一致。
  *
+ * 唯一的例外是**「系统讲解」默认展开**（`defaultOpen`）：它是这一条的正文主线，
+ * 而且数学的图（数轴、几何图形、函数图象、统计图）主要挂在这里——
+ * 图都在收起状态里，等于没配。
+ *
+ * ## 核心概念为什么不是格子（`note-grid` 的四列小格）
+ *
+ * 数学概念**不是词典条目**：一段解释往往三四行，还要配一张图。
+ * 早先复用语文的 `note-grid`（`minmax(220px, 1fr)`）时，宽屏上四条概念并成一行，
+ * 每条只有 220px：文字挤成一列窄条、图缩到看不清，读完一条得来回找位置。
+ * 现在一条概念**独占一整行**（`.mcon`）：编号 + 概念名 + 定义 + 解析，
+ * 配图时正文与图并排两栏（窄屏自动堆叠）——这才是数学该有的「图文结合」。
+ *
  * ## 「中考考点（综合）」
  *
  * 与语文模块同一思路：每个知识点都写清「中考里怎么被考」——题位题型、
  * 与哪些知识综合、踩分靠什么（`MathTopic.examPoints`）。放在核心概念之后，
  * 先知道学什么，再知道考什么，例题与练习才有针对性。
  */
+
 export function MathDetail({ entry, moduleName }: { entry: MathEntry; moduleName: string }) {
   const t = entry.data;
 
@@ -41,7 +55,34 @@ export function MathDetail({ entry, moduleName }: { entry: MathEntry; moduleName
       // 标签按纯文本渲染，只能放短标签；解题方法含公式标记，绝不能塞进标签
       tags={['数学']}
     >
-      {/* 核心概念 */}
+      {/* 系统讲解：分步推演，每步尽量配图（几何/函数/统计不看图讲不清） */}
+      {t.steps?.length ? (
+        <Section
+          title={`系统讲解（${t.steps.length} 步）`}
+          icon="🧭"
+          fold
+          defaultOpen
+          summary={t.steps[0]?.heading}
+        >
+          <ol className="physics-stepsList">
+            {t.steps.map((s, i) => (
+              <li key={i} className="physics-step">
+                <div className="physics-step__head">
+                  <span className="physics-step__no">{i + 1}</span>
+                  <span className="physics-step__title">{s.heading}</span>
+                </div>
+                <div className="physics-step__body">
+                  <RichText text={s.body} />
+                </div>
+                {s.figure ? <PhysicsFigureView figure={s.figure} /> : null}
+                {s.note ? <div className="physics-step__note">⚠️ {s.note}</div> : null}
+              </li>
+            ))}
+          </ol>
+        </Section>
+      ) : null}
+
+      {/* 核心概念（一条一整行：定义 + 解析 + 配图，见文件头「核心概念为什么不是格子」） */}
       {t.concepts?.length ? (
         <Section
           title={`核心概念（${t.concepts.length} 条）`}
@@ -52,14 +93,26 @@ export function MathDetail({ entry, moduleName }: { entry: MathEntry; moduleName
             .map((c) => c.term)
             .join(' · ')}
         >
-          <div className="note-grid">
+          <div className="mcon-list">
             {t.concepts.map((c, i) => (
-              <div className="note" key={i}>
-                <span className="note__word">{c.term}</span>
-                <span className="note__text">
-                  <RichText text={c.explain} />
-                </span>
-              </div>
+              <article className="mcon" key={i}>
+                <div className="mcon__head">
+                  <span className="mcon__idx">{String(i + 1).padStart(2, '0')}</span>
+                  <h3 className="mcon__term">{c.term}</h3>
+                </div>
+                <div className={cn('mcon__grid', c.figure && 'mcon__grid--fig')}>
+                  <div className="mcon__text">
+                    <RichText text={c.explain} />
+                    {c.insight ? (
+                      <div className="mcon__insight">
+                        <span className="mcon__insightTag">怎么理解</span>
+                        <RichText text={c.insight} />
+                      </div>
+                    ) : null}
+                  </div>
+                  {c.figure ? <PhysicsFigureView figure={c.figure} className="mcon__fig" /> : null}
+                </div>
+              </article>
             ))}
           </div>
         </Section>
@@ -91,7 +144,7 @@ export function MathDetail({ entry, moduleName }: { entry: MathEntry; moduleName
         </Section>
       ) : null}
 
-      {/* 公式与定理 */}
+      {/* 公式与定理（判定定理这类配图：图上哪几组元素相等，一眼看清） */}
       {t.formulas?.length ? (
         <Section
           title={`公式与定理（${t.formulas.length} 条）`}
@@ -119,6 +172,7 @@ export function MathDetail({ entry, moduleName }: { entry: MathEntry; moduleName
                     </div>
                   ) : null}
                 </div>
+                {f.figure ? <PhysicsFigureView figure={f.figure} className="formula__fig" /> : null}
               </div>
             ))}
           </div>

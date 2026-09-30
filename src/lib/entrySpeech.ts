@@ -404,9 +404,34 @@ export function speechSegmentsOf(entry: Entry): SpeechSegment[] {
       if (!entry.moduleId.startsWith('math-')) break;
       const m = entry.data as {
         summary?: string;
-        concepts?: { term: string; explain: string }[];
+        concepts?: {
+          term: string;
+          explain: string;
+          insight?: string;
+          figure?: { title?: string; alt?: string };
+        }[];
+        steps?: { heading?: string; body?: string; note?: string; figure?: { title?: string; alt?: string } }[];
       };
-      (m.concepts ?? []).forEach((c, i) => push(out, `concept-${i}`, c.explain, `概念·${c.term}`));
+      // 与物理同一顺序：先按理解顺序读系统讲解（含图的文字描述），再读概念与要点
+      (m.steps ?? []).forEach((s, i) => {
+        push(
+          out,
+          `mstep-${i}`,
+          `${s.heading ?? ''}。${s.body ?? ''}${s.note ? `。注意：${s.note}` : ''}`,
+          `系统讲解第 ${i + 1} 步`,
+        );
+        if (s.figure) {
+          push(out, `mstep-${i}-fig`, `${s.figure.title ?? ''}。${s.figure.alt ?? ''}`, `第 ${i + 1} 步的图`);
+        }
+      });
+      // 定义与解析一起读：只读定义等于把「为什么」这一层丢掉，听的人还是不会用
+      (m.concepts ?? []).forEach((c, i) => {
+        const body = c.insight ? `${c.explain.replace(/[。！？]?$/, '。')}${c.insight}` : c.explain;
+        push(out, `concept-${i}`, body, `概念·${c.term}`);
+        if (c.figure) {
+          push(out, `concept-${i}-fig`, `${c.figure.title ?? ''}。${c.figure.alt ?? ''}`, `概念图·${c.term}`);
+        }
+      });
       push(out, 'summary', m.summary, '本节要点');
       break;
     }

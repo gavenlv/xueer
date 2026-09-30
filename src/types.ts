@@ -1381,6 +1381,72 @@ export type FigurePrim =
   /** 斜线阴影（地面、墙面、不透光区域） */
   | { t: 'hatch'; x: number; y: number; w: number; h: number; tone?: FigureTone; gap?: number }
 
+  /* ---------------- 数学元件（几何 / 函数 / 统计） ---------------- */
+  /**
+   * 平面直角坐标系（四象限）。
+   *
+   * 与 `axis` 的区别：`axis` 只画「从原点向右上的第一象限」，而数学的函数图象
+   * 大量落在负半轴（如 $y=2x-3$ 与 $x$ 轴交于正半轴但图象伸向负半轴、
+   * 抛物线关于对称轴对称需要两侧都画）。这里给的是**以 `(x, y)` 为原点的完整坐标系**：
+   * 四条半轴各自给长度，刻度用「沿轴的距离（画布单位，可正可负）」定位，
+   * 数据曲线仍用 `curve` 按画布坐标叠点。
+   */
+  | {
+      t: 'plane';
+      x: number;
+      y: number;
+      /** 原点右侧的轴长（画布单位） */
+      right: number;
+      /** 原点左侧的轴长 */
+      left: number;
+      /** 原点上方的轴长 */
+      up: number;
+      /** 原点下方的轴长 */
+      down: number;
+      xLabel?: string;
+      yLabel?: string;
+      /** 刻度：`at` 是沿轴的距离（画布单位，可正可负），`label` 是刻度文字 */
+      xTicks?: { at: number; label: string }[];
+      yTicks?: { at: number; label: string }[];
+      /** 画网格（按刻度铺到整个坐标系） */
+      grid?: boolean;
+    }
+  /** 扇形（扇形统计图、扇形面积、圆锥侧面展开图）：角度为度、逆时针为正 */
+  | {
+      t: 'sector';
+      cx: number;
+      cy: number;
+      r: number;
+      from: number;
+      to: number;
+      tone?: FigureTone;
+      fill?: boolean;
+      label?: string;
+      /** 标注离圆心的半径比例，默认 0.62 */
+      labelR?: number;
+    }
+  /**
+   * 立体图形（三视图、圆柱圆锥、正方体展开折叠）。
+   *
+   * `(x, y)` 是**正面底边的中点**，`w` 是底面宽、`h` 是高、`d` 是纵深偏移
+   * （斜二测的「深度」，向右上偏）。只画轮廓（不填色），便于标出
+   * 母线、高、半径、对角线这些要计算的线段。
+   */
+  | {
+      t: 'solid';
+      x: number;
+      y: number;
+      kind: 'cylinder' | 'cone' | 'sphere' | 'cube' | 'prism' | 'pyramid';
+      /** 底面宽（球的直径），默认 28 */
+      w?: number;
+      /** 高（球时等于直径），默认 24 */
+      h?: number;
+      /** 纵深偏移量，默认 6 */
+      d?: number;
+      tone?: FigureTone;
+      label?: string;
+    }
+
   /* ---------------- 电学符号（教材标准画法） ---------------- */
   /** 电源：长线是正极、短线是负极 */
   | { t: 'battery'; x: number; y: number; vertical?: boolean; label?: string; cells?: number }
@@ -1805,6 +1871,13 @@ export interface MathFormula {
   text?: string;
   /** 适用条件 / 注意点 */
   note?: string;
+  /**
+   * 配图：判定定理这类「把哪几组元素标出来就一目了然」的公式配图。
+   *
+   * 只背 `SSS`／`SAS` 四个字母没用，学生真正要记住的是「图上哪几组元素相等」——
+   * 有图的公式卡读起来是「看图 → 对应定理」，没图的只是四个字母。
+   */
+  figure?: PhysicsFigure;
 }
 
 /** 例题精讲 */
@@ -1834,6 +1907,37 @@ export interface MathExamPoint {
   how: string;
 }
 
+/**
+ * 数学「系统讲解」的一步：与物理同一形状（标题 + 正文 + 配图 + 提醒）。
+ *
+ * 数学的图不是装饰：数轴、几何图形、函数图象、统计图这些内容，
+ * 「不看图讲不清、画出来一眼就懂」，所以每一步都尽量配 `figure`。
+ */
+export type MathStep = PhysicsStep;
+
+/**
+ * 核心概念：一条概念 + 定义 + **解析** + 配图。
+ *
+ * 数学只给「一个概念」是学不会的：定义（`explain`）回答「是什么」，
+ * 学生真正卡住的是「为什么这样规定、用的时候怎么想」——那是 `insight`；
+ * 再加上 `figure` 的图形结合，一条概念才是能读懂的。
+ */
+export interface MathConcept {
+  /** 概念名（尽量短，是一眼能记住的短语） */
+  term: string;
+  /** 定义：教科书口径的严谨表述「是什么」 */
+  explain: string;
+  /**
+   * 解析：「怎么理解、为什么这样、用的时候怎么想」。
+   *
+   * 与 `explain` 分工明确——定义只能背，解析才让人会用；
+   * 缺了它，概念块就退化成一本只能抄不能读的词典。
+   */
+  insight?: string;
+  /** 配图：数轴、几何图形、函数图象这类「不看图讲不清」的概念 */
+  figure?: PhysicsFigure;
+}
+
 /** 数学知识点 */
 export interface MathTopic {
   id: string;
@@ -1844,8 +1948,10 @@ export interface MathTopic {
   chapter?: string;
   /** 一句话概述 */
   summary: string;
-  /** 核心概念与定义 */
-  concepts: { term: string; explain: string }[];
+  /** 系统讲解：分步推演（先看什么 → 抓哪个条件 → 建立关系 → 换情境再想），每步尽量配图 */
+  steps?: MathStep[];
+  /** 核心概念与定义，每条可配图 */
+  concepts: MathConcept[];
   /** 中考考点（综合）：这个知识点在中考里怎么被考、与哪些知识综合 */
   examPoints?: MathExamPoint[];
   /** 公式与定理 */
