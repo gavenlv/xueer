@@ -69,6 +69,7 @@ import type {
   GradeId,
   MindNode,
   ModuleId,
+  PhysicsFigure,
   QuizQuestion,
   StudyState,
   WritingLesson,
@@ -146,6 +147,107 @@ function checkMathFigure(where: string, fig?: { id?: string; alt?: string; prims
   if (!fig.alt?.trim()) err(`${where}: 图「${fig.id || '(无 id)'}」缺少 alt（朗读与检索要用它）`);
   if (!Array.isArray(fig.prims) || !fig.prims.length) {
     err(`${where}: 图「${fig.id || '(无 id)'}」没有图元 prims`);
+  }
+}
+
+/** 写法类缩写：`$SSS$`、`$\\mathrm{Rt}\\triangle ABC$` 里的 Rt 不是点名字母 */
+const ACRONYMS = new Set(['SSS', 'SAS', 'ASA', 'AAS', 'SSA', 'AAA', 'HL', 'Rt', 'Rt△']);
+
+/**
+ * 量名字母：`S` 是面积、`V` 是体积，几何图上也**不用**这两个字母标点
+ * （与量名撞车，教材一律避开），所以不要求它们在图上出现。
+ */
+const QUANTITY_NAMES = new Set(['S', 'V']);
+
+/**
+ * 正文是否在**用字母指代点／线段**（「$D$ 是 $AB$ 的中点」）。
+ *
+ * 这是「图文配套」的判据：文字用字母说话，图上就必须有这些字母；
+ * 只认 `$...$` 里成串的大写字母与「如图」两种写法，避免把普通中文当图形描述。
+ */
+function pointLetters(text: string): Set<string> {
+  const out = new Set<string>();
+  if (!text) return out;
+  for (const m of text.match(/\$[^$]*\$/g) ?? []) {
+    // 去掉 LaTeX 命令（\triangle、\angle、\mathrm…）后再看剩下的字母
+    const body = m.slice(1, -1).replace(/\\[a-zA-Z]+/g, ' ');
+    // 只有**全大写**的字母串才是点名字母：`\mathrm{Rt}` 去掉命令后剩下的 `Rt`、
+    // 以及 `\frac` 里的 `frac`，都是命令残渣，不能当成点 A 之类的标记。
+    for (const run of body.match(/[A-Za-z]{1,4}/g) ?? []) {
+      if (!/^[A-Z]+$/.test(run) || ACRONYMS.has(run)) continue;
+      for (const ch of run) if (!QUANTITY_NAMES.has(ch)) out.add(ch);
+    }
+  }
+  return out;
+}
+
+/**
+ * 图里已经标出的字母（带 label 的点，或单字母的 text 标注）。
+ *
+ * 点的标注可以是「A」，也可以是「A(0,3.5)」这种带坐标的写法，两者都算标了 A；
+ * 下标记号（`B₁`）按主字母 B 计。
+ */
+function figureLetters(fig: PhysicsFigure): Set<string> {
+  const out = new Set<string>();
+  const take = (s: string) => {
+    const m = /^([A-Z])/.exec(s.trim());
+    if (m) out.add(m[1]);
+  };
+  for (const p of fig.prims) {
+    if (p.t === 'dot' && p.label) take(p.label);
+    else if (p.t === 'text' && /^[A-Z][′']?$/.test(p.text.trim())) take(p.text.trim());
+    // 坐标系图元自带原点字母 O（渲染器画出来的），不能因为作者没再写一个 dot 就判「没标」
+    else if (p.t === 'plane') take('O');
+    else if (p.t === 'axis' && p.origin) take('O');
+  }
+  return out;
+}
+
+/** 数学条目里每个**能配图的位置**：概念、系统讲解、公式、例题、题目 */
+function mathFigureItems(
+  t: import('../src/types').MathTopic,
+): { at: string; text: string; figure?: PhysicsFigure }[] {
+  const out: { at: string; text: string; figure?: PhysicsFigure }[] = [];
+  (t.concepts ?? []).forEach((c) =>
+    out.push({ at: `概念「${c.term}」`, text: `${c.explain}${c.insight ?? ''}`, figure: c.figure }),
+  );
+  (t.steps ?? []).forEach((s, i) =>
+    out.push({ at: `系统讲解第 ${i + 1} 步「${s.heading}」`, text: `${s.body}${s.note ?? ''}`, figure: s.figure }),
+  );
+  (t.formulas ?? []).forEach((f) =>
+    out.push({ at: `公式「${f.name}」`, text: `${f.text ?? ''}${f.note ?? ''}`, figure: f.figure }),
+  );
+  (t.examples ?? []).forEach((x, i) =>
+    out.push({ at: `例题 ${i + 1}`, text: `${x.stem}${x.steps.join('')}${x.tip ?? ''}`, figure: x.figure }),
+  );
+  // 题目只看题干：选项里的 $SSS$／$SAS$ 是方法名，不是点名字母
+  (t.questions ?? []).forEach((q) => out.push({ at: `题目 ${q.id}`, text: q.stem, figure: q.figure }));
+  return out;
+}
+
+/**
+ * 逐条核对「图文配套」：
+ *
+ *   ① 正文用字母指代点／线段（或写了「如图」）却**没有配图** → 告警（内容还没写完）；
+ *   ② 有图，图上却**一个字母都没有** → **报错**（和「图缺 alt」同级：这不是没写完，是画错了）；
+ *   ③ 图上有字母，但正文用到的字母没标全 → 告警（「哪个顶点是 A」答不上来的图就是废图）。
+ */
+function checkMathFigureText(where: string, t: import('../src/types').MathTopic) {
+  for (const item of mathFigureItems(t)) {
+    const want = pointLetters(item.text);
+    const need = want.size > 0 || /如图|图意/.test(item.text);
+    if (!need) continue;
+    if (!item.figure) {
+      warn(`${where}: ${item.at} 用字母／图说话但没有配图（几何不看图讲不清）`);
+      continue;
+    }
+    const got = figureLetters(item.figure);
+    if (!got.size) {
+      err(`${where}: ${item.at} 的图「${item.figure.id}」一个字母都没标——正文靠字母指代点，图必须标出来`);
+      continue;
+    }
+    const missing = [...want].filter((l) => !got.has(l));
+    if (missing.length) warn(`${where}: ${item.at} 的图「${item.figure.id}」没标出 ${missing.join('、')}`);
   }
 }
 
@@ -371,6 +473,8 @@ for (const entry of allEntries as Entry[]) {
           warn(`${where}: 核心概念一条配图都没有`);
         }
         for (const c of t.concepts ?? []) checkMathFigure(`${where}: 概念「${c.term}」`, c.figure);
+        // 图文配套：正文用字母说话就必须有图，图必须有字母（见 checkMathFigureText 注释）
+        checkMathFigureText(where, t);
         if (!t.pitfalls?.length) warn(`${where}: 数学知识点缺少易错点 pitfalls`);
         if (!t.methods?.length) warn(`${where}: 数学知识点缺少解题方法 methods`);
         if (!t.chapter?.trim()) warn(`${where}: 数学知识点缺少章节归属 chapter`);

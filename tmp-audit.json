@@ -1,0 +1,412 @@
+[
+ {
+  "topic": "m-geo-tuxing-chubu",
+  "key": "questions",
+  "title": "已知线段 $AB=8$ cm，点 $M$ 是 $AB"
+ },
+ {
+  "topic": "m-geo-tuxing-chubu",
+  "key": "questions",
+  "title": "已知 $\\\\angle A=30^\\\\circ 25"
+ },
+ {
+  "topic": "m-geo-xiangjiao-pingxing",
+  "key": "examples",
+  "title": "直线 $AB$、$CD$ 相交于点 $O$，$OE\\"
+ },
+ {
+  "topic": "m-geo-xiangjiao-pingxing",
+  "key": "questions",
+  "title": "$\\\\angle 1$ 与 $\\\\angle 2$ "
+ },
+ {
+  "topic": "m-geo-xiangjiao-pingxing",
+  "key": "questions",
+  "title": "直线 $AB\\\\parallel CD$，直线 $E"
+ },
+ {
+  "topic": "m-geo-pingmian-zuobiao",
+  "key": "questions",
+  "title": "点 $P(-3,4)$ 到 $x$ 轴的距离是"
+ },
+ {
+  "topic": "m-geo-pingmian-zuobiao",
+  "key": "questions",
+  "title": "若点 $M(a-1,\\\\ a+2)$ 在 $y$ 轴"
+ },
+ {
+  "topic": "m-geo-pingmian-zuobiao",
+  "key": "questions",
+  "title": "把点 $A(2,-5)$ 先向左平移 3 个单位，再"
+ },
+ {
+  "topic": "m-geo-pingmian-zuobiao",
+  "key": "questions",
+  "title": "已知点 $A(3,-2)$ 与点 $B(-1,-2)"
+ },
+ {
+  "topic": "m-geo-pingmian-zuobiao",
+  "key": "questions",
+  "title": "点 $A(-2,3)$ 平移后得到点 $B(1,3)"
+ },
+ {
+  "topic": "m-geo-pingmian-zuobiao",
+  "key": "questions",
+  "title": "点 $P$ 在第四象限，且它到 $x$ 轴的距离是 "
+ },
+ {
+  "topic": "m-geo-pingmian-zuobiao",
+  "key": "questions",
+  "title": "点 $P(-6,\\\\ 8)$ 到原点 $O$ 的距离"
+ },
+ {
+  "topic": "m-geo-sanjiaoxing",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 中，$\\\\an"
+ },
+ {
+  "topic": "m-geo-sanjiaoxing",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 中，$D$ 是"
+ },
+ {
+  "topic": "m-geo-sanjiaoxing",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 中，$\\\\an"
+ },
+ {
+  "topic": "m-geo-quandeng",
+  "key": "examples",
+  "title": "在四边形中，$AB=AD$，射线 $AC$ 平分 $"
+ },
+ {
+  "topic": "m-geo-quandeng",
+  "key": "examples",
+  "title": "$OP$ 平分 $\\\\angle AOB$，$PC\\"
+ },
+ {
+  "topic": "m-geo-quandeng",
+  "key": "examples",
+  "title": "已知 $AB=AC$，$AD=AE$，$\\\\angl"
+ },
+ {
+  "topic": "m-geo-quandeng",
+  "key": "questions",
+  "title": "已知 $AB=AD$，$\\\\angle BAC=\\\\"
+ },
+ {
+  "topic": "m-geo-quandeng",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 和 $\\\\tr"
+ },
+ {
+  "topic": "m-geo-quandeng",
+  "key": "questions",
+  "title": "已知 $\\\\triangle ABC\\\\cong\\\\"
+ },
+ {
+  "topic": "m-geo-quandeng",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 中，$AD$ "
+ },
+ {
+  "topic": "m-geo-zhouduichen",
+  "key": "formulas",
+  "title": "线段垂直平分线的性质"
+ },
+ {
+  "topic": "m-geo-zhouduichen",
+  "key": "formulas",
+  "title": "含 30° 角的直角三角形"
+ },
+ {
+  "topic": "m-geo-zhouduichen",
+  "key": "examples",
+  "title": "在 $\\\\mathrm{Rt}\\\\triangle "
+ },
+ {
+  "topic": "m-geo-zhouduichen",
+  "key": "examples",
+  "title": "用构造全等的方法证明等腰三角形的判定定理：如果一个三"
+ },
+ {
+  "topic": "m-geo-zhouduichen",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 中，$AB=A"
+ },
+ {
+  "topic": "m-geo-zhouduichen",
+  "key": "questions",
+  "title": "点 $P(-2,3)$ 关于 $x$ 轴对称的点的坐"
+ },
+ {
+  "topic": "m-geo-zhouduichen",
+  "key": "questions",
+  "title": "在 $\\\\mathrm{Rt}\\\\triangle "
+ },
+ {
+  "topic": "m-geo-zhouduichen",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 中，$AB=A"
+ },
+ {
+  "topic": "m-geo-zhouduichen",
+  "key": "questions",
+  "title": "点 $P$ 在线段 $AB$ 的垂直平分线上，且 $"
+ },
+ {
+  "topic": "m-geo-gougu",
+  "key": "examples",
+  "title": "在 $\\\\mathrm{Rt}\\\\triangle "
+ },
+ {
+  "topic": "m-geo-gougu",
+  "key": "examples",
+  "title": "在 $\\\\triangle ABC$ 中，$AB=1"
+ },
+ {
+  "topic": "m-geo-gougu",
+  "key": "questions",
+  "title": "在 $\\\\mathrm{Rt}\\\\triangle "
+ },
+ {
+  "topic": "m-geo-gougu",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 中，$\\\\an"
+ },
+ {
+  "topic": "m-geo-gougu",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 中，$AB=1"
+ },
+ {
+  "topic": "m-geo-pingxing-sibianxing",
+  "key": "examples",
+  "title": "在 $\\\\triangle ABC$ 中，$D$、$"
+ },
+ {
+  "topic": "m-geo-pingxing-sibianxing",
+  "key": "examples",
+  "title": "在四边形 $ABCD$ 中，$AB\\\\paralle"
+ },
+ {
+  "topic": "m-geo-pingxing-sibianxing",
+  "key": "questions",
+  "title": "下列条件中，不能判定四边形 $ABCD$ 是平行四边"
+ },
+ {
+  "topic": "m-geo-pingxing-sibianxing",
+  "key": "questions",
+  "title": "在平行四边形 $ABCD$ 中，$\\\\angle A"
+ },
+ {
+  "topic": "m-geo-pingxing-sibianxing",
+  "key": "questions",
+  "title": "四边形 $ABCD$ 的两条对角线 $AC$、$BD"
+ },
+ {
+  "topic": "m-geo-pingxing-sibianxing",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 中，$D$、$"
+ },
+ {
+  "topic": "m-geo-pingxing-sibianxing",
+  "key": "questions",
+  "title": "菱形 $ABCD$ 的两条对角线 $AC=10$，$"
+ },
+ {
+  "topic": "m-geo-pingxing-sibianxing",
+  "key": "questions",
+  "title": "在平行四边形 $ABCD$ 中，$\\\\angle A"
+ },
+ {
+  "topic": "m-geo-xuanzhuan",
+  "key": "questions",
+  "title": "点 $A(-3,2)$ 关于原点对称的点的坐标是"
+ },
+ {
+  "topic": "m-geo-xuanzhuan",
+  "key": "questions",
+  "title": "把一个图形绕点 $O$ 顺时针旋转 $90^\\\\ci"
+ },
+ {
+  "topic": "m-geo-xuanzhuan",
+  "key": "questions",
+  "title": "把点 $P(3,1)$ 绕原点旋转 $180^\\\\c"
+ },
+ {
+  "topic": "m-geo-xuanzhuan",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 中，$AB=A"
+ },
+ {
+  "topic": "m-geo-xuanzhuan",
+  "key": "questions",
+  "title": "已知：在正方形 $ABCD$ 中，点 $E$ 在边 "
+ },
+ {
+  "topic": "m-geo-yuan",
+  "key": "formulas",
+  "title": "直径所对的圆周角是直角"
+ },
+ {
+  "topic": "m-geo-yuan",
+  "key": "questions",
+  "title": "$\\\\odot O$ 的半径是 5，弦 $AB=8$"
+ },
+ {
+  "topic": "m-geo-yuan",
+  "key": "questions",
+  "title": "$AB$ 是 $\\\\odot O$ 的直径，点 $C"
+ },
+ {
+  "topic": "m-geo-yuan",
+  "key": "questions",
+  "title": "从 $\\\\odot O$ 外一点 $P$ 引 $\\\\"
+ },
+ {
+  "topic": "m-geo-yuan",
+  "key": "questions",
+  "title": "点 $A$、$B$、$C$、$D$ 都在 $\\\\od"
+ },
+ {
+  "topic": "m-geo-yuan",
+  "key": "questions",
+  "title": "已知：在 $\\\\triangle ABC$ 中，$A"
+ },
+ {
+  "topic": "m-geo-xiangsi",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 中，$D$ 在"
+ },
+ {
+  "topic": "m-geo-xiangsi",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 与 $\\\\tr"
+ },
+ {
+  "topic": "m-geo-xiangsi",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 中，$DE\\\\"
+ },
+ {
+  "topic": "m-geo-xiangsi",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 中，$D$、$"
+ },
+ {
+  "topic": "m-geo-xiangsi",
+  "key": "questions",
+  "title": "已知：在正方形 $ABCD$ 中，$AB=6$，点 "
+ },
+ {
+  "topic": "m-geo-ruijiao-sanjiao",
+  "key": "formulas",
+  "title": "正弦"
+ },
+ {
+  "topic": "m-geo-ruijiao-sanjiao",
+  "key": "formulas",
+  "title": "余弦"
+ },
+ {
+  "topic": "m-geo-ruijiao-sanjiao",
+  "key": "formulas",
+  "title": "正切"
+ },
+ {
+  "topic": "m-geo-ruijiao-sanjiao",
+  "key": "questions",
+  "title": "在 $\\\\mathrm{Rt}\\\\triangle "
+ },
+ {
+  "topic": "m-geo-ruijiao-sanjiao",
+  "key": "questions",
+  "title": "在 $\\\\mathrm{Rt}\\\\triangle "
+ },
+ {
+  "topic": "m-geo-ruijiao-sanjiao",
+  "key": "questions",
+  "title": "在 $\\\\mathrm{Rt}\\\\triangle "
+ },
+ {
+  "topic": "m-geo-ruijiao-sanjiao",
+  "key": "questions",
+  "title": "如图意，一轮船在灯塔 $P$ 的北偏东 $30^\\\\"
+ },
+ {
+  "topic": "m-geo-ruijiao-sanjiao",
+  "key": "questions",
+  "title": "已知：在 $\\\\triangle ABC$ 中，$\\"
+ },
+ {
+  "topic": "m-geo-touying-shitu",
+  "key": "examples",
+  "title": "一根高 1.5 m 的木杆在阳光下的影长是 2 m，"
+ },
+ {
+  "topic": "m-geo-touying-shitu",
+  "key": "examples",
+  "title": "夜里，一根高 $1.5$ m 的标杆 $AB$ 直立"
+ },
+ {
+  "topic": "m-geo-zhengming-yiucuo",
+  "key": "formulas",
+  "title": "倍长中线构造全等"
+ },
+ {
+  "topic": "m-geo-zhengming-yiucuo",
+  "key": "examples",
+  "title": "在 $\\\\triangle ABC$ 中，$AD$ "
+ },
+ {
+  "topic": "m-geo-zhengming-yiucuo",
+  "key": "examples",
+  "title": "在 $\\\\triangle ABC$ 中，$D$ 在"
+ },
+ {
+  "topic": "m-geo-zhengming-yiucuo",
+  "key": "examples",
+  "title": "在 $\\\\triangle ABC$ 中，$\\\\an"
+ },
+ {
+  "topic": "m-geo-zhengming-yiucuo",
+  "key": "examples",
+  "title": "已知：在 $\\\\triangle ABC$ 中，$A"
+ },
+ {
+  "topic": "m-geo-zhengming-yiucuo",
+  "key": "examples",
+  "title": "已知：在 $\\\\triangle ABC$ 中，$\\"
+ },
+ {
+  "topic": "m-geo-zhengming-yiucuo",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 和 $\\\\tr"
+ },
+ {
+  "topic": "m-geo-zhengming-yiucuo",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 中，$D$ 是"
+ },
+ {
+  "topic": "m-geo-zhengming-yiucuo",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 中，$AD$ "
+ },
+ {
+  "topic": "m-geo-zhengming-yiucuo",
+  "key": "questions",
+  "title": "在 $\\\\triangle ABC$ 中，$BD$ "
+ },
+ {
+  "topic": "m-geo-zhengming-yiucuo",
+  "key": "questions",
+  "title": "指出下面证明中的错误并加以改正：已知在 $\\\\tri"
+ },
+ {
+  "topic": "m-geo-zhengming-yiucuo",
+  "key": "questions",
+  "title": "已知：在 $\\\\triangle ABC$ 中，$A"
+ }
+]
