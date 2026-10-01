@@ -10,6 +10,8 @@
 
 import type { ChemPaper, ChemTopic, Entry } from '../src/types';
 import { allPapers, allTopics, TEXTBOOK_MODULE_IDS } from '../src/data/chemistry';
+// 「图文配套」的判据与数学、物理共用一套（纯函数，另有自测）
+import { figureNeed, isStrategyTopic } from './figure-rules';
 
 /**
  * 广州中考化学卷面（穗教规字〔2025〕1 号及官方解读）：
@@ -62,33 +64,31 @@ export function validateChemistry(opts: {
   };
 
   /**
-   * 图是不是「配」上了（与物理同一条红线）。
+   * 图是不是「配」上了（判据与数学、物理共用，见 `scripts/figure-rules.ts`）。
    *
-   * 化学里「非图说不清」的说法集中在装置、操作与图像三类：
+   * 化学里「非图说不清」的说法集中在装置、结构示意、流程与图像：
    *   ① 写了「如图／图中」却没有图 → 报错（题面自相矛盾）；
    *   ② 提到「装置图／结构示意图／流程图／图象／原子结构」却没有图 → 报错。
    *
    * 例外同样是**卷面策略**类条目（`chem-exam-strategy-*`）：它们说「先看装置图」
    * 是讲答题顺序，不是给自己的正文配图。
    */
-  const SAY_FIG = /如图|图中|下图|见图|图甲|图乙|图丙/;
-  const SAY_CHART =
-    /装置图|结构示意图|示意图|流程图|模型图|图象|图像|坐标图|原子结构|粒子模型|微观示意/;
   const checkFigureText = (
     where: string,
     at: string,
     text: string,
     figs: ({ id?: string; prims?: unknown[] } | undefined)[],
   ): void => {
-    if (/strategy/.test(at)) return;
+    if (isStrategyTopic(at)) return;
     if (figs.some((f) => f && Array.isArray(f.prims) && f.prims.length)) return;
-    if (SAY_FIG.test(text)) {
-      bad += 1;
-      err(`${at}: ${where} 写了「如图／图中」却没有配图（题面得有图可指）`);
-    } else if (SAY_CHART.test(text)) {
-      bad += 1;
-      err(`${at}: ${where} 提到装置图／结构示意图／图象这类非图说不清的内容，却没有配图`);
-    }
+    const need = figureNeed(text, 'chemistry');
+    if (!need) return;
+    bad += 1;
+    err(
+      need === 'say'
+        ? `${at}: ${where} 写了「如图／图中」却没有配图（题面得有图可指）`
+        : `${at}: ${where} 提到装置图／结构示意图／图象这类非图说不清的内容，却没有配图`,
+    );
   };
 
   /**

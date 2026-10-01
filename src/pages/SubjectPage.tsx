@@ -17,6 +17,7 @@ import { ENTRY_META } from '../data/summary';
 import { useStudy } from '../store/StudyContext';
 import type { GradeId, ModuleId, Subject } from '../types';
 import { GRADES, cn } from '../lib/utils';
+import { gradesWithContent } from '../lib/termData';
 import { EmptyState, PageHeader, SectionTitle, Tag } from '../components/common';
 
 /**
@@ -236,6 +237,43 @@ export default function SubjectPage() {
               {g.short}
             </button>
           ))}
+        </div>
+      </section>
+
+      {/*
+        按学期浏览：模块网格是按中考复习排的（数与代数、中考专题……），
+        跟着学校进度学的学生更习惯按「这学期第几单元」找内容，所以给一条平行的入口，
+        进去是「教材册次 → 单元章节」两级（见 pages/TermPage.tsx）。
+      */}
+      <section className="stack stack--sm">
+        <SectionTitle sub="按教材册次与单元章节重排，适合跟着学校进度同步学">
+          按学期浏览
+        </SectionTitle>
+        <div className="grid grid--auto">
+          <Link className="module-card" to={`/s/${subject.id}/units${gradeQuery}`}>
+            <span className="module-card__accent" style={{ background: subject.color }} />
+            <span
+              className="module-card__icon"
+              style={{ background: `${subject.color}16`, color: subject.color }}
+            >
+              📚
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span className="module-card__name" style={{ display: 'block' }}>
+                按学期 · 单元章节
+              </span>
+              <span className="module-card__desc" style={{ display: 'block' }}>
+                七上 → 九下逐册展开，每个单元按教材顺序排列
+              </span>
+              <span className="module-card__foot">
+                <span>
+                  {gradeFilter === 'all'
+                    ? `共 ${gradesWithContent(subject.id).length} 个册次`
+                    : `从${GRADES.find((g) => g.id === gradeFilter)?.short ?? ''}进入`}
+                </span>
+              </span>
+            </span>
+          </Link>
         </div>
       </section>
 

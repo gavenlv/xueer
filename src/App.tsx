@@ -13,6 +13,7 @@ import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import AppShell from './components/AppShell';
 import Home from './pages/Home';
 import SubjectPage from './pages/SubjectPage';
+import TermPage from './pages/TermPage';
 import ModulePage from './pages/ModulePage';
 import DetailPage from './pages/DetailPage';
 import ExamTopicSectionPage from './pages/detail/ExamTopicSectionPage';
@@ -52,6 +53,13 @@ export default function App() {
         <Route path="s/:subjectId/wrong" element={<WrongBook />} />
         <Route path="s/:subjectId/exam" element={<SubjectExamRoute />} />
         <Route path="s/:subjectId/extras" element={<ExtrasPage />} />
+        {/*
+          「按学期 · 单元章节」：与模块视图（下面那条）共用同一批数据，
+          只是把内容按**教材册次 → 单元章节**重排，方便非初三的学生跟着学校进度学。
+          静态段 `units` 会优先于动态的 `:moduleId`，但显式写在前面，读代码的人不必
+          去回忆「静态优先」这条匹配规则——就像上面的 `/sec/:sectionNo` 一样。
+        */}
+        <Route path="s/:subjectId/units" element={<TermPage />} />
         <Route path="s/:subjectId/:moduleId" element={<ModulePage />} />
         {/*
           题型专题的**章节页**：一页只讲一节（`/sec/<第几节>`）。

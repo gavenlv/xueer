@@ -14,6 +14,8 @@
  */
 
 import type { Entry, PhysicsFigure, PhysicsPaper, PhysicsTopic } from '../src/types';
+// 「图文配套」的判据与数学、化学共用一套（纯函数，另有自测）
+import { figureNeed, hasDrawableFigure, isStrategyTopic } from './figure-rules';
 import { allPapers, allTopics, TEXTBOOK_MODULE_IDS } from '../src/data/physics';
 
 /**
@@ -73,34 +75,30 @@ export function validatePhysics(opts: {
   };
 
   /**
-   * 图是不是「配」上了。
+   * 图是不是「配」上了（判据与数学、化学共用，见 `scripts/figure-rules.ts`）。
    *
-   * 判据只有两条，都从**正文自己说的话**出发：
-   *   ① 写了「如图／图中／下图」却**没有图** → 报错。这是题面自相矛盾：学生对着空气读题。
-   *   ② 提到「装置图／电路图／光路图／图象／天平读数」这类**成图说法**却没有图 → 报错。
-   *      这类话在物理里几乎都要一张图才落得下去（读数题要表盘、实验题要装置、图像题要曲线）。
-   *
-   * 唯一的例外是**卷面策略**类条目（`phy-exam-strategy-*`）：它们说「先读实验题的装置图」
-   * 是在讲答题方法，不是给自己的正文配图；对它们报错只会逼作者删掉有用的表述。
+   *   ① 写了「如图／图中／下图」却**没有图** → 报错：题面自相矛盾，学生对着空气读题；
+   *   ② 提到「装置图／电路图／光路图／图象／天平读数」这类**成图说法**却没有图 → 报错：
+   *      这类话在物理里几乎都要一张图才落得下去（读数题要表盘、实验题要装置、图像题要曲线）；
+   *   ③ 卷面策略条目（`phy-exam-strategy-*`）豁免——它们说「先读实验题的装置图」
+   *      是在讲答题方法，不是给自己的正文配图。
    */
-  const SAY_FIG = /如图|图中|下图|见图|图甲|图乙|图丙/;
-  const SAY_CHART =
-    /电路图|光路图|受力示意图|受力分析|装置图|示意图|图象|图像|坐标图|表盘|读数示意|(?:电流表|电压表|温度计|体温计|天平|量筒|弹簧测力计|停表|刻度尺)的?读数/;
   const checkFigureText = (
     where: string,
     at: string,
     text: string,
     figs: (PhysicsFigure | undefined)[],
   ): void => {
-    if (/strategy/.test(at)) return;
-    if (figs.some((f) => f && f.prims?.length)) return;
-    if (SAY_FIG.test(text)) {
-      bad += 1;
-      err(`${at}: ${where} 写了「如图／图中」却没有配图（题面得有图可指）`);
-    } else if (SAY_CHART.test(text)) {
-      bad += 1;
-      err(`${at}: ${where} 提到装置图／图象／读数这类非图说不清的内容，却没有配图`);
-    }
+    if (isStrategyTopic(at)) return;
+    if (hasDrawableFigure(figs)) return;
+    const need = figureNeed(text, 'physics');
+    if (!need) return;
+    bad += 1;
+    err(
+      need === 'say'
+        ? `${at}: ${where} 写了「如图／图中」却没有配图（题面得有图可指）`
+        : `${at}: ${where} 提到装置图／图象／读数这类非图说不清的内容，却没有配图`,
+    );
   };
 
   for (const t of allTopics as PhysicsTopic[]) {

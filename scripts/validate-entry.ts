@@ -32,9 +32,19 @@ import { allTopics, allPapers } from '../src/data/history';
 // allTopics 含 pol-exam 的「题型专题」（与整卷共用 pol-exam），allPapers 只含卷子：
 // 校验卷面结构必须从 allPapers 取，不能按 moduleId === 'pol-exam' 从条目里筛。
 import { allPapers as polPapers, allTopics as polTopics } from '../src/data/politics';
+// 「图文配套」的判据与三科共用（纯函数，另有自测，见下面的「图文配套规则自测」）
+import {
+  figureLetters,
+  figureNeed,
+  hasDrawableFigure,
+  isStrategyTopic,
+  pointLetters,
+} from './figure-rules';
 import { validateChemistry } from './validate-chemistry';
 import { validateAllExamTopics } from './validate-exam-topics';
 import { validatePhysics } from './validate-physics';
+// 「按学期 · 单元章节」的排序逻辑（纯函数），下面有自测
+import { chineseNumberText, groupByUnit } from '../src/lib/termTree';
 import type { EnglishKnowledge, EnglishPaper, PoliticsPaper } from '../src/types';
 import { BOOK_EXAM_POINT_TAGS } from '../src/lib/bookExams';
 import { DAILY_LINES, ENTRY_META, MODULE_TOTALS } from '../src/data/summary';
@@ -150,88 +160,10 @@ function checkMathFigure(where: string, fig?: { id?: string; alt?: string; prims
   }
 }
 
-/** 写法类缩写：`$SSS$`、`$\\mathrm{Rt}\\triangle ABC$` 里的 Rt 不是点名字母 */
-const ACRONYMS = new Set(['SSS', 'SAS', 'ASA', 'AAS', 'SSA', 'AAA', 'HL', 'Rt', 'Rt△']);
-
 /**
- * 量名字母：`S` 是面积、`V` 是体积、`R` 是半径，几何图上也**不用**这几个字母标点
- * （与量名撞车，教材一律避开），所以不要求它们在图上出现。
+ * 数学「图文配套」的判据本身（`pointLetters`／`figureLetters`）已抽到 `scripts/figure-rules.ts`：
+ * 三科共用一套实现，规则不会分叉；那里还有自测用例，改规则时会立刻发现放宽了没有。
  */
-const QUANTITY_NAMES = new Set(['S', 'V', 'R']);
-
-/**
- * 「点 $A$」「交于点 $O$」「延长到 $E$」这类**上下文**——单个大头字母只有在这种
- * 语境里才是「图上的点」；`$A$、$B$ 两种型号`、`$\frac{A}{B}$` 里的 A、B 只是代号。
- */
-const POINT_CONTEXT = '点|顶点|交点|中点|端点|圆心|原点|垂足|交于|延长到|延长|连接|取|记为|记作|设为';
-
-/** 几何／函数／坐标语境的标志词：没有它们，正文里的字母一律按代数变量看待 */
-const GEOM_CONTEXT =
-  /点|线段|直线|射线|数轴|角|边|三角形|四边形|圆|弧|切线|垂直|垂足|平行|中点|交于|相交|延长|连接|坐标|图象|图像|对称|旋转|平移|全等|相似|勾股|原点/;
-
-/**
- * 正文是否在**用字母指代点／线段**（「$D$ 是 $AB$ 的中点」）。
- *
- * 这是「图文配套」的判据：文字用字母说话，图上就必须有这些字母。
- * 只认三种写法，避免把变量、代号、量名当成点：
- *
- *   ① 几何记号：`$\triangle ABC$`、`$\angle ACD$`、`$\odot O$`；
- *   ② 连写的大写字母串：`$AB$`、`$ABCD$`（单字母不算，`$A$` 可能是型号或变量）；
- *   ③ 点相关上下文里的单字母：`点 $P$`、`交于点 $O$`、`延长到 $E$`。
- *
- * 走这三条的代价是可能漏掉极少数写法（如「以 $A$ 为圆心」），但换来的是不误报——
- * 误报会逼着作者给「事件 $A$」也画一张图，红线就没人看了。
- */
-function pointLetters(text: string): Set<string> {
-  const out = new Set<string>();
-  if (!text) return out;
-  // 先过一道语境闸门：只有几何／函数／坐标类条目才可能「用字母指代点」。
-  // 代数里的连写字母是真的式子——`$A^{3}+B^{3}$` 的 A、B 是表达式，`$AB=0$` 的 AB 是两个因式的积，
-  // 给它们要求图上标点纯属误报，而误报会让这条红线失去约束力。
-  if (!GEOM_CONTEXT.test(text)) return out;
-  for (const m of text.match(/\$[^$]*\$/g) ?? []) {
-    const raw = m.slice(1, -1);
-    for (const x of raw.matchAll(/\\triangle\s*([A-Z]+)/g)) for (const ch of x[1]) out.add(ch);
-    for (const x of raw.matchAll(/\\angle\s*([A-Z]+)/g)) for (const ch of x[1]) out.add(ch);
-    for (const x of raw.matchAll(/\\odot\s*([A-Z])/g)) out.add(x[1]);
-    // 去掉 LaTeX 命令后剩下的连写大写字母（`\mathrm{Rt}` 残渣、`\frac` 之类都不是）
-    const body = raw.replace(/\\[a-zA-Z]+/g, ' ');
-    for (const m2 of body.matchAll(/([A-Z]{2,4})(\s*=\s*0)?/g)) {
-      const run = m2[1];
-      if (ACRONYMS.has(run)) continue;
-      // `$AB=0$ 得 $A=0$ 或 $B=0$`：这里的 AB 是两个因式的积，是代数写法而不是线段
-      if (m2[2]) continue;
-      for (const ch of run) out.add(ch);
-    }
-  }
-  const ctx = new RegExp(`(?:${POINT_CONTEXT})\\s*\\$\\s*([A-Z])\\s*\\$`, 'g');
-  for (const m of text.matchAll(ctx)) out.add(m[1]);
-  for (const ch of [...out]) if (QUANTITY_NAMES.has(ch)) out.delete(ch);
-  return out;
-}
-
-/**
- * 图里已经标出的字母（带 label 的点，或单字母的 text 标注）。
- *
- * 点的标注可以是「A」，也可以是「A(0,3.5)」这种带坐标的写法，两者都算标了 A；
- * 下标记号（`B₁`）按主字母 B 计。
- */
-function figureLetters(fig: PhysicsFigure): Set<string> {
-  const out = new Set<string>();
-  const take = (s: string) => {
-    const m = /^([A-Z])/.exec(s.trim());
-    if (m) out.add(m[1]);
-  };
-  for (const p of fig.prims) {
-    if (p.t === 'dot' && p.label) take(p.label);
-    // 「A」与「A(2,3)」「A(0, 3)」都算标了 A：后者是坐标标注，点名字母在最前面
-    else if (p.t === 'text' && /^[A-Z][′']?\s*(?:[（(]|$)/.test(p.text.trim())) take(p.text.trim());
-    // 坐标系图元自带原点字母 O（渲染器画出来的），不能因为作者没再写一个 dot 就判「没标」
-    else if (p.t === 'plane') take('O');
-    else if (p.t === 'axis' && p.origin) take('O');
-  }
-  return out;
-}
 
 /** 数学条目里每个**能配图的位置**：概念、系统讲解、公式、例题、题目 */
 function mathFigureItems(
@@ -1841,6 +1773,212 @@ const mergeCases: [string, boolean, string][] = [
 const mergeFailures = mergeCases.filter(([, ok]) => !ok);
 
 
+/* ------------------------ 图文配套规则自测 ------------------------ */
+
+/**
+ * 「图文配套」这条红线全由正则与阈值构成，最容易出的两种事故：
+ *
+ *   ① 放宽到**误报**——给「事件 $A$」「$A^{3}+B^{3}$」「$A$、$B$ 两种型号」也要求画图，
+ *      作者很快就把红线当噪声，整条判据失效；
+ *   ② 收紧到**漏报**——该拦的放过，页面上「如图」就长期没有图可指。
+ *
+ * 下面用**真实内容里出现过**的写法把两头都钉住：改规则时若把某一类写崩，这里立刻红。
+ */
+const sortedLetters = (s: Set<string>) => [...s].sort().join('');
+const fig = (prims: unknown[]): PhysicsFigure => ({ prims } as unknown as PhysicsFigure);
+
+const figureRuleCases: [string, boolean, string][] = [
+  // —— 数学：什么算「用字母指代点」 ——
+  [
+    '「点 $D$ 是 $AB$ 的中点」要标出 A、B、D',
+    sortedLetters(pointLetters('点 $D$ 是 $AB$ 的中点')) === 'ABD',
+    sortedLetters(pointLetters('点 $D$ 是 $AB$ 的中点')),
+  ],
+  [
+    '「$\\triangle ABC$ 中 $\\angle BAC=90^\\circ$」要标出 A、B、C',
+    sortedLetters(pointLetters('在 $\\triangle ABC$ 中，$\\angle BAC=90^\\circ$')) === 'ABC',
+    sortedLetters(pointLetters('在 $\\triangle ABC$ 中，$\\angle BAC=90^\\circ$')),
+  ],
+  [
+    '「$\\odot O$ 的半径是 5，弦 $AB=8$」要标出 O、A、B',
+    sortedLetters(pointLetters('$\\odot O$ 的半径是 5，弦 $AB=8$')) === 'ABO',
+    sortedLetters(pointLetters('$\\odot O$ 的半径是 5，弦 $AB=8$')),
+  ],
+  [
+    '立方和公式 $A^{3}+B^{3}$ 不算点名（否则整章代数都要画图）',
+    pointLetters('套用 $A^{3}+B^{3}=(A+B)(A^{2}-AB+B^{2})$ 分解因式').size === 0,
+    [...pointLetters('套用 $A^{3}+B^{3}=(A+B)(A^{2}-AB+B^{2})$ 分解因式')].join(''),
+  ],
+  [
+    '「$AB=0$ 得 $A=0$ 或 $B=0$」里的 AB 是两个因式的积，不是线段',
+    pointLetters('由 $AB=0$ 得 $A=0$ 或 $B=0$，故原方程可解').size === 0,
+    [...pointLetters('由 $AB=0$ 得 $A=0$ 或 $B=0$，故原方程可解')].join(''),
+  ],
+  [
+    '概率题「事件 $A$」没有几何语境，不要图',
+    pointLetters('求事件 $A$ 发生的概率').size === 0,
+    [...pointLetters('求事件 $A$ 发生的概率')].join(''),
+  ],
+  [
+    '「$A$、$B$ 两种型号」是型号名，不是点',
+    pointLetters('某公司计划购买 $A$、$B$ 两种型号的电脑共 10 台').size === 0,
+    [...pointLetters('某公司计划购买 $A$、$B$ 两种型号的电脑共 10 台')].join(''),
+  ],
+  [
+    '量名 $R$（半径）不要求标在图上',
+    !pointLetters('圆的周长 $C=2\\pi R$，其中 $R$ 为半径').has('R'),
+    sortedLetters(pointLetters('圆的周长 $C=2\\pi R$，其中 $R$ 为半径')),
+  ],
+  [
+    '图上标注写成「A(2,3)」也算标了点 A',
+    sortedLetters(figureLetters(fig([{ t: 'text', x: 1, y: 1, text: 'A(2,3)' }]))) === 'A',
+    sortedLetters(figureLetters(fig([{ t: 'text', x: 1, y: 1, text: 'A(2,3)' }]))),
+  ],
+  [
+    '面名写在图元 label 上（正方体展开图）也算标了字母',
+    sortedLetters(figureLetters(fig([{ t: 'rect', x: 18, y: 18, w: 16, h: 16, label: 'E' }]))) === 'E',
+    sortedLetters(figureLetters(fig([{ t: 'rect', x: 18, y: 18, w: 16, h: 16, label: 'E' }]))),
+  ],
+  [
+    '说明文字「AB = 4」不算点名（否则图上一句说明就能冒充点名）',
+    figureLetters(fig([{ t: 'text', x: 1, y: 1, text: 'AB = 4' }])).size === 0,
+    sortedLetters(figureLetters(fig([{ t: 'text', x: 1, y: 1, text: 'AB = 4' }]))),
+  ],
+  [
+    '坐标系图元自带原点 O，不能判成「没标」',
+    figureLetters(fig([{ t: 'plane', x: 50, y: 50, right: 20, left: 20, up: 20, down: 20 }])).has('O'),
+    sortedLetters(figureLetters(fig([{ t: 'plane', x: 50, y: 50, right: 20, left: 20, up: 20, down: 20 }]))),
+  ],
+
+  // —— 理科：什么算「指着图说话」 ——
+  [
+    '物理写「如图，…」→ 必须有图',
+    figureNeed('如图，物体在水平面上做匀速直线运动', 'physics') === 'say',
+    String(figureNeed('如图，物体在水平面上做匀速直线运动', 'physics')),
+  ],
+  [
+    '物理提「装置图」→ 必须有图',
+    figureNeed('写出该装置图的连接顺序', 'physics') === 'chart',
+    String(figureNeed('写出该装置图的连接顺序', 'physics')),
+  ],
+  [
+    '物理提「电流表的读数」→ 必须有图',
+    figureNeed('读出电流表的读数并写出分度值', 'physics') === 'chart',
+    String(figureNeed('读出电流表的读数并写出分度值', 'physics')),
+  ],
+  [
+    '化学提「装置图」→ 必须有图',
+    figureNeed('根据装置图说明试管口为什么向下倾斜', 'chemistry') === 'chart',
+    String(figureNeed('根据装置图说明试管口为什么向下倾斜', 'chemistry')),
+  ],
+  [
+    '化学的「量筒读数」不强制配图（读数类判据只归物理）',
+    figureNeed('读出量筒中液体的读数', 'chemistry') === null,
+    String(figureNeed('读出量筒中液体的读数', 'chemistry')),
+  ],
+  [
+    '纯文字叙述不要求配图',
+    figureNeed('分子、原子都在不断运动', 'physics') === null,
+    String(figureNeed('分子、原子都在不断运动', 'physics')),
+  ],
+  [
+    '卷面策略条目豁免（它讲的是答题方法，不是给自己的正文配图）',
+    isStrategyTopic('[物理] phy-exam-strategy-1'),
+    String(isStrategyTopic('[物理] phy-exam-strategy-1')),
+  ],
+  [
+    '内容条目不豁免',
+    !isStrategyTopic('[物理] phy-mech-3'),
+    String(isStrategyTopic('[物理] phy-mech-3')),
+  ],
+  [
+    '空 prims 等于没画图',
+    !hasDrawableFigure([fig([])]),
+    String(hasDrawableFigure([fig([])])),
+  ],
+  [
+    '有图元才算配了图',
+    hasDrawableFigure([undefined, fig([{ t: 'text', x: 0, y: 0, text: 'x' }])]),
+    String(hasDrawableFigure([undefined, fig([{ t: 'text', x: 0, y: 0, text: 'x' }])])),
+  ],
+];
+
+const figureRuleFailures = figureRuleCases.filter(([, ok]) => !ok);
+
+/* ------------------------ 「按学期 · 单元章节」排序自测 ------------------------ */
+
+/**
+ * 这一页踩过三个坑，每一个都会让学生看到**错的目录**：
+ *
+ *   ① 条目是按模块串联的，模块顺序 ≠ 教材章序（物理八下数据里第 1 章后面紧跟第 6 章，
+ *      化学是第三 → 第四 → 第二 → 第六 → 第五）——必须按解析出的章号排序；
+ *   ② 同一章有多种写法（「第16章 整式的乘法、第17章 因式分解」与单独的「第17章 因式分解」），
+ *      按字符串分组会把一章拆成两组；
+ *   ③ 教材有、本站没录内容的章会整个消失——必须按册补出占位单元。
+ *
+ * 这三条都在这里钉死：改坏了立刻红，不用等学生反馈目录是乱的。
+ */
+const unitEntry = (label: string, grade: GradeId = '7a'): Entry =>
+  ({ id: label, moduleId: 'math-number', title: label, grade, data: { chapter: label } }) as unknown as Entry;
+const unitOrder = (labels: string[], subjectId = 'math', grade: GradeId = '7a') =>
+  groupByUnit(labels.map((l) => unitEntry(l, grade)), subjectId, grade);
+/** 只看**有内容**的单元序号：排序用例不掺杂补出来的占位单元 */
+const unitFilledOrder = (labels: string[], subjectId = 'math', grade: GradeId = '7a') =>
+  unitOrder(labels, subjectId, grade)
+    .filter((g) => !g.empty)
+    .map((g) => `${g.no ?? '—'}`)
+    .join(',');
+
+const termCases: [string, boolean, string][] = [
+  [
+    '乱序的章要按章号排好（物理八上数据是 1,6,2,4,5,3）',
+    unitFilledOrder(['第 6 章 质量与密度', '第 1 章 机械运动', '第 2 章 声现象'], 'physics', '8a') === '1,2,6',
+    unitFilledOrder(['第 6 章 质量与密度', '第 1 章 机械运动', '第 2 章 声现象'], 'physics', '8a'),
+  ],
+  [
+    '合写标签与单章标签并回同一章（第16章…、第17章… + 第17章）',
+    (() => {
+      const g = unitOrder(['人教版八上 · 第16章 整式的乘法、第17章 因式分解', '人教版八上 · 第17章 因式分解'], 'math', '8a');
+      return g.filter((x) => !x.empty).length === 1 && g.find((x) => x.no === 16)?.entries.length === 2;
+    })(),
+    `有内容组 ${unitFilledOrder(['人教版八上 · 第16章 整式的乘法、第17章 因式分解', '人教版八上 · 第17章 因式分解'], 'math', '8a')} · ` +
+      `第16章条目数 ${unitOrder(['人教版八上 · 第16章 整式的乘法、第17章 因式分解', '人教版八上 · 第17章 因式分解'], 'math', '8a').find((x) => x.no === 16)?.entries.length}`,
+  ],
+  [
+    '教材有、本站没内容的章要补占位（数学七上缺第 3 章）',
+    unitOrder(['人教版七上 · 第1章 有理数'], 'math', '7a').some((g) => g.empty && g.no === 3),
+    unitOrder(['人教版七上 · 第1章 有理数'], 'math', '7a')
+      .filter((g) => g.empty)
+      .map((g) => g.no)
+      .join(','),
+  ],
+  [
+    '中文数字的单元能解析（化学「第三单元」→ 3）',
+    unitOrder(['人教版九年级 · 第三单元 物质构成的奥秘'], 'chemistry', '9a').some((g) => g.no === 3 && !g.empty),
+    unitFilledOrder(['人教版九年级 · 第三单元 物质构成的奥秘'], 'chemistry', '9a'),
+  ],
+  [
+    '范围写法覆盖的章号不再重复补占位（第18—19章 同时顶掉第18、19章）',
+    unitOrder(['人教版九年级 · 第 18—19 章 焦耳定律与生活用电'], 'physics', '9a').every((g) => g.no !== 19 || !g.empty),
+    unitOrder(['人教版九年级 · 第 18—19 章 焦耳定律与生活用电'], 'physics', '9a')
+      .filter((g) => g.no === 19)
+      .map((g) => (g.empty ? '空占位' : '有内容'))
+      .join(','),
+  ],
+  [
+    '没有章号的类别排在最后（数学的「应用题 · 行程」不是教材章）',
+    (() => {
+      const g = unitOrder(['应用题 · 行程', '人教版七上 · 第4章 整式的加减']);
+      return g[g.length - 1]?.no === null && g[g.length - 1].label === '应用题 · 行程';
+    })(),
+    unitFilledOrder(['应用题 · 行程', '人教版七上 · 第4章 整式的加减']),
+  ],
+  ['中文数字输出（第十一单元）', chineseNumberText(11) === '十一', chineseNumberText(11)],
+  ['中文数字输出（第三单元）', chineseNumberText(3) === '三', chineseNumberText(3)],
+];
+
+const termFailures = termCases.filter(([, ok]) => !ok);
+
 /* ------------------------ 判分逻辑自测 ------------------------ */
 
 // 判分是应用的核心路径：这里用真实数据里出现过的答案写法做回归测试，
@@ -2836,6 +2974,15 @@ const gradeTotal = fillCases.length + mathCases.length + duanjuCases.length + nu
 const gradeBad =
   fillFailures.length + mathFailures.length + duanjuFailures.length + numericFailures.length;
 console.log(`  判分逻辑自测      ${gradeTotal - gradeBad} / ${gradeTotal} 通过`);
+// 「图文配套」的判据是数学／物理／化学共用的一套（scripts/figure-rules.ts），
+// 这条自测保证规则本身不被改宽或改窄——内容再多，判据崩了也等于没查。
+console.log(
+  `  图文配套规则自测  ${figureRuleCases.length - figureRuleFailures.length} / ${figureRuleCases.length} 通过`,
+);
+// 「按学期 · 单元章节」的排序：乱序输入要排好、合写标签要并章、缺内容的章要占位
+console.log(
+  `  单元排序自测      ${termCases.length - termFailures.length} / ${termCases.length} 通过`,
+);
 for (const [input, answer, expect, note] of fillFailures) {
   console.log(`    ❌ [文字] 输入「${input}」对答案「${answer}」应为 ${expect}（${note}）`);
 }
@@ -3033,7 +3180,9 @@ if (
   progressFailures.length > 0 ||
   reciteFailures.length > 0 ||
   cardFailures.length > 0 ||
-  mergeFailures.length > 0
+  mergeFailures.length > 0 ||
+  figureRuleFailures.length > 0 ||
+  termFailures.length > 0
 ) {
   if (errors.length) {
     console.log(`\n❌ 数据错误 ${errors.length} 条：`);
@@ -3054,6 +3203,14 @@ if (
   }
   if (mergeFailures.length > 0) {
     console.log(`\n❌ 云端合并规则自测失败 ${mergeFailures.length} 条`);
+  }
+  if (figureRuleFailures.length > 0) {
+    console.log(`\n❌ 图文配套规则自测失败 ${figureRuleFailures.length} 条：`);
+    for (const [note, , actual] of figureRuleFailures) console.log(`    ❌ ${note}（实际：${actual}）`);
+  }
+  if (termFailures.length > 0) {
+    console.log(`\n❌ 「按学期 · 单元章节」排序自测失败 ${termFailures.length} 条：`);
+    for (const [note, , actual] of termFailures) console.log(`    ❌ ${note}（实际：${actual}）`);
   }
   process.exitCode = 1;
 } else {

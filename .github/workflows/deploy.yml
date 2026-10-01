@@ -34,6 +34,16 @@ jobs:
       - name: 安装依赖
         run: pnpm install --frozen-lockfile
 
+      # 数据红线必须在部署前跑：图文配套（写的「如图」有没有图、图上有没有点名）、
+      # 判分自测、结构完整性等几百条断言都在 `pnpm validate` 里。
+      # 以前 CI 只跑 `pnpm build`（只做类型检查与打包），这些红线一次都没被自动执行过，
+      # 于是「内容缺图」这类问题只能靠人翻页面发现。
+      - name: 数据校验（图文配套 / 判分自测等红线）
+        run: pnpm validate
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
       - name: 构建（含类型检查）
         run: pnpm build
         env:

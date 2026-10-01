@@ -62,6 +62,14 @@ const routes: string[] = [
         `/practice/${m.id}`,
       ]),
   ]),
+  // 「按学期 · 单元章节」：与模块视图共用同一批数据、按教材册次重排的第二条入口。
+  // 每条都要能渲染；带 `?grade=` 的三条分别覆盖七上（语文/数学）与九上（物理），
+  // 再加一条 `grade=all` 走「跨册」分支。
+  ...SUBJECTS.filter((s) => s.available).map((s) => `/s/${s.id}/units`),
+  '/s/chinese/units?grade=7a',
+  '/s/math/units?grade=7a',
+  '/s/physics/units?grade=9a',
+  '/s/chinese/units?grade=all',
   // 待开发科目的轮廓页：学科页与每个占位模块页都必须能渲染出「待开发」而不是空白
   ...SUBJECTS.filter((s) => !s.available).flatMap((s) => [
     `/s/${s.id}`,
