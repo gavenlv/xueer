@@ -13,7 +13,7 @@ import { useAuth } from '../auth/AuthContext';
 import { isCloudConfigured } from '../lib/supabase';
 import { useStreak, useStudy } from '../store/StudyContext';
 import { ENTRY_META, MODULE_TOTALS } from '../data/summary';
-import { isMastered } from '../lib/recite';
+import { isRecited } from '../lib/recite';
 import { cn, dateKey } from '../lib/utils';
 
 /** 用户相关入口：不针对某一科，所以不属于科目一级菜单 */
@@ -36,7 +36,7 @@ const TOTAL_ENTRIES = ENTRY_META.length;
 const TOTAL_CARDS = MODULE_TOTALS.reduce((n, m) => n + m.cards, 0);
 
 /**
- * 「我的」里的个人数据小结：连续打卡 / 今日答题 / 已学内容 / 已标熟知识点。
+ * 「我的」里的个人数据小结：连续打卡 / 今日答题 / 已学内容 / 已背诵知识点。
  *
  * 这几个数字原先摊在首页（今日概览、我的进度）与学科页（本科学习进度）上，
  * 同一份数据在三处重复；现在只留在「我的」——首页与学科页专注导航，
@@ -48,7 +48,7 @@ function UserStat() {
   const today = state.daily[dateKey()]?.answered ?? 0;
   const studied = Object.values(state.progress).filter((p) => (p.studied ?? 0) > 0).length;
   let mastered = 0;
-  for (const rec of Object.values(state.cards ?? {})) if (isMastered(rec)) mastered += 1;
+  for (const rec of Object.values(state.cards ?? {})) if (isRecited(rec)) mastered += 1;
 
   return (
     <div className="mystat">
@@ -72,7 +72,7 @@ function UserStat() {
           {mastered}
           <i> / {TOTAL_CARDS}</i>
         </span>
-        <span className="mystat__label">已标熟知识点</span>
+        <span className="mystat__label">已背诵知识点</span>
       </div>
     </div>
   );

@@ -123,7 +123,7 @@ export function PoemDetail({ entry, moduleName }: { entry: PoemEntry; moduleName
       </section>
 
       {/* 背诵训练（三级提示 + 小段遮罩 + 间隔重复） */}
-      <ReciteTrainer poem={poem} entryId={entry.id} />
+      <ReciteTrainer lines={poem.lines} entryId={entry.id} />
 
       {/* 名句 */}
       {poem.famousLines?.length ? (

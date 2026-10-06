@@ -2,7 +2,9 @@
  * 云端同步：状态规范化、双向合并与上传。
  *
  * 合并原则（全部幂等：同一对状态无论合并多少次结果一致，可放心双向同步）：
- * - progress / recite / cards：逐条按 lastAt 取较新；收藏取并集（布尔标记无时间戳）
+ * - progress：逐条按 lastAt 取较新；收藏取并集（布尔标记无时间戳）
+ * - recite / cards：**字段级**合并（计数取 max、明细取并集、达成时间取最早、排期跟最近一次背诵），
+ *   不能整条按 lastAt 新者胜——两台设备各背几天后同步，整条覆盖会把另一台的次数与明细抹掉
  * - wrong：逐条按 lastAt 取较新，并结合墓碑（wrongRemoved）让「答对消错」也能跨设备同步
  * - checkins：日期并集
  * - daily：每个计数取较大值（避免双向同步把同一天重复累加）
@@ -11,8 +13,9 @@
  *   不能拿 `'7a'` 当哨兵——「七上」既是默认值，也是学生会主动选的正常学段）
  */
 
-import type { GradeId, StudyState } from '../types';
+import type { CardAttempt, GradeId, StudyState } from '../types';
 import { supabase, LAST_SYNC_KEY } from './supabase';
+import { RECITE_ATTEMPT_KEEP } from './recite';
 
 /** 把任意来源（本地存储 / 云端 JSONB）的数据补全成完整 StudyState */
 export function normalizeStudyState(parsed: unknown): StudyState {
@@ -29,6 +32,64 @@ export function normalizeStudyState(parsed: unknown): StudyState {
     totalSeconds: typeof p.totalSeconds === 'number' && p.totalSeconds > 0 ? p.totalSeconds : 0,
     recite: p.recite ?? {},
     cards: p.cards ?? {},
+    // 刻意**不给** recite/cards 里的 `effDays` 补默认值：旧记录靠「没有 effDays」这一事实
+    // 走 `isRecited` 的存量兼容分支（有 masteredAt 即视为已背诵），补了 0 反而会把老进度判没。
+  };
+}
+
+/** 取两者中已定义且较大的一个（都没定义就返回 undefined） */
+function maxDefined(a?: number, b?: number): number | undefined {
+  if (a == null) return b;
+  if (b == null) return a;
+  return Math.max(a, b);
+}
+
+/** 取两者中已定义且较小的一个（都没定义就返回 undefined） */
+function minDefined(a?: number, b?: number): number | undefined {
+  if (a == null) return b;
+  if (b == null) return a;
+  return Math.min(a, b);
+}
+
+/**
+ * 背诵明细的并集：按时间排序、同一时刻只留一条，再截到最近的若干条。
+ *
+ * 明细是「第几次、什么时候、背了没记住」的回放记录，两端都要保留；
+ * 用 `at` 作去重口径，是因为同一时刻不可能点两次不同结果。
+ */
+function mergeAttempts(a?: CardAttempt[], b?: CardAttempt[]): CardAttempt[] {
+  const all = [...(a ?? []), ...(b ?? [])].sort((x, y) => x.at - y.at);
+  const out: CardAttempt[] = [];
+  for (const it of all) if (out[out.length - 1]?.at !== it.at) out.push(it);
+  return out.slice(-RECITE_ATTEMPT_KEEP);
+}
+
+/** 卡片与整篇共有的背诵字段（可选字段只在有值时写出，避免把 undefined 落盘） */
+type ReciteFields = {
+  times: number;
+  streak: number;
+  effDays?: number;
+  lastCountedAt?: number;
+  recitedAt?: number;
+  attempts?: CardAttempt[];
+};
+
+/**
+ * 背诵记录的**字段级**合并：计数取 max（单调不复活）、明细取并集、达成时间取最早。
+ * 排期（`lastAt` / `dueAt` / `level`）不在返回值里——由调用方取「最近一次背诵」那条。
+ */
+function mergeReciteFields(l: ReciteFields, r: ReciteFields): ReciteFields {
+  const effDays = maxDefined(l.effDays, r.effDays);
+  const lastCountedAt = maxDefined(l.lastCountedAt, r.lastCountedAt);
+  const recitedAt = minDefined(l.recitedAt, r.recitedAt);
+  const attempts = mergeAttempts(l.attempts, r.attempts);
+  return {
+    times: Math.max(l.times, r.times),
+    streak: Math.max(l.streak, r.streak),
+    ...(effDays != null ? { effDays } : {}),
+    ...(lastCountedAt != null ? { lastCountedAt } : {}),
+    ...(recitedAt != null ? { recitedAt } : {}),
+    ...(attempts.length ? { attempts } : {}),
   };
 }
 
@@ -63,19 +124,34 @@ export function mergeStates(local: StudyState, remote: StudyState): StudyState {
     if (tomb) wrongRemoved[id] = tomb;
   }
 
-  // 背诵记录：lastAt 新者胜
+  // 背诵记录（整篇）：字段级合并，排期跟最近一次背诵，其余字段取并集/最大值
   const recite: NonNullable<StudyState['recite']> = { ...(local.recite ?? {}) };
   for (const [id, r] of Object.entries(remote.recite ?? {})) {
     const l = recite[id];
-    if (!l || r.lastAt > l.lastAt) recite[id] = r;
+    if (!l) {
+      recite[id] = r;
+      continue;
+    }
+    const newer = r.lastAt > l.lastAt ? r : l;
+    recite[id] = { ...newer, ...mergeReciteFields(l, r) };
   }
 
-  // 知识点卡片记录：同样 lastAt 新者胜
-  // （熟练度与「标熟」都由 streak 推导，不另存，因此合并时不会出现两个字段互相矛盾）
+  // 知识点卡片记录：同样字段级合并（明细并集、计数取 max）；
+  // `masteredAt` 是旧口径的达成时间，取最早的那个，作存量兼容
   const cards: NonNullable<StudyState['cards']> = { ...(local.cards ?? {}) };
   for (const [id, r] of Object.entries(remote.cards ?? {})) {
     const l = cards[id];
-    if (!l || r.lastAt > l.lastAt) cards[id] = r;
+    if (!l) {
+      cards[id] = r;
+      continue;
+    }
+    const newer = r.lastAt > l.lastAt ? r : l;
+    const masteredAt = minDefined(l.masteredAt, r.masteredAt);
+    cards[id] = {
+      ...newer,
+      ...mergeReciteFields(l, r),
+      ...(masteredAt != null ? { masteredAt } : {}),
+    };
   }
 
   // 打卡日期并集

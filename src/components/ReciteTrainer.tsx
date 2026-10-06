@@ -7,11 +7,13 @@
  *   ③ 逐段遮罩（**按小段遮**：五言绝句就是五个字一小段）
  *   ④ 全遮（只看结构）
  * 学生自评「背下来了 / 没背下来」，据此决定下次复习时间。
+ *
+ * 只认 `lines`（一句一行），所以古诗词与文言文通用：古诗传诗行，
+ * 文言文把正文按句切开传入即可，训练与记录口径完全一致。
  */
 
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { Poem } from '../types';
 import { useStudy } from '../store/StudyContext';
 import { daysUntilDue, levelLabel } from '../lib/recite';
 import { cn } from '../lib/utils';
@@ -158,7 +160,17 @@ function SegmentMask({ lines }: { lines: string[] }) {
   );
 }
 
-export function ReciteTrainer({ poem, entryId }: { poem: Poem; entryId: string }) {
+export function ReciteTrainer({
+  lines,
+  entryId,
+  links = true,
+}: {
+  /** 要背的正文，一句一行（古诗传诗行，文言文按句切分） */
+  lines: string[];
+  entryId: string;
+  /** 是否显示「用默写检验一遍」这类回归练习入口（文言文暂无用默写页，置 false） */
+  links?: boolean;
+}) {
   const { state, recordReciteResult } = useStudy();
   const [stage, setStage] = useState(0);
   const [justJudged, setJustJudged] = useState<null | boolean>(null);
@@ -166,8 +178,8 @@ export function ReciteTrainer({ poem, entryId }: { poem: Poem; entryId: string }
   const rec = state.recite?.[entryId];
 
   const maskedLines = useMemo(
-    () => poem.lines.map((l) => maskLine(l, stage)),
-    [poem.lines, stage],
+    () => lines.map((l) => maskLine(l, stage)),
+    [lines, stage],
   );
 
   const judge = (ok: boolean) => {
@@ -219,7 +231,7 @@ export function ReciteTrainer({ poem, entryId }: { poem: Poem; entryId: string }
 
         {/* 逐段遮罩：按小段单独遮；其余级别按行遮 */}
         {stage === 2 ? (
-          <SegmentMask lines={poem.lines} />
+          <SegmentMask lines={lines} />
         ) : (
           <div className="recite__body">
             {maskedLines.map((line, i) => (
@@ -267,9 +279,11 @@ export function ReciteTrainer({ poem, entryId }: { poem: Poem; entryId: string }
         </div>
 
         <div className="row row--wrap" style={{ marginTop: 14 }}>
-          <Link className="btn btn--sm" to={`/practice/poems/${entryId}`}>
-            ✍️ 用默写检验一遍
-          </Link>
+          {links ? (
+            <Link className="btn btn--sm" to={`/practice/poems/${entryId}`}>
+              ✍️ 用默写检验一遍
+            </Link>
+          ) : null}
           <Link className="btn btn--sm btn--ghost" to="/s/chinese/recite">
             📅 今日背诵清单
           </Link>

@@ -50,7 +50,7 @@ import type {
   QuizQuestion,
   ReciteCard,
 } from '../types';
-import { isMastered } from './recite';
+import { isRecited } from './recite';
 
 /* ------------------------------------------------------------------ */
 /* 构造工具                                                            */
@@ -537,7 +537,7 @@ export interface CardStats {
   total: number;
   /** 已背过（至少打卡一次） */
   practiced: number;
-  /** 已标熟 */
+  /** 已背诵（跨天有效次数达标） */
   mastered: number;
   /** 今天该复习 */
   due: number;
@@ -558,7 +558,7 @@ export function cardStatsOf(
       continue;
     }
     practiced += 1;
-    if (isMastered(rec)) mastered += 1;
+    if (isRecited(rec)) mastered += 1;
     if (rec.dueAt <= now) due += 1;
   }
   return { total: cards.length, practiced, mastered, due };

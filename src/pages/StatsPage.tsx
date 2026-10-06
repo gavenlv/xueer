@@ -11,7 +11,7 @@ import { useStreak, useStudy } from '../store/StudyContext';
 import { useAuth } from '../auth/AuthContext';
 import { isCloudConfigured } from '../lib/supabase';
 import { dateKey, formatDuration, pct, shiftDate } from '../lib/utils';
-import { isMastered } from '../lib/recite';
+import { isRecited } from '../lib/recite';
 import { entryIdOfCard } from '../lib/reciteCards';
 import { useDataScope, useLazyEntries, DataLoading } from '../lib/useData';
 import { EmptyState, PageHeader, ProgressBar, SectionTitle, Stat, Tag } from '../components/common';
@@ -83,12 +83,12 @@ export default function StatsPage() {
       if (mid) {
         const s = byModule.get(mid) ?? { practiced: 0, mastered: 0 };
         s.practiced += 1;
-        if (isMastered(rec)) {
+        if (isRecited(rec)) {
           s.mastered += 1;
           mastered += 1;
         }
         byModule.set(mid, s);
-      } else if (isMastered(rec)) {
+      } else if (isRecited(rec)) {
         // 条目已下线（清单里查不到）时，掌握数仍然算进总数，别凭空少掉
         mastered += 1;
       }
@@ -269,7 +269,7 @@ export default function StatsPage() {
               <Stat value={totals.studied} label={`已学内容 / ${ENTRY_META.length}`} />
               <Stat
                 value={cardTotals.mastered}
-                label={`已标熟知识点 / ${grandTotals.cards}`}
+                label={`已背诵知识点 / ${grandTotals.cards}`}
                 tone="#1a9a6c"
               />
               <Stat value={totals.wrong} label="当前错题" tone="#d24f3d" />
@@ -283,7 +283,7 @@ export default function StatsPage() {
               </div>
               <ProgressBar value={totals.studied} max={Math.max(1, ENTRY_META.length)} thin />
               <div className="row row--between small">
-                <span>已标熟知识点（完全掌握）</span>
+                <span>已背诵知识点（完全掌握）</span>
                 <span className="bold">
                   {cardTotals.mastered} / {grandTotals.cards} 个
                 </span>
@@ -295,8 +295,8 @@ export default function StatsPage() {
                 thin
               />
               <div className="small muted">
-                学习不是看了就等于学了：知识点卡片连续背对 3 次（跨三天）才算标熟，
-                另有 {cardTotals.practiced} 个已背过但还没标熟。
+                学习不是看了就等于学了：知识点卡片累计背满 5 次（跨 5 天，每天最多算 1 次）才算「已背诵」，
+                另有 {cardTotals.practiced} 个已背过但还没背完。
               </div>
               <div className="row row--between small">
                 <span>总学习时长</span>
@@ -382,7 +382,7 @@ export default function StatsPage() {
                       已学 {studiedSum} / {entriesSum} 条
                     </span>
                     <span className="muted">
-                      已标熟 {masteredSum} / {cardSum} 个知识点
+                      已背诵 {masteredSum} / {cardSum} 个知识点
                     </span>
                   </div>
                   {group.rows.map((row) => (

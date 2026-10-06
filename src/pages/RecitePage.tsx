@@ -6,10 +6,11 @@
  * 原来的「今日背诵」只列古诗词篇目，学生点进去还得自己判断「这一篇我到底记住哪几句」。
  * 现在每一句默写、每一个历史时间点、每一条材料大题踩分点都是一张卡片：
  * 背一张，打卡一次（1 次、2 次…），按遗忘曲线排下一次复习，
- * **连续背对三次（跨三天）即标熟 = 完全掌握**，在学习进度里单独统计。
+ * **累计跨天有效 5 次即「已背诵」= 完全掌握**（同一天重复点只算 1 次），
+ * 每次点击都留下时间明细，在学习进度里单独统计。
  *
  * 于是「学过」与「掌握」被彻底分开：`已学内容` 是打开过多少条，
- * `已标熟知识点` 是真正背下来的有多少——学习不是看了就等于学了。
+ * `已背诵知识点` 是真正背下来的有多少——学习不是看了就等于学了。
  *
  * 卡片本身不落库（见 `lib/reciteCards.ts`），页面按科目加载本科模块后现场派生。
  */
@@ -21,20 +22,20 @@ import { getSubject } from '../data/subjects';
 import { useStudy } from '../store/StudyContext';
 import type { ModuleId, ReciteCard } from '../types';
 import { cn, pct } from '../lib/utils';
-import { isMastered } from '../lib/recite';
+import { isRecited } from '../lib/recite';
 import { cardStatsOf, reciteCardsOf } from '../lib/reciteCards';
 import { useDataScope, DataLoading } from '../lib/useData';
 import { EmptyState, PageHeader, ProgressBar, SectionTitle, Stat, Tag } from '../components/common';
 import { ReciteCardGroup } from '../components/ReciteCards';
 
-/** 状态筛选：全部 / 今天该复习 / 没背过 / 还没标熟 / 已标熟 */
+/** 状态筛选：全部 / 今天该复习 / 没背过 / 还没背完 / 已背诵 */
 type StatusKey = 'all' | 'due' | 'fresh' | 'learning' | 'mastered';
 
 const STATUSES: { key: StatusKey; label: string }[] = [
   { key: 'due', label: '今天该复习' },
   { key: 'fresh', label: '没背过' },
-  { key: 'learning', label: '还没标熟' },
-  { key: 'mastered', label: '已标熟' },
+  { key: 'learning', label: '还没背完' },
+  { key: 'mastered', label: '已背诵' },
   { key: 'all', label: '全部' },
 ];
 
@@ -49,6 +50,18 @@ export default function RecitePage() {
   /** 本科已上线模块（待开发模块没有内容，声明了也加载不到东西） */
   const moduleIds = useMemo(
     () => (subject ? subject.modules.filter((m) => m.available).map((m) => m.id as ModuleId) : []),
+    [subject],
+  );
+
+  /**
+   * 支持「整篇遮罩训练」的模块：只有古诗词与文言文有整篇文本（`ReciteTrainer`），
+   * 其他科目（历史、道法、英语、数学）的必背项都是分散的知识点，没有可遮的整篇。
+   */
+  const wholeText = useMemo(
+    () =>
+      subject
+        ? subject.modules.filter((m) => m.available && (m.id === 'poems' || m.id === 'classical'))
+        : [],
     [subject],
   );
   const ready = useDataScope(moduleIds);
@@ -69,7 +82,7 @@ export default function RecitePage() {
    *
    * 关键是「队列在筛选变化时定好，作答过程中不重排、也不移除」：
    * 一张卡点过「✅ 背了」之后 `dueAt` 会被推到明天，若按 `dueAt` 实时过滤，
-   * 学生刚点完就看到卡片当场消失，「已背 1 次 · 还差 2 次标熟」一眼都看不到，
+   * 学生刚点完就看到卡片当场消失，「已背 1 次 · 有效 1/5 次」一眼都看不到，
    * 也就无从判断这次到底记下没有。队列冻结后卡片原地留着，底部小字实时更新，
    * 学生可以接着点第 2 次、第 3 次——这正是「不背单词」那种一张张过的手感。
    *
@@ -82,8 +95,8 @@ export default function RecitePage() {
       const rec = records?.[c.id];
       if (status === 'all') return true;
       if (status === 'fresh') return !rec || rec.times === 0;
-      if (status === 'mastered') return isMastered(rec);
-      if (status === 'learning') return Boolean(rec && rec.times > 0) && !isMastered(rec);
+      if (status === 'mastered') return isRecited(rec);
+      if (status === 'learning') return Boolean(rec && rec.times > 0) && !isRecited(rec);
       // due：没背过的也算「今天该背」，到点未复习的排前面
       return !rec || rec.times === 0 || rec.dueAt <= Date.now();
     });
@@ -163,7 +176,7 @@ export default function RecitePage() {
       <PageHeader
         crumbs={crumbs}
         title="🧠 知识点背诵"
-        desc="每个知识点一张卡：先自己回忆，再翻面核对。背对三次（跨三天）即「标熟」，代表完全掌握——学习不是看了就等于学了。"
+        desc="每个知识点一张卡：先自己回忆，再翻面核对。每天最多算 1 次，累计背满 5 次（跨 5 天）即「已背诵」，代表完全掌握——学习不是看了就等于学了。"
         extra={
           <Link className="btn btn--sm" to={`/s/${subject.id}`}>
             返回{subject.name}
@@ -174,14 +187,14 @@ export default function RecitePage() {
       <section className="card card--pad stack stack--sm">
         <div className="grid grid--3">
           <Stat value={stats.total} label={`${subject.name}知识点`} />
-          <Stat value={stats.mastered} label="已标熟（完全掌握）" tone="#1a9a6c" />
+          <Stat value={stats.mastered} label="已背诵（完全掌握）" tone="#1a9a6c" />
           <Stat value={stats.due} label="今天该背 / 该复习" tone="#d24f3d" />
         </div>
         <div className="row row--between small">
           <span>
             掌握率 {pct(stats.mastered, Math.max(1, stats.total))}%（已背过 {stats.practiced} 个）
           </span>
-          <span className="muted">连续背对 3 次标熟 · 间隔 1→2→4→7→15→30 天</span>
+          <span className="muted">累计 5 次已背诵 · 间隔 1→2→4→7→15→30 天</span>
         </div>
         <ProgressBar value={stats.mastered} max={Math.max(1, stats.total)} tone="jade" />
       </section>
@@ -235,7 +248,7 @@ export default function RecitePage() {
           return (
             <section className="stack stack--sm" key={mid}>
               <SectionTitle
-                sub={`共 ${gs.total} 个知识点 · 已标熟 ${gs.mastered} 个`}
+                sub={`共 ${gs.total} 个知识点 · 已背诵 ${gs.mastered} 个`}
                 extra={
                   <Link className="btn btn--sm btn--ghost" to={`/s/${subject.id}/${mid}`}>
                     看这部分内容 →
@@ -264,16 +277,26 @@ export default function RecitePage() {
         <Link to={`/s/${subject.id}`} style={{ color: 'var(--c-primary)' }}>
           本科模块
         </Link>
-        进入；想按篇目整篇训练，用
-        <Link to="/s/chinese/poems" style={{ color: 'var(--c-primary)' }}>
-          古诗词专门的遮罩训练
-        </Link>
+        进入
+        {wholeText.length > 0 ? (
+          <>
+            ；想按篇目整篇遮罩训练，用
+            {wholeText.map((m, i) => (
+              <span key={m.id}>
+                {i > 0 ? '、' : ''}
+                <Link to={`/s/${subject.id}/${m.id}`} style={{ color: 'var(--c-primary)' }}>
+                  {m.name}
+                </Link>
+              </span>
+            ))}
+          </>
+        ) : null}
         。
       </section>
 
       {stats.mastered > 0 ? (
         <div className="row row--wrap">
-          <Tag tone="jade">✅ 已标熟 {stats.mastered} 个知识点</Tag>
+          <Tag tone="jade">✅ 已背诵 {stats.mastered} 个知识点</Tag>
           <Link className="btn btn--sm" to="/stats">
             在学习报告里看掌握情况 →
           </Link>

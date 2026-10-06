@@ -1,7 +1,7 @@
 /**
  * 学科页：**本学科的章节导航**（学段切换 + 模块网格 + 本科工具）。
  *
- * 只负责「这一科要从哪一块开始学」：所有学习数据（本科进度、已学/已标熟、分值看板）
+ * 只负责「这一科要从哪一块开始学」：所有学习数据（本科进度、已学/已背诵、分值看板）
  * 都不在这里出现——首页负责选科、学科页负责选章节，「我的」负责看数据，
  * 三层各管一件事，同一份数字也就不必在多处重复渲染。
  *
@@ -13,12 +13,24 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { TOTAL_SCORE, getSubject, weightOf } from '../data/subjects';
 import { moduleIdsOfSubject } from '../data';
 import { totalsOfModule } from '../data/totals';
-import { ENTRY_META } from '../data/summary';
+import { ENTRY_META, MODULE_TOTALS } from '../data/summary';
 import { useStudy } from '../store/StudyContext';
 import type { GradeId, ModuleId, Subject } from '../types';
 import { GRADES, cn } from '../lib/utils';
 import { gradesWithContent } from '../lib/termData';
 import { EmptyState, PageHeader, SectionTitle, Tag } from '../components/common';
+
+/**
+ * 有知识点卡片的模块：这份「哪些模块能背」的判断来自轻量清单 `MODULE_TOTALS`
+ * （每模块的 `cards` 数），与 `lib/reciteCards.ts` 的派生覆盖面一致。
+ * 学科页是 `@data-summary-only`，不能为了判断入口去加载正文。
+ */
+const CARD_MODULES = new Set<string>(MODULE_TOTALS.filter((m) => m.cards > 0).map((m) => m.id));
+
+/** 本科是否有可背诵的知识点：任一上线模块产卡片就给「背诵」入口 */
+function hasReciteCards(subject: Subject): boolean {
+  return subject.modules.some((m) => m.available && CARD_MODULES.has(m.id));
+}
 
 /**
  * 本科工具：背诵 / 错题本 / 考点 / 知识拓展。
@@ -29,7 +41,9 @@ import { EmptyState, PageHeader, SectionTitle, Tag } from '../components/common'
  */
 function toolsOf(subject: Subject): { to: string; icon: string; label: string; desc: string }[] {
   const tools: { to: string; icon: string; label: string; desc: string }[] = [];
-  if (subject.id === 'chinese') {
+  // 语文/英语/历史/道法/数学都有自动派生的知识点卡片，背诵对它们一视同仁；
+  // 物理、化学以计算实验为主，掌握按「逐题过关」统计，不设背诵入口。
+  if (hasReciteCards(subject)) {
     tools.push({
       to: `/s/${subject.id}/recite`,
       icon: '📅',

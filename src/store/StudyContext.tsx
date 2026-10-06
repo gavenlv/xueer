@@ -88,7 +88,7 @@ interface StudyContextValue {
   recordReciteResult: (itemId: string, ok: boolean) => void;
   /**
    * 记录一次知识点卡片背诵。
-   * 连续背对到 `RECITE_MASTER_STREAK` 次即「标熟」（完全掌握）。
+   * 累计跨天有效背满 `RECITE_TARGET_TIMES` 次即「已背诵」（完全掌握）。
    */
   recordCardRecite: (cardId: string, ok: boolean) => void;
   /** 切换收藏 */
@@ -196,7 +196,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
   );
 
   /**
-   * 记录一次知识点卡片背诵：按遗忘曲线排下一次复习，连续背对达标即「标熟」。
+   * 记录一次知识点卡片背诵：按遗忘曲线排下一次复习，累计跨天有效背满 5 次即「已背诵」。
    *
    * 这里**不动** `progress`：卡片的掌握情况与「条目是否打开过」是两件事，
    * 混在一起会让「已学内容」这个数字失去意义（学习不是看了就等于学了）。

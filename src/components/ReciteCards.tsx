@@ -3,7 +3,8 @@
  *
  * 交互刻意抄「不背单词」那一套：**先自己回忆，再翻面**——直接看答案不叫背。
  * 每次点「背了」都记一次打卡（学生看到 1 次、2 次…），并按遗忘曲线排下一次复习；
- * 连续背对到 `RECITE_MASTER_STREAK` 次即**标熟**（= 完全掌握），在学习进度里体现。
+ * 每张卡还留下**每一次背诵的明细**（第几次、什么时候、背没背下来），
+ * 累计跨天有效 5 次即**已背诵**（= 完全掌握），在学习进度里体现。
  *
  * 组件本身不产出数据：卡片来自 `lib/reciteCards.ts`，记录落在 `useStudy().recordCardRecite`。
  */
@@ -14,17 +15,63 @@ import { useStudy } from '../store/StudyContext';
 import { RichText } from './RichText';
 import { Tag } from './common';
 import { cn } from '../lib/utils';
-import { RECITE_MASTER_STREAK, cardLevelLabel, daysUntilDue, isMastered } from '../lib/recite';
+import {
+  RECITE_TARGET_TIMES,
+  cardLevelLabel,
+  daysUntilDue,
+  effectiveCount,
+  isRecited,
+} from '../lib/recite';
 
-/** 熟练度三点：●●○ 一眼看出还差几次标熟 */
+/** 明细里的时间：`10-06 20:31`，年份对学生没有意义 */
+function fmtAt(at: number): string {
+  const d = new Date(at);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/** 熟练度点点：●●●○○ 一眼看出还差几次已背诵 */
 function MasteryDots({ rec }: { rec: CardRecord | undefined }) {
-  const filled = Math.min(RECITE_MASTER_STREAK, rec?.streak ?? 0);
+  const filled = Math.min(RECITE_TARGET_TIMES, effectiveCount(rec));
   return (
     <span className="rcard__dots" title={cardLevelLabel(rec)} aria-label={cardLevelLabel(rec)}>
-      {Array.from({ length: RECITE_MASTER_STREAK }, (_, i) => (
+      {Array.from({ length: RECITE_TARGET_TIMES }, (_, i) => (
         <span key={i} className={cn('rcard__dot', i < filled && 'is-on')} />
       ))}
     </span>
+  );
+}
+
+/** 每次背诵的轨迹：第几次、什么时候、背没背下来 */
+function Attempts({ rec }: { rec: CardRecord }) {
+  const [open, setOpen] = useState(false);
+  const attempts = rec.attempts ?? [];
+  if (!attempts.length) return null;
+  /**
+   * 明细只保留最近若干条，编号必须**接着总数往前推**，不能从 1 重新数——
+   * 否则第 25 次会被显示成「第 5 次」，学生看到的轨迹就假了。
+   */
+  const offset = Math.max(0, rec.times - attempts.length);
+  return (
+    <div className="stack stack--sm" style={{ marginTop: 8 }}>
+      <button className="btn btn--sm btn--ghost" onClick={() => setOpen((v) => !v)}>
+        {open ? '收起背诵明细' : `查看背诵明细（${rec.times} 次）`}
+      </button>
+      {open ? (
+        <div className="stack stack--sm fade-in">
+          {attempts.map((a, i) => (
+            <div className="row small" key={`${a.at}-${i}`} style={{ gap: 8 }}>
+              <span className="muted" style={{ minWidth: 62 }}>
+                第 {offset + i + 1} 次
+              </span>
+              <span>{fmtAt(a.at)}</span>
+              <span>{a.ok ? '✅ 背了' : '❌ 没记住'}</span>
+              {!a.counted ? <span className="muted">同日重复打卡，不计入有效次数</span> : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -39,7 +86,7 @@ export function ReciteCardItem({
   const { state, recordCardRecite } = useStudy();
   const [revealed, setRevealed] = useState(false);
   const rec = state.cards?.[card.id];
-  const mastered = isMastered(rec);
+  const recited = isRecited(rec);
 
   const answer = (ok: boolean) => {
     recordCardRecite(card.id, ok);
@@ -47,7 +94,7 @@ export function ReciteCardItem({
   };
 
   return (
-    <div className={cn('rcard', mastered && 'is-mastered', card.key && 'is-key')}>
+    <div className={cn('rcard', recited && 'is-mastered', card.key && 'is-key')}>
       <div className="rcard__head">
         <span className="rcard__kind">
           {card.key ? '★ ' : ''}
@@ -56,7 +103,7 @@ export function ReciteCardItem({
         {showSource ? <span className="rcard__from">{card.title}</span> : null}
         <span className="spacer" />
         <MasteryDots rec={rec} />
-        {mastered ? <Tag tone="jade">✅ 已标熟</Tag> : null}
+        {recited ? <Tag tone="jade">✅ 已背诵</Tag> : null}
       </div>
 
       <div className="rcard__front">
@@ -108,16 +155,20 @@ export function ReciteCardItem({
           <>
             <span>已背 {rec.times} 次</span>
             <span>·</span>
-            <span>{mastered ? '已完全掌握' : `还差 ${RECITE_MASTER_STREAK - rec.streak} 次标熟`}</span>
-            <span>·</span>
             <span>
-              {daysUntilDue(rec) > 0 ? `${daysUntilDue(rec)} 天后复习` : '今天该复习'}
+              {recited
+                ? '已背诵（完全掌握）'
+                : `有效 ${effectiveCount(rec)} / ${RECITE_TARGET_TIMES} 次`}
             </span>
+            <span>·</span>
+            <span>{daysUntilDue(rec) > 0 ? `${daysUntilDue(rec)} 天后复习` : '今天该复习'}</span>
           </>
         ) : (
-          <span>还没背过 · 背对 {RECITE_MASTER_STREAK} 次（不同三天）即标熟</span>
+          <span>还没背过 · 每天最多算 1 次，累计背满 {RECITE_TARGET_TIMES} 次即已背诵</span>
         )}
       </div>
+
+      {rec && rec.times > 0 ? <Attempts rec={rec} /> : null}
     </div>
   );
 }

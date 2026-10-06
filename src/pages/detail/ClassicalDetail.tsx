@@ -5,6 +5,7 @@ import type { ClassicalEntry } from '../../types';
 import { Accordion, NoteGrid, Tag } from '../../components/common';
 import { SpeakButton } from '../../components/SpeechBar';
 import { AnnotatedText } from '../../components/WordTip';
+import { ReciteTrainer } from '../../components/ReciteTrainer';
 import { glossaryOf } from '../../lib/glossary';
 import { DetailShell, Section } from './DetailShell';
 
@@ -19,6 +20,20 @@ export function ClassicalDetail({
 
   /** 需要翻译的字词：注释 + 语法归类里的词条，正文里出现即加 tooltip */
   const glossary = useMemo(() => glossaryOf(entry), [entry]);
+
+  /**
+   * 遮罩训练用的正文：一句一行。
+   * `ClassicalText` 只有 `paragraphs`，所以按句末标点切句——文言文的一句就是朗读与
+   * 默写的自然单位，切完就能复用古诗词那套四级遮罩，不必再给文言文单独做一套。
+   */
+  const reciteLines = useMemo(
+    () =>
+      c.paragraphs
+        .flatMap((p) => p.split(/(?<=[。！？；])/))
+        .map((s) => s.trim())
+        .filter(Boolean),
+    [c.paragraphs],
+  );
 
   return (
     <DetailShell
@@ -47,6 +62,9 @@ export function ClassicalDetail({
           <span className="small muted">← 逐段朗读</span>
         </div>
       </Section>
+
+      {/* 整篇遮罩训练：与古诗词同一套四级提示，逐句遮、逐句查 */}
+      <ReciteTrainer lines={reciteLines} entryId={entry.id} links={false} />
 
       <Section title={`重点注释（${c.annotations.length} 条）`} icon="🔖">
         <NoteGrid items={c.annotations} />

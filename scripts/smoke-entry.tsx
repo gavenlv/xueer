@@ -18,6 +18,7 @@ import { supplementsOf } from '../src/lib/relations';
 import { relOfEntry, relPool } from '../src/lib/relNode';
 import { makeReciteQuestions } from '../src/lib/quiz';
 import { reciteCardsOf } from '../src/lib/reciteCards';
+import { RECITE_TARGET_TIMES } from '../src/lib/recite';
 import { ReciteCardGroup } from '../src/components/ReciteCards';
 import type { ReciteCard } from '../src/types';
 import { PhysicsFigureView } from '../src/components/PhysicsFigure';
@@ -196,8 +197,10 @@ const progressTarget = allEntries.find(
 );
 
 /**
- * 用于验证「已标熟」能流到界面的卡片。
+ * 用于验证「已背诵」能流到界面的卡片。
  * 从真实数据里派生，不写死 id——内容一改，这条断言不该跟着失效。
+ * 记录刻意写成**旧口径**（只有 `streak` 与 `masteredAt`、没有 `effDays`）：
+ * 既验证存量记录仍算「已背诵」，也验证门槛从「连续 3 次」抬到「跨天 5 次」不会让老进度回退。
  */
 const cardTarget = (() => {
   const e = allEntries.find((x) => x.moduleId === 'poems' && reciteCardsOf(x).length > 0);
@@ -226,14 +229,15 @@ if (!progressTarget) {
             daily: {},
             grade: '7a',
             totalSeconds: 0,
-            // 一张已经「背对 3 次」的卡：标熟必须能出现在「我的」与学习报告上
+            // 一张旧口径已「标熟」的卡（只有 streak 与 masteredAt，无 effDays）：新版仍须算作
+            // 「已背诵」，且必须出现在「我的」与学习报告上。dueAt 设在过去，好让它也进入背诵页的今日队列。
             cards: cardTarget
               ? {
                   [cardTarget.id]: {
                     times: 3,
                     streak: 3,
                     lastAt: Date.now(),
-                    dueAt: Date.now() + 86400000,
+                    dueAt: Date.now() - 86400000,
                     masteredAt: Date.now(),
                   },
                 }
@@ -588,6 +592,21 @@ if (!progressTarget) {
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
   /**
+   * 背诵入口按「本科有没有知识点卡片」决定，不再只给语文开。
+   * 曾经只有 `subject.id === 'chinese'` 才放出「背诵」，于是历史/道法/英语/数学
+   * 明明都派生出了卡片，学生却在这些科目里找不到入口。这里逐个科目钉住。
+   */
+  const reciteEntryOf = (id: string) =>
+    renderToString(
+      <MemoryRouter initialEntries={[`/s/${id}`]}>
+        <AppWithProviders />
+      </MemoryRouter>,
+    ).replace(/<!--[\s\S]*?-->/g, '');
+  const histSubjectHtml = reciteEntryOf('history');
+  const mathSubjectHtml = reciteEntryOf('math');
+  const phySubjectHtml = reciteEntryOf('physics');
+  const chemSubjectHtml = reciteEntryOf('chemistry');
+  /**
    * 待开发科目的样本**不能写死某个科目**：物理原本是待开发的，上线后这些断言就会假失败。
    * 所以从注册表里挑一个当前仍待开发的科目来当样本。
    */
@@ -670,6 +689,18 @@ if (!progressTarget) {
       '待开发学科页不给本科工具入口',
       pendingSubjectHtml.includes('待开发') && !pendingSubjectHtml.includes('本科工具'),
     ],
+    // 有知识点卡片的科目都要给出背诵入口（历史/道法/英语/数学一视同仁）
+    [
+      '历史学科页有背诵入口',
+      histSubjectHtml.includes('href="/s/history/recite"'),
+    ],
+    ['数学学科页有背诵入口', mathSubjectHtml.includes('href="/s/math/recite"')],
+    // 物理/化学以计算与实验为主，掌握按「逐题过关」统计，不该出现背诵入口
+    [
+      '物理/化学学科页不给背诵入口',
+      !phySubjectHtml.includes('href="/s/physics/recite"') &&
+        !chemSubjectHtml.includes('href="/s/chemistry/recite"'),
+    ],
     // 待开发科目的错题本：空态 + 指回本科
     [
       '待开发科目错题本渲染空态',
@@ -695,7 +726,9 @@ if (!progressTarget) {
     // 首页只做导航：今日概览、总进度这些数据项必须留在「我的」，别又摊回首页
     [
       '首页不重复个人进度（已移至「我的」）',
-      !homeHtml.includes('今日概览') && !homeHtml.includes('已标熟知识点'),
+      !homeHtml.includes('今日概览') &&
+        !homeHtml.includes('已背诵知识点') &&
+        !homeHtml.includes('已标熟知识点'),
     ],
     // 一级菜单 = 按 2027 中考满分降序的全部计分科目（含待开发科目）
     [
@@ -737,7 +770,7 @@ if (!progressTarget) {
   );
   if (!navOk) failed += 1;
 
-  /* ------------- 接线检查：知识点背诵（卡片派生 / 标熟 / 学过的 ≠ 掌握的） ------------- */
+  /* ------------- 接线检查：知识点背诵（卡片派生 / 已背诵 / 学过的 ≠ 掌握的） ------------- */
 
   /**
    * 背诵页与详情页的「知识点背诵」区都是**派生**出来的（见 lib/reciteCards.ts）：
@@ -768,7 +801,11 @@ if (!progressTarget) {
 
   const reciteChecks: [string, boolean][] = [
     ['语文背诵页渲染出卡片', chineseReciteHtml.includes('rcard') && chineseReciteHtml.includes('看答案')],
-    ['语文背诵页给出标熟口径', chineseReciteHtml.includes('知识点背诵') && chineseReciteHtml.includes('标熟')],
+    [
+      '背诵页给出「跨天 5 次已背诵」口径',
+      chineseReciteHtml.includes('知识点背诵') &&
+        chineseReciteHtml.includes(`累计背满 ${RECITE_TARGET_TIMES} 次（跨 ${RECITE_TARGET_TIMES} 天）`),
+    ],
     ['历史背诵页含「历史时间点」卡片', histReciteHtml.includes('历史时间点')],
     ['历史背诵页含「材料大题踩分点」卡片', histReciteHtml.includes('材料大题踩分点')],
     ['历史背诵页含分层考点卡片', histReciteHtml.includes('考点·重点')],
@@ -781,17 +818,17 @@ if (!progressTarget) {
   ];
   const reciteOk = reciteChecks.every(([, ok]) => ok);
   console.log(
-    `  ${reciteOk ? '✅' : '❌'} 接线检查：知识点背诵与标熟（${reciteChecks
+    `  ${reciteOk ? '✅' : '❌'} 接线检查：知识点背诵与已背诵（${reciteChecks
       .filter(([, ok]) => !ok)
       .map(([n]) => n)
       .join('、') || `${reciteChecks.length} 项断言全通过`}）`,
   );
   if (!reciteOk) failed += 1;
 
-  /* ---- 接线检查：学习报告上「已学」与「已标熟」是两个数字 ---- */
+  /* ---- 接线检查：学习报告上「已学」与「已背诵」是两个数字 ---- */
 
   /**
-   * 注入的 localStorage 里有一张标熟卡片，学习报告必须把它算进「已标熟知识点」，
+   * 注入的 localStorage 里有旧口径已「标熟」的卡片，学习报告必须把它算进「已背诵知识点」，
    * 而条目级进度（studied）另算——这正是「学习不是看了就等于学了」的落点。
    */
   const statsHtml = renderToString(
@@ -800,7 +837,7 @@ if (!progressTarget) {
     </MemoryRouter>,
   ).replace(/<!--[\s\S]*?-->/g, '');
   const statsChecks: [string, boolean][] = [
-    ['学习报告有「已标熟知识点」', statsHtml.includes('已标熟知识点')],
+    ['学习报告有「已背诵知识点」', statsHtml.includes('已背诵知识点')],
     ['学习报告并列「已学内容（看过）」', statsHtml.includes('已学内容（看过）')],
     ['两个数字分开说明', statsHtml.includes('看过 ≠ 掌握') || statsHtml.includes('完全掌握')],
     // 首页简化后，今日概览搬到这里——数据必须有地方看得到，不是删掉了
@@ -811,28 +848,63 @@ if (!progressTarget) {
     `  ${statsOk ? '✅' : '❌'} 接线检查：学习报告的双指标（${statsChecks
       .filter(([, ok]) => !ok)
       .map(([n]) => n)
-      .join('、') || '已学 / 已标熟 分列'}）`,
+      .join('、') || '已学 / 已背诵 分列'}）`,
   );
   if (!statsOk) failed += 1;
 
-  /* ------- 接线检查：卡片底部的「已背 N 次 / 还差 N 次标熟」文案 ------- */
+  /* ------- 接线检查：卡片底部的「已背 N 次 / 有效 M / 5 次」文案 ------- */
 
   /**
-   * 学生点完「✅ 背了」必须**当场**看到「已背 N 次 · 还差 N 次标熟 · N 天后复习」。
-   * 这行字由 `ReciteCardItem` 现拼，拼错、或者把「同一天重复打卡」也算成一次熟练度，
-   * 页面都照样渲染得很正常——所以直接喂两条记录来锁死文案：
-   * A 卡＝今天第一次背对（次数 1、熟练度 1）；B 卡＝同一天又点了一次（次数 2、熟练度仍是 1）。
+   * 学生点完「✅ 背了」必须**当场**看到「已背 N 次 · 有效 M / 5 次 · N 天后复习」，
+   * 达标后显示「已背诵（完全掌握）」并给出**每次背诵的明细**入口。
+   * 这行字由 `ReciteCardItem` 现拼，拼错、或者把「同一天重复打卡」也算成有效次数，
+   * 页面都照样渲染得很正常——所以直接喂三条记录来锁死文案：
+   *   A 卡＝今天第一次背对（次数 1、有效 1）；B 卡＝同一天又点了一次（次数 2、有效仍 1）；
+   *   C 卡＝旧口径已达标（只有 streak 与 masteredAt，没有 effDays）→ 仍须算「已背诵」。
    */
   const DAY_MS = 86400000;
   const metaNow = Date.now();
-  const metaIds = ['meta-a#默写#0', 'meta-b#默写#0'];
+  const metaIds = ['meta-a#默写#0', 'meta-b#默写#0', 'meta-c#默写#0'];
   (globalThis as unknown as { localStorage: unknown }).localStorage = {
     getItem: (k: string) =>
       k.includes('xueer')
         ? JSON.stringify({
             cards: {
-              [metaIds[0]]: { times: 1, streak: 1, lastAt: metaNow, dueAt: metaNow + DAY_MS },
-              [metaIds[1]]: { times: 2, streak: 1, lastAt: metaNow, dueAt: metaNow + DAY_MS },
+              [metaIds[0]]: {
+                times: 1,
+                streak: 1,
+                lastAt: metaNow,
+                dueAt: metaNow + DAY_MS,
+                effDays: 1,
+                lastCountedAt: metaNow,
+                attempts: [{ at: metaNow, ok: true, counted: true }],
+              },
+              [metaIds[1]]: {
+                times: 2,
+                streak: 2,
+                lastAt: metaNow,
+                dueAt: metaNow + DAY_MS,
+                effDays: 1,
+                lastCountedAt: metaNow - DAY_MS,
+                attempts: [
+                  { at: metaNow - DAY_MS, ok: true, counted: true },
+                  // 同一天又点了一次：次数 +1，但没推进有效次数
+                  { at: metaNow, ok: true, counted: false },
+                ],
+              },
+              // 旧口径：连续背对 3 次即标熟，没有 effDays
+              [metaIds[2]]: {
+                times: 3,
+                streak: 3,
+                lastAt: metaNow,
+                dueAt: metaNow + DAY_MS,
+                masteredAt: metaNow,
+                attempts: [
+                  { at: metaNow - 2 * DAY_MS, ok: true, counted: true },
+                  { at: metaNow - DAY_MS, ok: true, counted: true },
+                  { at: metaNow, ok: true, counted: true },
+                ],
+              },
             },
           })
         : null,
@@ -859,19 +931,24 @@ if (!progressTarget) {
 
   const cardMetaChecks: [string, boolean][] = [
     ['首次背对显示「已背 1 次」', metaHtml.includes('已背 1 次')],
-    ['首次背对显示「还差 2 次标熟」', metaHtml.includes('还差 2 次标熟')],
+    ['显示跨天有效进度「有效 1 / 5 次」', metaHtml.includes(`有效 1 / ${RECITE_TARGET_TIMES} 次`)],
     ['首次背对显示「1 天后复习」', metaHtml.includes('1 天后复习')],
     ['同一天第二次背显示「已背 2 次」', metaHtml.includes('已背 2 次')],
-    // 同一天重复点不该推进熟练度：两张卡的 streak 都还是 1
-    ['同一天重复打卡不推进熟练度', !metaHtml.includes('还差 1 次标熟')],
-    ['熟练度圆点各亮 1 个（共 2 个亮）', (metaHtml.match(/rcard__dot is-on/g) ?? []).length === 2],
+    // 同一天重复点不该推进有效次数：A/B 两张卡都还停在「有效 1 / 5 次」
+    ['同一天重复打卡不推进有效次数', !metaHtml.includes(`有效 2 / ${RECITE_TARGET_TIMES} 次`)],
+    // 有效次数点点：A/B 各亮 1 个、C（旧口径 streak=3）亮 3 个 → 共 5 个
+    ['熟练度圆点按有效次数点亮', (metaHtml.match(/rcard__dot is-on/g) ?? []).length === 5],
+    // 旧口径已达标：标签与文案都必须显示「已背诵」，且能展开每一次的明细
+    ['旧口径已达标显示「已背诵」标签', metaHtml.includes('✅ 已背诵')],
+    ['已背诵卡片显示「已背诵（完全掌握）」', metaHtml.includes('已背诵（完全掌握）')],
+    ['每张卡都有背诵明细入口', (metaHtml.match(/查看背诵明细/g) ?? []).length === metaCards.length],
   ];
   const cardMetaOk = cardMetaChecks.every(([, ok]) => ok);
   console.log(
     `  ${cardMetaOk ? '✅' : '❌'} 接线检查：卡片打卡文案（${cardMetaChecks
       .filter(([, ok]) => !ok)
       .map(([n]) => n)
-      .join('、') || '已背 N 次 / 还差 N 次标熟 / 复习时间'}）`,
+      .join('、') || '已背 N 次 / 有效 M 次 / 复习时间 / 背诵明细'}）`,
   );
   if (!cardMetaOk) failed += 1;
 

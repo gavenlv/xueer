@@ -158,11 +158,11 @@ function ExtraSections({ entry, subjectId }: { entry: Entry; subjectId: string }
 
 /**
  * 这一课的**知识点背诵**：把正文里的必背项（默写句、时间点、踩分点、必背结论…）
- * 抽成一张张卡片，先回忆再翻面，背对三次标熟。
+ * 抽成一张张卡片，先回忆再翻面，累计背满 5 次（跨 5 天）即已背诵。
  *
  * 挂在详情页里而不是单独做页面，是因为「学」与「背」本来就在同一课里：
  * 学生读完主线与考点，往下划一屏就能立刻开始背，不用再去别的页面找同一个知识点。
- * 折叠卡片头部给出「已标熟 y / N」，一眼看出这一课掌握到什么程度。
+ * 折叠卡片头部给出「已背诵 y / N」，一眼看出这一课掌握到什么程度。
  */
 function ReciteSection({ entry }: { entry: Entry }) {
   const { state } = useStudy();
@@ -175,11 +175,11 @@ function ReciteSection({ entry }: { entry: Entry }) {
     <CollapseCard
       icon="🧠"
       title="知识点背诵"
-      summary="先自己回忆，再翻面核对；连续背对 3 次即标熟（完全掌握）"
+      summary="先自己回忆，再翻面核对；累计背满 5 次（跨 5 天）即已背诵（完全掌握）"
       badge={
         stats.mastered > 0 ? (
           <Tag tone="jade">
-            已标熟 {stats.mastered} / {stats.total}
+            已背诵 {stats.mastered} / {stats.total}
           </Tag>
         ) : (
           <Tag>{stats.total} 个知识点</Tag>

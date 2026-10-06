@@ -62,25 +62,29 @@ import { sampleLength, EXAM_MIN_WORDS } from '../src/lib/writing';
 import { answerModeFor, checkFill } from '../src/lib/utils';
 import { applyAnswerToProgress } from '../src/lib/progress';
 import {
+  RECITE_ATTEMPT_KEEP,
   RECITE_INTERVALS,
-  RECITE_MASTER_STREAK,
+  RECITE_TARGET_TIMES,
   applyCardRecite,
   applyRecite,
   cardLevelLabel,
   daysUntilDue,
+  effectiveCount,
   isDue,
-  isMastered,
-  toMastery,
+  isRecited,
+  toTarget,
 } from '../src/lib/recite';
 import { reciteCardsOf } from '../src/lib/reciteCards';
 import { mergeStates, normalizeStudyState } from '../src/lib/sync';
 import type {
+  CardRecord,
   Entry,
   GradeId,
   MindNode,
   ModuleId,
   PhysicsFigure,
   QuizQuestion,
+  ReciteRecord,
   StudyState,
   WritingLesson,
 } from '../src/types';
@@ -880,7 +884,7 @@ if (reviewKindTotal < 250) {
         `[轻量清单] 条目 ${e.id} 的题量 ${m.questions} 与实际 ${e.questions.length} 不符 → 请运行 pnpm gen`,
       );
     }
-    // 卡片张数：首页/学习报告的「已标熟 N / 总数 M」全靠清单里的这个数字，
+    // 卡片张数：首页/学习报告的「已背诵 N / 总数 M」全靠清单里的这个数字，
     // 清单一旦过期，掌握率就会算错（分母与实际卡片对不上）
     const cards = cardCountByEntry.get(e.id) ?? 0;
     if (m.cards !== cards) {
@@ -1638,94 +1642,170 @@ const progressFailures = progressCases.filter(([, ok]) => !ok);
 const DAY_MS = 24 * 60 * 60 * 1000;
 const T0 = 1_700_000_000_000;
 
+// 「有效次数」一天最多加 1，所以这一串刻意跨天推进
 let rc = applyRecite(undefined, true, T0);
 const rc1 = { ...rc };
-rc = applyRecite(rc, true, T0);
+rc = applyRecite(rc, true, T0 + 60_000); // 同一天再点一次：只加打卡次数
+const rcSameDay = { ...rc };
+rc = applyRecite(rc, true, T0 + DAY_MS); // 第 2 天
 const rc2 = { ...rc };
-rc = applyRecite(rc, false, T0);
+rc = applyRecite(rc, false, T0 + 2 * DAY_MS); // 第 3 天背错
 const rcBack = { ...rc };
+
+// 跨 5 天连续背对 → 整篇「已背诵」，达成时间落在第 5 天
+let rp = applyRecite(undefined, true, T0);
+for (let i = 1; i < RECITE_TARGET_TIMES; i += 1) rp = applyRecite(rp, true, T0 + i * DAY_MS);
+const rpDone = { ...rp };
 
 const reciteCases: [string, boolean, string][] = [
   [
-    '首次背对 → 熟练度 1，2 天后复习',
-    rc1.level === 1 && rc1.times === 1 && rc1.dueAt === T0 + RECITE_INTERVALS[1] * DAY_MS,
+    '首次背对 → 有效 1 次、1 天后复习',
+    rc1.effDays === 1 &&
+      rc1.level === 0 &&
+      rc1.times === 1 &&
+      rc1.dueAt === T0 + RECITE_INTERVALS[0] * DAY_MS,
     JSON.stringify(rc1),
   ],
   [
-    '连续背对 → 熟练度升到 2，4 天后复习',
-    rc2.level === 2 && rc2.times === 2 && rc2.dueAt === T0 + RECITE_INTERVALS[2] * DAY_MS,
+    '同一天重复「背了」只加次数、不加有效次数（防连点刷已背诵）',
+    rcSameDay.times === 2 &&
+      rcSameDay.effDays === 1 &&
+      rcSameDay.dueAt === rc1.dueAt &&
+      !isRecited(rcSameDay),
+    JSON.stringify(rcSameDay),
+  ],
+  [
+    '隔天背对 → 有效 2 次，按 2 天档排期',
+    rc2.effDays === 2 &&
+      rc2.level === 1 &&
+      rc2.times === 3 &&
+      rc2.dueAt === T0 + DAY_MS + RECITE_INTERVALS[1] * DAY_MS,
     JSON.stringify(rc2),
   ],
   [
-    '一次背错 → 降回 1，1 天后复习，连续次数清零',
-    rcBack.level === 1 && rcBack.streak === 0 && rcBack.dueAt === T0 + RECITE_INTERVALS[0] * DAY_MS,
+    '一次背错 → 有效次数不清零，只把复习推到明天',
+    rcBack.effDays === 2 &&
+      rcBack.streak === 0 &&
+      rcBack.dueAt === T0 + 2 * DAY_MS + RECITE_INTERVALS[0] * DAY_MS,
     JSON.stringify(rcBack),
   ],
+  [
+    `跨 ${RECITE_TARGET_TIMES} 天背对 → 已背诵，达成时间 = 第 ${RECITE_TARGET_TIMES} 天`,
+    isRecited(rpDone) &&
+      rpDone.effDays === RECITE_TARGET_TIMES &&
+      rpDone.recitedAt === T0 + (RECITE_TARGET_TIMES - 1) * DAY_MS &&
+      toTarget(rpDone) === 0,
+    JSON.stringify(rpDone),
+  ],
   ['未背过的内容视为「今天该复习」', isDue(undefined, T0) === true, ''],
-  ['刚排期 4 天的内容今天不到期', isDue(rc2, T0 + DAY_MS) === false, ''],
-  ['到期后 isDue 为真', isDue(rc2, T0 + 5 * DAY_MS) === true, ''],
-  ['daysUntilDue 到期返回 0', daysUntilDue(rc2, T0 + 5 * DAY_MS) === 0, ''],
-  ['daysUntilDue 未到期返回正数', daysUntilDue(rc2, T0) === 4, String(daysUntilDue(rc2, T0))],
+  ['刚排期 3 天的内容今天不到期', isDue(rc2, T0) === false, ''],
+  ['到期后 isDue 为真', isDue(rc2, T0 + 4 * DAY_MS) === true, ''],
+  ['daysUntilDue 到期返回 0', daysUntilDue(rc2, T0 + 4 * DAY_MS) === 0, ''],
+  ['daysUntilDue 未到期返回正数', daysUntilDue(rc2, T0) === 3, String(daysUntilDue(rc2, T0))],
 ];
 
 const reciteFailures = reciteCases.filter(([, ok]) => !ok);
 
-/* ------------------------ 知识点卡片（标熟）规则自测 ------------------------ */
+/* ------------------------ 知识点卡片（已背诵）规则自测 ------------------------ */
 
-// 「标熟 = 完全掌握」是学习进度的判定依据，规则一旦写错，进度数字就会骗人，
-// 所以这里把遗忘曲线、同日不叠加、掉出标熟这几条都钉死。
+// 「已背诵 = 完全掌握」是学习进度的判定依据，规则一旦写错，进度数字就会骗人，
+// 所以这里把「跨天计数」「同日不叠加」「背错不清零」「明细留痕」这几条都钉死。
 
 let cc = applyCardRecite(undefined, true, T0);
 const cc1 = { ...cc };
-// 同一天又点了一次「背了」：只加打卡次数，熟练度与排期都不动
+// 同一天又点了一次「背了」：只加打卡次数，有效次数与排期都不动
 cc = applyCardRecite(cc, true, T0 + 60_000);
 const ccSameDay = { ...cc };
-// 第二天背对 → 熟练度 2
+// 第二天背对 → 有效次数 2
 cc = applyCardRecite(cc, true, T0 + DAY_MS);
 const cc2 = { ...cc };
-// 第三天背对 → 达到标熟
-cc = applyCardRecite(cc, true, T0 + 3 * DAY_MS);
-const ccMastered = { ...cc };
-// 标熟之后又背错 → 掉出标熟，明天重来
-cc = applyCardRecite(cc, false, T0 + 4 * DAY_MS);
-const ccFall = { ...cc };
+// 第三天背错 → 有效次数保留，只把复习推回明天
+cc = applyCardRecite(cc, false, T0 + 2 * DAY_MS);
+const ccWrong = { ...cc };
+// 跨 5 天背对 → 已背诵
+let cd = applyCardRecite(undefined, true, T0);
+for (let i = 1; i < RECITE_TARGET_TIMES; i += 1) cd = applyCardRecite(cd, true, T0 + i * DAY_MS);
+const ccDone = { ...cd };
+// 明细超过上限时只留最近若干条
+let ct = applyCardRecite(undefined, true, T0);
+for (let i = 1; i < RECITE_ATTEMPT_KEEP + 5; i += 1) ct = applyCardRecite(ct, false, T0 + i * 1000);
+const ccTrim = { ...ct };
 
 const cardCases: [string, boolean, string][] = [
   [
-    '首次背对 → 熟练度 1，1 天后复习',
-    cc1.streak === 1 && cc1.times === 1 && cc1.dueAt === T0 + RECITE_INTERVALS[0] * DAY_MS,
+    '首次背对 → 有效 1 次，1 天后复习，且卡片不落 level（可由有效次数推导）',
+    cc1.effDays === 1 &&
+      cc1.times === 1 &&
+      cc1.dueAt === T0 + RECITE_INTERVALS[0] * DAY_MS &&
+      !('level' in cc1),
     JSON.stringify(cc1),
   ],
   [
-    '同一天重复「背了」只加次数、不加熟练度（防连点刷熟）',
+    '同一天重复「背了」只加次数、不加有效次数（防连点刷已背诵）',
     ccSameDay.times === 2 &&
-      ccSameDay.streak === 1 &&
+      ccSameDay.effDays === 1 &&
       ccSameDay.dueAt === cc1.dueAt &&
-      !isMastered(ccSameDay),
+      !isRecited(ccSameDay),
     JSON.stringify(ccSameDay),
   ],
   [
-    '隔天背对 → 熟练度 2，按 2 天档排期',
-    cc2.streak === 2 &&
+    '隔天背对 → 有效 2 次，按 2 天档排期',
+    cc2.effDays === 2 &&
       cc2.times === 3 &&
+      cc2.streak === 2 &&
       cc2.dueAt === T0 + DAY_MS + RECITE_INTERVALS[1] * DAY_MS,
     JSON.stringify(cc2),
   ],
   [
-    `连背 ${RECITE_MASTER_STREAK} 天 → 标熟（= 完全掌握）`,
-    isMastered(ccMastered) && ccMastered.masteredAt === T0 + 3 * DAY_MS,
-    JSON.stringify(ccMastered),
+    '背错 → 有效次数不清零、连续次数归零，只把复习推到明天',
+    ccWrong.effDays === 2 &&
+      ccWrong.streak === 0 &&
+      ccWrong.dueAt === T0 + 2 * DAY_MS + RECITE_INTERVALS[0] * DAY_MS,
+    JSON.stringify(ccWrong),
   ],
-  ['标熟后「还差几次」归零', toMastery(ccMastered) === 0, String(toMastery(ccMastered))],
-  ['标熟标签文案正确', cardLevelLabel(ccMastered) === '已标熟', cardLevelLabel(ccMastered)],
   [
-    '背错 → 掉出标熟，1 天后重来',
-    !isMastered(ccFall) &&
-      ccFall.streak === 0 &&
-      ccFall.dueAt === T0 + 4 * DAY_MS + RECITE_INTERVALS[0] * DAY_MS,
-    JSON.stringify(ccFall),
+    `跨 ${RECITE_TARGET_TIMES} 天背对 → 已背诵，达成时间 = 第 ${RECITE_TARGET_TIMES} 天`,
+    isRecited(ccDone) &&
+      ccDone.effDays === RECITE_TARGET_TIMES &&
+      ccDone.recitedAt === T0 + (RECITE_TARGET_TIMES - 1) * DAY_MS,
+    JSON.stringify(ccDone),
   ],
+  ['已背诵后「还差几次」归零', toTarget(ccDone) === 0, String(toTarget(ccDone))],
+  ['已背诵标签文案正确', cardLevelLabel(ccDone) === '已背诵', cardLevelLabel(ccDone)],
+  ['未达标显示进度文案', cardLevelLabel(cc2) === `已背 2 / ${RECITE_TARGET_TIMES} 次`, cardLevelLabel(cc2)],
   ['未背过的卡片显示「还没背过」', cardLevelLabel(undefined) === '还没背过', cardLevelLabel(undefined)],
+  [
+    '每次背诵都留下明细（时间 / 是否背下 / 是否计入有效）',
+    ccDone.attempts?.length === RECITE_TARGET_TIMES &&
+      ccDone.attempts?.every((a) => a.ok && a.counted) === true &&
+      ccDone.attempts?.[0].at === T0,
+    JSON.stringify(ccDone.attempts?.slice(0, 2)),
+  ],
+  [
+    '同日重复的那一次明细标 counted=false（说明为什么没推进进度）',
+    ccSameDay.attempts?.length === 2 && ccSameDay.attempts?.[1].counted === false,
+    JSON.stringify(ccSameDay.attempts),
+  ],
+  [
+    '背错的那一次明细记 ❌',
+    ccWrong.attempts?.at(-1)?.ok === false,
+    JSON.stringify(ccWrong.attempts?.slice(-1)),
+  ],
+  [
+    `明细最多保留最近 ${RECITE_ATTEMPT_KEEP} 条（同步体积的闸门）`,
+    ccTrim.times === RECITE_ATTEMPT_KEEP + 5 && ccTrim.attempts?.length === RECITE_ATTEMPT_KEEP,
+    String(ccTrim.attempts?.length),
+  ],
+  [
+    '旧记录（无 effDays）按 streak 兼容读取',
+    effectiveCount({ times: 3, streak: 3 }) === 3 && effectiveCount({ times: 3, streak: 3, effDays: 1 }) === 1,
+    String(effectiveCount({ times: 3, streak: 3 })),
+  ],
+  [
+    '旧口径已「标熟」的记录继续算已背诵（门槛从 3 抬到 5 不能让进度回退）',
+    isRecited({ times: 3, streak: 3, masteredAt: T0 }) === true && isRecited({ times: 2, streak: 2 }) === false,
+    String(isRecited({ times: 3, streak: 3, masteredAt: T0 })),
+  ],
 ];
 
 const cardFailures = cardCases.filter(([, ok]) => !ok);
@@ -1745,6 +1825,75 @@ function stateWith(grade: GradeId, gradePicked: boolean): StudyState {
 const localPicked7a = stateWith('7a', true);
 const localNeverPicked = stateWith('7a', false);
 const remote9b = stateWith('9b', true);
+
+/**
+ * 背诵记录的合并夹具：两台设备各背了几天，合并后**次数、有效次数、明细都不能丢**。
+ * 这正是「整条 lastAt 新者胜」会出事的地方——后同步的那份会把另一台的记录整条盖掉。
+ */
+const mergedCards = (l: Record<string, CardRecord>, r: Record<string, CardRecord>) =>
+  mergeStates(normalizeStudyState({ cards: l }), normalizeStudyState({ cards: r })).cards ?? {};
+const mergedRecite = (l: Record<string, ReciteRecord>, r: Record<string, ReciteRecord>) =>
+  mergeStates(normalizeStudyState({ recite: l }), normalizeStudyState({ recite: r })).recite ?? {};
+
+const cardL: CardRecord = {
+  times: 2,
+  streak: 1,
+  lastAt: T0,
+  dueAt: T0 + DAY_MS,
+  effDays: 2,
+  lastCountedAt: T0,
+  attempts: [{ at: T0, ok: true, counted: true }],
+};
+const cardR: CardRecord = {
+  times: 3,
+  streak: 1,
+  lastAt: T0 + DAY_MS,
+  dueAt: T0 + 3 * DAY_MS,
+  effDays: 3,
+  lastCountedAt: T0 + DAY_MS,
+  attempts: [{ at: T0 + DAY_MS, ok: true, counted: true }],
+};
+const cardMerged = mergedCards({ c1: cardL }, { c1: cardR }).c1;
+
+// 两边都背到「已背诵」：达成时间要取最早的，不能因为后同步就改晚
+const doneL: CardRecord = { times: 5, streak: 3, lastAt: T0, dueAt: T0, effDays: 5, recitedAt: T0 };
+const doneR: CardRecord = {
+  times: 6,
+  streak: 4,
+  lastAt: T0 + 5 * DAY_MS,
+  dueAt: T0 + 5 * DAY_MS,
+  effDays: 6,
+  recitedAt: T0 + 5 * DAY_MS,
+};
+const recitedMerged = mergedCards({ c1: doneL }, { c1: doneR }).c1;
+
+// 同一时刻的明细（同一端重复推送）只留一条
+const dupAttempt = { at: T0, ok: true, counted: true };
+const dupL: CardRecord = { times: 1, streak: 1, lastAt: T0, dueAt: T0, effDays: 1, attempts: [dupAttempt] };
+const dupR: CardRecord = { times: 1, streak: 1, lastAt: T0, dueAt: T0, effDays: 1, attempts: [dupAttempt] };
+const dupMerged = mergedCards({ c1: dupL }, { c1: dupR }).c1;
+
+const recL: ReciteRecord = {
+  times: 1,
+  streak: 1,
+  lastAt: T0,
+  dueAt: T0 + DAY_MS,
+  level: 0,
+  effDays: 1,
+  lastCountedAt: T0,
+  attempts: [{ at: T0, ok: true, counted: true }],
+};
+const recR: ReciteRecord = {
+  times: 2,
+  streak: 1,
+  lastAt: T0 + DAY_MS,
+  dueAt: T0 + 3 * DAY_MS,
+  level: 1,
+  effDays: 2,
+  lastCountedAt: T0 + DAY_MS,
+  attempts: [{ at: T0 + DAY_MS, ok: true, counted: true }],
+};
+const reciteMerged = mergedRecite({ r1: recL }, { r1: recR }).r1;
 
 const mergeCases: [string, boolean, string][] = [
   [
@@ -1767,6 +1916,35 @@ const mergeCases: [string, boolean, string][] = [
     '没选过的旧数据不会被凭空标成「选过」',
     normalizeStudyState({ grade: '7a' }).gradePicked === false,
     String(normalizeStudyState({ grade: '7a' }).gradePicked),
+  ],
+  // —— 背诵记录：字段级合并（两台设备各背几天后同步，不能整条覆盖） ——
+  [
+    '卡片计数取 max、明细取并集（不因后同步的那份覆盖而丢次数/丢明细）',
+    cardMerged.times === 3 &&
+      cardMerged.effDays === 3 &&
+      cardMerged.attempts?.length === 2 &&
+      cardMerged.streak === 1,
+    JSON.stringify(cardMerged),
+  ],
+  [
+    '卡片排期跟最近一次背诵（dueAt / lastAt 取较新那侧）',
+    cardMerged.lastAt === cardR.lastAt && cardMerged.dueAt === cardR.dueAt,
+    JSON.stringify({ lastAt: cardMerged.lastAt, dueAt: cardMerged.dueAt }),
+  ],
+  [
+    '卡片「已背诵」达成时间取最早（两边都达成时以先达成为准）',
+    recitedMerged.recitedAt === T0 && isRecited(recitedMerged),
+    String(recitedMerged.recitedAt),
+  ],
+  [
+    '同一时刻的明细去重后不会重复计数',
+    dupMerged.attempts?.length === 1,
+    String(dupMerged.attempts?.length),
+  ],
+  [
+    '整篇背诵记录同样字段级合并（明细并集、有效次数取 max）',
+    reciteMerged.effDays === 2 && reciteMerged.attempts?.length === 2 && reciteMerged.level === 1,
+    JSON.stringify(reciteMerged),
   ],
 ];
 
@@ -3013,7 +3191,7 @@ for (const [note, , detail] of reciteFailures) {
 }
 
 console.log(
-  `  知识点卡片标熟    ${cardCases.length - cardFailures.length} / ${cardCases.length} 通过`,
+  `  知识点卡片已背诵    ${cardCases.length - cardFailures.length} / ${cardCases.length} 通过`,
 );
 for (const [note, , detail] of cardFailures) {
   console.log(`    ❌ ${note}  实际 ${detail}`);
@@ -3199,7 +3377,7 @@ if (
     console.log(`\n❌ 背诵排期规则自测失败 ${reciteFailures.length} 条`);
   }
   if (cardFailures.length > 0) {
-    console.log(`\n❌ 知识点卡片标熟规则自测失败 ${cardFailures.length} 条`);
+    console.log(`\n❌ 知识点卡片已背诵规则自测失败 ${cardFailures.length} 条`);
   }
   if (mergeFailures.length > 0) {
     console.log(`\n❌ 云端合并规则自测失败 ${mergeFailures.length} 条`);
