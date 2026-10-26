@@ -68,6 +68,19 @@ export default function AppShell() {
             </NavLink>
             {/* 一级菜单 = 全部计分科目（按中考满分降序），点科目就地展开该科的模块 */}
             <SubjectMenu />
+            {/*
+              高中语文单独一个入口：它对应的是 2027 广东高考（语文 150 分、全国卷），
+              与「广州中考 8 科」不是一套考试。放进学科菜单会被当成中考科目，
+              所以宁可多一个一级链接，也不混进科目列表。
+            */}
+            <NavLink
+              to="/hs"
+              className={({ isActive }) =>
+                cn('topnav__link', (isActive || location.pathname.startsWith('/hs')) && 'is-active')
+              }
+            >
+              高中
+            </NavLink>
           </nav>
 
           <span className="spacer" />

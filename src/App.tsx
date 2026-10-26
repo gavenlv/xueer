@@ -27,6 +27,8 @@ import ExamRunPage from './pages/ExamRunPage';
 import HistoryReviewPage from './pages/HistoryReviewPage';
 import PoliticsReviewPage from './pages/PoliticsReviewPage';
 import AccountPage from './pages/AccountPage';
+import HsChinesePage from './pages/HsChinesePage';
+import HsBookPage from './pages/HsBookPage';
 import NotFound from './pages/NotFound';
 
 /**
@@ -47,6 +49,10 @@ export default function App() {
     <Routes>
       <Route element={<AppShell />}>
         <Route index element={<Home />} />
+        {/* 高中语文：另一个考试体系（广东 2027 高考），不与中考科目混在一起。
+            两步路由：`/hs` 五册总览 → `/hs/:bookId` 一册的单元与课时。 */}
+        <Route path="hs" element={<HsChinesePage />} />
+        <Route path="hs/:bookId" element={<HsBookPage />} />
         <Route path="s/:subjectId" element={<SubjectPage />} />
         {/* 科目子页面：背诵 / 错题本 / 考点 / 知识拓展，内容都按本科过滤 */}
         <Route path="s/:subjectId/recite" element={<RecitePage />} />

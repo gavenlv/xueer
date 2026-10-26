@@ -13,6 +13,7 @@ import { StudyProvider } from '../src/store/StudyContext';
 import { allEntries, ensureAll, entryIndex } from '../src/data';
 import { allPoems } from '../src/data/chinese';
 import { SUBJECTS } from '../src/data/subjects';
+import { HS_CHINESE_BOOKS } from '../src/data/hs-chinese/books';
 import { QuizLearnLinks } from '../src/components/QuizLearnLinks';
 import { supplementsOf } from '../src/lib/relations';
 import { relOfEntry, relPool } from '../src/lib/relNode';
@@ -52,6 +53,12 @@ function AppWithProviders() {
 
 const routes: string[] = [
   '/',
+  // 高中语文：另一套考试体系（广东 2027 高考），两步路由都要能渲染。
+  // 一册一个页面、五项册次全列，再带一个不存在的册次验「友好出口」。
+  '/hs',
+  '/hs/bx-1',
+  '/hs/xx-3',
+  '/hs/nonexistent-book',
   // 已上线学科的学科页、模块页、详情页、练习页
   ...SUBJECTS.filter((s) => s.available).flatMap((s) => [
     `/s/${s.id}`,
@@ -1500,6 +1507,68 @@ console.log(
     .join('、') || `${zhTopicChecks.length} 类断言全通过`}）`,
 );
 if (!zhTopicOk) failed += 1;
+
+/* ------------- 接线检查：高中语文（五册目录 + 单元课时） ------------- */
+
+/**
+ * 高中语文是**另一套考试体系**（广东 2027 高考，语文 150 分全国卷），页面完全独立于
+ * 中考的科目/模块。这里断言三件事：
+ *   ① `/hs` 真的渲染出五册与「按高考主题」两块，不是空壳；
+ *   ② 五册的课时合计与数据一致（少一册或漏一课，学生按目录复习就会漏考点）；
+ *   ③ 一册页面能渲染出单元与课时、且带上「高考怎么考」与核实等级。
+ */
+const hsHomeHtml = renderToString(
+  <MemoryRouter initialEntries={['/hs']}>
+    <AppWithProviders />
+  </MemoryRouter>,
+).replace(/<!--[\s\S]*?-->/g, '');
+const hsFirstBook = HS_CHINESE_BOOKS[0];
+const hsBookHtml = hsFirstBook
+  ? renderToString(
+      <MemoryRouter initialEntries={[`/hs/${hsFirstBook.id}`]}>
+        <AppWithProviders />
+      </MemoryRouter>,
+    ).replace(/<!--[\s\S]*?-->/g, '')
+  : '';
+const hsLessonTotal = HS_CHINESE_BOOKS.reduce(
+  (n, b) => n + b.units.reduce((m, u) => m + u.lessons.length, 0),
+  0,
+);
+/** 首页头部显示的是「单元数 + 课文篇数」（学习活动与诵读分开数），按同一口径核对 */
+const hsUnitTotal = HS_CHINESE_BOOKS.reduce((n, b) => n + b.units.length, 0);
+const hsTextTotal = HS_CHINESE_BOOKS.reduce(
+  (n, b) =>
+    n +
+    b.units.reduce(
+      (m, u) => m + (u.kind === 'activity' || u.kind === 'recite' ? 0 : u.lessons.length),
+      0,
+    ),
+  0,
+);
+const hsChecks: [string, boolean][] = [
+  ['五册都在首页（必修上／下、选必上／中／下）', HS_CHINESE_BOOKS.length === 5 && HS_CHINESE_BOOKS.every((b) => hsHomeHtml.includes(b.name))],
+  ['首页渲染出「按高考主题」索引', hsHomeHtml.includes('按高考主题') && hsHomeHtml.includes('文言文阅读')],
+  [
+    '首页的单元数与课文篇数跟数据一致（少一册或漏一课就会露）',
+    hsLessonTotal >= 150 && hsHomeHtml.includes(`${hsUnitTotal} 个单元`) && hsHomeHtml.includes(`${hsTextTotal} 篇`),
+  ],
+  [
+    '一册页面：单元名、课时篇名、「高考怎么考」都在',
+    Boolean(hsFirstBook) &&
+      hsFirstBook.units.every((u) => hsBookHtml.includes(u.name)) &&
+      hsBookHtml.includes(hsFirstBook.units[0].lessons[0].title) &&
+      hsBookHtml.includes('高考怎么考'),
+  ],
+  ['一册页面标出目录核实等级', Boolean(hsFirstBook) && hsBookHtml.includes(hsFirstBook.verified)],
+];
+const hsOk = hsChecks.every(([, ok]) => ok);
+console.log(
+  `  ${hsOk ? '✅' : '❌'} 接线检查：高中语文（${hsChecks
+    .filter(([, ok]) => !ok)
+    .map(([n]) => n)
+    .join('、') || `${hsChecks.length} 类断言全通过`}）`,
+);
+if (!hsOk) failed += 1;
 
 /* ------------- 接线检查：学段筛选（选了的学段必须真的生效） ------------- */
 
