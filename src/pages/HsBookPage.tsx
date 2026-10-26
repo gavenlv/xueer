@@ -20,6 +20,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { EmptyState, PageHeader, Tag } from '../components/common';
 import { HS_CHINESE_BOOKS, hsBookOf } from '../data/hs-chinese/books';
+import { hsLessonContentOf, hsUnitDoneCount } from '../data/hs-chinese/lessons';
 
 const KIND_LABEL: Record<string, string> = {
   text: '课文单元',
@@ -124,18 +125,39 @@ export default function HsBookPage() {
             ) : null}
 
             <ol className="hs-lessons">
-              {u.lessons.map((l, i) => (
-                <li className="hs-lesson" key={`${l.title}-${i}`}>
-                  {l.no ? <span className="hs-lesson__no">{l.no}</span> : <span className="hs-lesson__dot">·</span>}
-                  <span className="hs-lesson__title">{l.title}</span>
-                  {l.author ? <span className="small muted hs-lesson__author">{l.author}</span> : null}
-                  {l.selfRead ? <Tag>自读</Tag> : null}
-                </li>
-              ))}
+              {u.lessons.map((l, i) => {
+                const has = Boolean(hsLessonContentOf(book.id, u.no, l.title));
+                return (
+                  <li className="hs-lesson" key={`${l.title}-${i}`}>
+                    {l.no ? <span className="hs-lesson__no">{l.no}</span> : <span className="hs-lesson__dot">·</span>}
+                    {has ? (
+                      <Link
+                        className="hs-lesson__title hs-lesson__title--link"
+                        to={`/hs/${book.id}/l/${encodeURIComponent(l.title)}`}
+                      >
+                        {l.title}
+                      </Link>
+                    ) : (
+                      <span className="hs-lesson__title">{l.title}</span>
+                    )}
+                    {l.author ? <span className="small muted hs-lesson__author">{l.author}</span> : null}
+                    {l.selfRead ? <Tag>自读</Tag> : null}
+                    <span className="spacer" />
+                    {has ? (
+                      <Tag tone="jade">有讲解</Tag>
+                    ) : (
+                      <span className="small muted">讲解在补</span>
+                    )}
+                  </li>
+                );
+              })}
             </ol>
 
             <div className="small muted" style={{ marginTop: 8, lineHeight: 1.8 }}>
-              {u.task ? `单元任务：${u.task}。` : ''}这一单元的讲解与练习正在补充（按册推进，先做必修上册）。
+              {u.task ? `单元任务：${u.task}。` : ''}
+              {hsUnitDoneCount(book.id, u.no) > 0
+                ? `本单元已写 ${hsUnitDoneCount(book.id, u.no)} / ${u.lessons.length} 篇（点篇名看讲解与练习）。`
+                : '这一单元的讲解与练习正在补充（按册推进，先做必修上册）。'}
             </div>
           </details>
         ))}

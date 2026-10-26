@@ -14,6 +14,7 @@ import { allEntries, ensureAll, entryIndex } from '../src/data';
 import { allPoems } from '../src/data/chinese';
 import { SUBJECTS } from '../src/data/subjects';
 import { HS_CHINESE_BOOKS } from '../src/data/hs-chinese/books';
+import { HS_UNIT_CONTENT } from '../src/data/hs-chinese/lessons';
 import { QuizLearnLinks } from '../src/components/QuizLearnLinks';
 import { supplementsOf } from '../src/lib/relations';
 import { relOfEntry, relPool } from '../src/lib/relNode';
@@ -59,6 +60,10 @@ const routes: string[] = [
   '/hs/bx-1',
   '/hs/xx-3',
   '/hs/nonexistent-book',
+  // 课时页：必修上第一单元第一篇（有讲解与练习的那一篇）
+  `/hs/bx-1/l/${encodeURIComponent('沁园春·长沙')}`,
+  // 没有内容的那一篇：必须落到「正在补充」而不是空白或报错
+  `/hs/bx-1/l/${encodeURIComponent('故都的秋')}`,
   // 已上线学科的学科页、模块页、详情页、练习页
   ...SUBJECTS.filter((s) => s.available).flatMap((s) => [
     `/s/${s.id}`,
@@ -1545,6 +1550,18 @@ const hsTextTotal = HS_CHINESE_BOOKS.reduce(
     ),
   0,
 );
+/** 必修上第一单元第一篇（有讲解与练习的那一篇）——课时页断言拿它的真实内容去对 */
+const hsU1First = HS_UNIT_CONTENT['bx-1:1']?.[0];
+const hsLessonHtml = renderToString(
+  <MemoryRouter initialEntries={[`/hs/bx-1/l/${encodeURIComponent('沁园春·长沙')}`]}>
+    <AppWithProviders />
+  </MemoryRouter>,
+).replace(/<!--[\s\S]*?-->/g, '');
+const hsLessonEmptyHtml = renderToString(
+  <MemoryRouter initialEntries={[`/hs/bx-1/l/${encodeURIComponent('故都的秋')}`]}>
+    <AppWithProviders />
+  </MemoryRouter>,
+).replace(/<!--[\s\S]*?-->/g, '');
 const hsChecks: [string, boolean][] = [
   ['五册都在首页（必修上／下、选必上／中／下）', HS_CHINESE_BOOKS.length === 5 && HS_CHINESE_BOOKS.every((b) => hsHomeHtml.includes(b.name))],
   ['首页渲染出「按高考主题」索引', hsHomeHtml.includes('按高考主题') && hsHomeHtml.includes('文言文阅读')],
@@ -1560,6 +1577,19 @@ const hsChecks: [string, boolean][] = [
       hsBookHtml.includes('高考怎么考'),
   ],
   ['一册页面标出目录核实等级', Boolean(hsFirstBook) && hsBookHtml.includes(hsFirstBook.verified)],
+  /*
+   * 课时页：有内容的篇目要真的渲染出讲解与练习；没内容的要落到「正在补充」。
+   * 这两条一起卡住两种坏结果——「数据登记了但页面没渲染」和「没内容却显示空白」。
+   */
+  [
+    '课时页：第一篇渲染出讲解、高考怎么考、练习与解析',
+    Boolean(hsU1First) &&
+      hsLessonHtml.includes(hsU1First.notes[0].heading) &&
+      hsLessonHtml.includes('高考怎么考') &&
+      hsLessonHtml.includes('看答案与解析') &&
+      hsLessonHtml.includes('练习'),
+  ],
+  ['课时页：没写讲解的篇目给「正在补充」，不是空白', hsLessonEmptyHtml.includes('正在补充')],
 ];
 const hsOk = hsChecks.every(([, ok]) => ok);
 console.log(

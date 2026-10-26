@@ -29,6 +29,7 @@ import PoliticsReviewPage from './pages/PoliticsReviewPage';
 import AccountPage from './pages/AccountPage';
 import HsChinesePage from './pages/HsChinesePage';
 import HsBookPage from './pages/HsBookPage';
+import HsLessonPage from './pages/HsLessonPage';
 import NotFound from './pages/NotFound';
 
 /**
@@ -53,6 +54,7 @@ export default function App() {
             两步路由：`/hs` 五册总览 → `/hs/:bookId` 一册的单元与课时。 */}
         <Route path="hs" element={<HsChinesePage />} />
         <Route path="hs/:bookId" element={<HsBookPage />} />
+        <Route path="hs/:bookId/l/:lessonTitle" element={<HsLessonPage />} />
         <Route path="s/:subjectId" element={<SubjectPage />} />
         {/* 科目子页面：背诵 / 错题本 / 考点 / 知识拓展，内容都按本科过滤 */}
         <Route path="s/:subjectId/recite" element={<RecitePage />} />
